@@ -222,10 +222,19 @@ button:hover{transform:scale(1.02)}
 
 <!-- 設定選單 -->
 <div id="set" class="card" hidden>
-  <div class="row">音量容忍度 <span><button data-g="18">嚴格</button> <button data-g="30">適中</button> <button data-g="42">寬鬆</button></span></div>
-  <input id="goal" type="range" min="8" max="50" value="30">
+  <div class="row">音量容忍度 <span>
+    <button type="button" data-g="18">嚴格</button>
+    <button type="button" data-g="30">適中</button>
+    <button type="button" data-g="42">寬鬆</button>
+  </span></div>
+  <input id="goal" type="range" min="8" max="50" value="30" step="1">
+  <div class="row" style="font-size:12px;opacity:.9"><span>門檻預覽</span><span id="goalLive">30</span></div>
   <div class="row" style="font-size:12px;opacity:.9"><span>目前音量</span><span id="lvlReadout">— / 門檻 30</span></div>
-  <div class="row"><button id="cal">🎚 重新校準環境音</button><button id="noise" hidden>按住=測試吵鬧</button></div>
+  <div class="row"><button type="button" id="cal">🎚 重新校準環境音</button><button type="button" id="noise" hidden>按住=測試吵鬧</button></div>
+  <div class="row" style="margin-top:12px">
+    <button type="button" id="saveCfgBtn" style="width:100%;background:#2563eb;color:#fff;border:0;padding:10px 14px;font-weight:800">💾 儲存設定</button>
+  </div>
+  <div id="saveHint" style="font-size:12px;color:#16a34a;min-height:1.2em"></div>
   <label>候車間隔
     <select id="rate">
       <option value="10">短 (10秒)</option>
@@ -906,20 +915,107 @@ function initWaitingPassengers(){
   st.staff.dir = -1;
 }
 
-function saveCfg(){
-  if($('#sceneT').value==='0'){
-    // 立即切換下一站風景
-    $('#sceneT').value='180';
-    go2((st.sc+1)%6);
-  }
-  ['goal','rate','dwellT','sceneT'].forEach(i=>cfg[i]=$('#'+i).value);
-  cfg.snd=$('#snd').checked;sv('ak_cfg_v3',cfg);
-  document.querySelectorAll('[data-g]').forEach(b=>b.style.background=b.dataset.g==$('#goal').value?'#2e7d32':'');
+// 執行中門檻（與 UI 同步，但不因拖曳寫盤而卡死）
+st.goal = +($('#goal').value || 30);
+
+function refreshGoalButtons(){
+  const g = String(Math.round(st.goal));
+  document.querySelectorAll('[data-g]').forEach(b=>{
+    const on = b.getAttribute('data-g') === g;
+    b.style.background = on ? '#2e7d32' : '';
+    b.style.color = on ? '#fff' : '';
+  });
+  const gl = $('#goalLive');
+  if(gl) gl.textContent = g;
+  // 音量計門檻線
+  const volGoal = $('#volGoal');
+  if(volGoal) volGoal.style.left = Math.max(0, Math.min(100, (st.goal/50)*100)) + '%';
 }
-document.querySelectorAll('#set input,#set select').forEach(e=>e.onchange=e.oninput=saveCfg);
-document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{$('#goal').value=b.dataset.g;saveCfg()});
-saveCfg();
-$('#gear').onclick=()=>$('#set').hidden=!$('#set').hidden;
+
+function applyGoalFromUI(){
+  const v = +$('#goal').value;
+  if(!isFinite(v)) return;
+  st.goal = cl(v, 8, 50);
+  // 調門檻時清掉累積，避免突然紅燈或卡住
+  st.acc = 0;
+  st.loud = 0;
+  st.quiet = 1;
+  refreshGoalButtons();
+}
+
+function saveCfg(opts){
+  opts = opts || {};
+  try{
+    applyGoalFromUI();
+    // 風景「立刻切換」只在使用者主動儲存／變更時處理
+    if($('#sceneT').value === '0'){
+      $('#sceneT').value = '180';
+      if(typeof go2 === 'function') go2((st.sc+1)%6);
+    }
+    ['goal','rate','dwellT','sceneT'].forEach(i=>{ cfg[i] = $('#'+i).value; });
+    cfg.snd = $('#snd').checked;
+    cfg.goal = String(Math.round(st.goal));
+    sv('ak_cfg_v3', cfg);
+    refreshGoalButtons();
+    if(opts.toast){
+      const h = $('#saveHint');
+      if(h){ h.textContent = '✅ 設定已儲存'; setTimeout(()=>{ if(h.textContent.indexOf('已儲存')>=0) h.textContent=''; }, 2500); }
+      const m = $('#msg');
+      if(m) m.textContent = '✅ 設定已儲存（門檻 ' + Math.round(st.goal) + '）';
+    }
+  }catch(e){
+    console.warn('saveCfg', e);
+    const h = $('#saveHint');
+    if(h) h.textContent = '⚠️ 儲存失敗，請再試一次';
+  }
+}
+
+// 拖曳門檻：只即時預覽，不寫 localStorage（避免 iOS 拖曳時卡死／壞掉）
+const goalEl = $('#goal');
+if(goalEl){
+  goalEl.addEventListener('input', ()=>{
+    st.goal = cl(+$('#goal').value || 30, 8, 50);
+    st.acc = 0; st.loud = 0;
+    refreshGoalButtons();
+  }, {passive:true});
+  goalEl.addEventListener('change', ()=> saveCfg({toast:false}), {passive:true});
+}
+
+// 其他下拉／勾選：變更即存（不含 goal 連續 input）
+document.querySelectorAll('#set select, #set input[type=checkbox]').forEach(e=>{
+  e.addEventListener('change', ()=> saveCfg({toast:false}));
+});
+
+// 嚴格／適中／寬鬆
+document.querySelectorAll('[data-g]').forEach(b=>{
+  b.addEventListener('click', ev=>{
+    ev.preventDefault();
+    ev.stopPropagation();
+    const g = +b.getAttribute('data-g');
+    $('#goal').value = String(g);
+    st.goal = g;
+    st.acc = 0; st.loud = 0; st.quiet = 1;
+    refreshGoalButtons();
+    saveCfg({toast:true});
+  });
+});
+
+const saveBtn = $('#saveCfgBtn');
+if(saveBtn) saveBtn.addEventListener('click', ev=>{
+  ev.preventDefault();
+  saveCfg({toast:true});
+});
+
+// 初始套用（不觸發風景切換的 go2 風險：sceneT 若為 0 先改回）
+if($('#sceneT') && $('#sceneT').value === '0') $('#sceneT').value = '180';
+if(cfg.goal != null){ $('#goal').value = cfg.goal; st.goal = +cfg.goal; }
+applyGoalFromUI();
+refreshGoalButtons();
+
+$('#gear').onclick = ()=>{
+  $('#set').hidden = !$('#set').hidden;
+  if(!$('#set').hidden) refreshGoalButtons();
+};
 
 // 柔和木琴風車站音樂鈴 (低刺激、溫柔)
 function chime(freqs){
@@ -1252,7 +1348,7 @@ function update(dt){
   if(st.ccTimer>0){st.ccTimer-=dt;if(st.ccTimer<=0)$('#cornerCard').classList.remove('show')}
 
   if(st.run){
-    const goal=+$('#goal').value;
+    const goal=st.goal||+$('#goal').value||30;
     // 每幀確保 AudioContext 在跑（iOS 背景回來常被 suspend）
     if(st.mic) ensureAudioRunning();
     let tg;
@@ -1646,7 +1742,7 @@ function drawRailwayInfra(railY,ch,trkType,t){
   g.fillStyle='#4a525e';g.fillRect(sigX-3, sigTop, 6, railY-sigTop);
   g.fillStyle='#1e242c';g.beginPath();g.roundRect(sigX-14, sigTop-10, 28, 66, 14);g.fill();
   g.strokeStyle='#dce2ec';g.lineWidth=2;g.stroke();
-  const goal=+$('#goal').value, isWarn=!st.loud&&(st.lvl>goal*.78||st.acc>1.0);
+  const goal=(st.goal||+$('#goal').value||30), isWarn=!st.loud&&(st.lvl>goal*.78||st.acc>1.0);
   const cols=[
     [st.loud?'#ff2e2e':'#4a1c1c', st.loud],
     [isWarn?'#fbbf24':'#4a3b18', isWarn],
