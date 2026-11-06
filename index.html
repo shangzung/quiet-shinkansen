@@ -62,6 +62,7 @@ button:hover{transform:scale(1.02)}
 <div id="set" class="card" hidden>
   <div class="row">音量容忍度 <span><button data-g="18">嚴格</button> <button data-g="30">適中</button> <button data-g="42">寬鬆</button></span></div>
   <input id="goal" type="range" min="8" max="50" value="30">
+  <div class="row" style="font-size:12px;opacity:.9"><span>目前音量</span><span id="lvlReadout">— / 門檻 30</span></div>
   <div class="row"><button id="cal">🎚 重新校準環境音</button><button id="noise" hidden>按住=測試吵鬧</button></div>
   <label>候車間隔
     <select id="rate">
@@ -699,41 +700,108 @@ function chime(freqs){
   }catch(e){}
 }
 
-// ===================== 麥克風與自動環境音校準 =====================
-let an,buf=new Float32Array(2048);
-const raw=()=>{
-  if(!an)return 4;
-  an.getFloatTimeDomainData(buf);
-  let s=0;for(const x of buf)s+=x*x;
-  return cl((20*Math.log10(Math.sqrt(s/buf.length)||1e-5)+82)*50/55,0,50);
-};
+// ===================== 麥克風與自動環境音校準（穩定版） =====================
+// 目標：降低裝置差異、背景噪音誤判、短促尖峰誤觸發
+let an, buf = new Float32Array(2048);
+const lvlHist = [];           // 近期 level 環形緩衝（中值濾波用）
+const LVL_HIST_N = 9;         // 約 0.15~0.2s 的中值窗
+let calBusy = false;          // 校準進行中，避免重入
+let adaptQuietT = 0;          // 連續安靜時間，用於慢速適應底噪
 
-function autoCalibrate(){
-  if(!st.mic)return;
-  let n=0,s=0;
-  const iv=setInterval(()=>{
-    s+=raw();
-    if(++n>=12){clearInterval(iv);st.off=cl(s/n-4, 0, 28)}
-  },100);
+// 單次 RMS → 0~50 尺度（保留與舊版相近的映射，但後續會再平滑）
+function rawInstant(){
+  if(!an) return 4;
+  an.getFloatTimeDomainData(buf);
+  let s = 0;
+  for(let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+  const rms = Math.sqrt(s / buf.length) || 1e-5;
+  // 稍調公式：更容忍低底噪裝置，避免安靜時讀數偏高
+  const db = 20 * Math.log10(rms);
+  return cl((db + 85) * 50 / 58, 0, 50);
+}
+
+// 取中值，抑制偶發尖峰（咳嗽、鍵盤、短暫碰撞）
+function median(arr){
+  const a = arr.slice().sort((x,y)=>x-y);
+  const m = a.length >> 1;
+  return a.length % 2 ? a[m] : (a[m-1] + a[m]) * 0.5;
+}
+
+// 穩定讀值：中值濾波 + 輕微 EMA（給 update 用）
+function raw(){
+  const v = rawInstant();
+  lvlHist.push(v);
+  if(lvlHist.length > LVL_HIST_N) lvlHist.shift();
+  return lvlHist.length >= 3 ? median(lvlHist) : v;
+}
+
+// 強化校準：較長取樣、去極端值、用低百分位當底噪
+function autoCalibrate(opts){
+  opts = opts || {};
+  if(!st.mic || calBusy) return;
+  calBusy = true;
+  const samples = [];
+  const maxN = opts.samples || 40;       // ~2 秒 @ 50ms
+  const interval = opts.interval || 50;
+  $('#msg').textContent = '🎚 正在聆聽環境底噪…請保持安靜';
+  const iv = setInterval(()=>{
+    samples.push(rawInstant());
+    if(samples.length >= maxN){
+      clearInterval(iv);
+      samples.sort((a,b)=>a-b);
+      // 去掉最低/最高各約 15%，取剩餘較低端作為安靜底噪
+      const lo = Math.floor(samples.length * 0.15);
+      const hi = Math.floor(samples.length * 0.75);
+      const slice = samples.slice(lo, hi);
+      const floor = slice.reduce((a,b)=>a+b, 0) / (slice.length || 1);
+      // 讓安靜時讀數落在大約 3~8，給 goal（預設 30）足夠餘裕
+      st.off = cl(floor - 5, 0, 32);
+      st.lvl = cl(floor - st.off, 0, 20);
+      st.acc = 0;
+      st.loud = 0;
+      st.quiet = 2;
+      adaptQuietT = 0;
+      calBusy = false;
+      $('#msg').textContent = '✅ 已校準環境底噪（安靜讀數約 ' + Math.round(st.lvl) + '）';
+      setTimeout(()=>{ if($('#msg').textContent.indexOf('已校準')===0) $('#msg').textContent='提示：列車停靠時越安靜，停留時間越長喔！'; }, 4500);
+    }
+  }, interval);
 }
 
 $('#go').onclick=async()=>{
   $('#start').hidden=1;['lamp','dots','top'].forEach(i=>$('#'+i).hidden=0);
   initWaitingPassengers();
   try{
-    const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}}),
-    a=st.ac=new(window.AudioContext||webkitAudioContext)();a.resume();
-    an=a.createAnalyser();an.fftSize=2048;a.createMediaStreamSource(s).connect(an);st.mic=1;
-    autoCalibrate();
+    const s = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1
+      }
+    });
+    const a = st.ac = new (window.AudioContext || webkitAudioContext)();
+    await a.resume();
+    an = a.createAnalyser();
+    an.fftSize = 2048;
+    an.smoothingTimeConstant = 0.35; // 分析器本身再做一層時間平滑
+    a.createMediaStreamSource(s).connect(an);
+    st.mic = 1;
+    // 啟動後稍等再校準，讓麥克風硬體穩定
+    setTimeout(()=>autoCalibrate({samples:48, interval:50}), 400);
   }catch(e){
-    $('#noise').hidden=0;$('#msg').textContent='未開啟麥克風：按住「按住=測試吵鬧」或空白鍵測試';
+    $('#noise').hidden=0;
+    $('#msg').textContent='未開啟麥克風：按住「按住=測試吵鬧」或空白鍵測試';
   }
   st.run=1;
   st.first=1;
   st.qs=2.0; // 啟動後平緩迎來第一班列車
 };
 
-$('#cal').onclick=()=>{autoCalibrate();$('#msg').textContent='✅ 已重新校準環境底噪！'};
+$('#cal').onclick=()=>{
+  if(!st.mic){ $('#msg').textContent='請先允許麥克風權限後再校準'; return; }
+  autoCalibrate({samples:48, interval:50});
+};
 const nz=$('#noise');nz.onpointerdown=()=>st.sim=1;nz.onpointerup=nz.onpointerleave=()=>st.sim=0;
 addEventListener('keydown',e=>{if(e.code=='Space'&&!st.mic){st.sim=1;e.preventDefault()}});
 addEventListener('keyup',e=>{if(e.code=='Space')st.sim=0});
@@ -857,19 +925,46 @@ function update(dt){
   if(st.ccTimer>0){st.ccTimer-=dt;if(st.ccTimer<=0)$('#cornerCard').classList.remove('show')}
 
   if(st.run){
-    const goal=+$('#goal').value,tg=st.mic?cl(raw()-st.off,0,50):(st.sim?46:4+Math.random()*2);
-    st.lvl+=(tg-st.lvl)*Math.min(1,dt*6);
-    const over=st.lvl-goal;
-    if(over>0){st.acc+=dt*(1+3.5*Math.min(1,over/12));st.quiet=0}
-    else{st.quiet+=dt;st.acc=Math.max(0,st.acc-dt*2.5)}
-    if(!st.loud&&st.acc>=4.5){st.loud=1;st.loudT=0}
-    if(st.loud&&st.quiet>=1.8){st.loud=0;st.acc=0}
+    const goal=+$('#goal').value;
+    // 模擬吵鬧或真實麥克風；中值濾波後的 raw 再做中速 EMA，避免抖動
+    const tg = st.mic
+      ? cl(raw() - st.off, 0, 50)
+      : (st.sim ? 46 : 4 + Math.random() * 1.5);
+    // 平滑：安靜時跟得較慢、變吵時稍快，降低誤紅燈又保有反應
+    const follow = tg > st.lvl ? Math.min(1, dt * 4.2) : Math.min(1, dt * 2.6);
+    st.lvl += (tg - st.lvl) * follow;
 
-    const isWarn=!st.loud&&(st.lvl>goal*.82||st.acc>.8);
-    if(st.loud){
-      st.loudT+=dt;
+    const over = st.lvl - goal;
+    if(over > 0){
+      // 需明顯超過門檻才快速累積；輕微超標累積很慢 → 減少背景噪音誤判
+      const intensity = Math.min(1, over / 10);
+      st.acc += dt * (0.35 + 2.8 * intensity * intensity);
+      st.quiet = 0;
+      adaptQuietT = 0;
     }else{
-      if(!st.tr) st.qs += dt * (isWarn ? 0.5 : 1.0);
+      st.quiet += dt;
+      // 回到門檻以下時較快清除累積，避免「明明安靜卻還紅」
+      st.acc = Math.max(0, st.acc - dt * 3.2);
+      // 長時間非常安靜時，緩慢下修底噪偏移（適應冷氣等穩定噪音）
+      if(st.lvl < goal * 0.55 && st.mic && !calBusy){
+        adaptQuietT += dt;
+        if(adaptQuietT > 8){
+          const targetOff = st.off + (tg - 6) * 0.02;
+          st.off = cl(st.off + (targetOff - st.off) * Math.min(1, dt * 0.15), 0, 32);
+        }
+      }else{
+        adaptQuietT = 0;
+      }
+    }
+    // 觸發紅燈需持續累積更久；解除則在安靜約 1.4 秒後
+    if(!st.loud && st.acc >= 5.2){ st.loud = 1; st.loudT = 0; }
+    if(st.loud && st.quiet >= 1.4){ st.loud = 0; st.acc = 0; }
+
+    const isWarn = !st.loud && (st.lvl > goal * 0.78 || st.acc > 1.0);
+    if(st.loud){
+      st.loudT += dt;
+    }else{
+      if(!st.tr) st.qs += dt * (isWarn ? 0.45 : 1.0);
       st.scT += dt;
     }
 
@@ -898,6 +993,13 @@ function update(dt){
       lampTxt.textContent='🟡😐';lampEl.style.borderColor='#f59e0b';lampBar.style.background='#f59e0b';
     }else{
       lampTxt.textContent='🟢🙂';lampEl.style.borderColor='#4ade80';lampBar.style.background='#22c55e';
+    }
+
+    // 設定面板即時音量讀數（方便確認校準與裝置差異）
+    const lr = $('#lvlReadout');
+    if(lr && !$('#set').hidden){
+      const tag = st.loud ? '紅' : (isWarn ? '黃' : '綠');
+      lr.textContent = Math.round(st.lvl) + ' / 門檻 ' + goal + '（' + tag + '）';
     }
 
     st.cue=!st.tr&&st.qs>=INT-4.0;
@@ -1205,7 +1307,7 @@ function drawRailwayInfra(railY,ch,trkType,t){
   g.fillStyle='#4a525e';g.fillRect(sigX-3, sigTop, 6, railY-sigTop);
   g.fillStyle='#1e242c';g.beginPath();g.roundRect(sigX-14, sigTop-10, 28, 66, 14);g.fill();
   g.strokeStyle='#dce2ec';g.lineWidth=2;g.stroke();
-  const goal=+$('#goal').value, isWarn=!st.loud&&(st.lvl>goal*.82||st.acc>.8);
+  const goal=+$('#goal').value, isWarn=!st.loud&&(st.lvl>goal*.78||st.acc>1.0);
   const cols=[
     [st.loud?'#ff2e2e':'#4a1c1c', st.loud],
     [isWarn?'#fbbf24':'#4a3b18', isWarn],
