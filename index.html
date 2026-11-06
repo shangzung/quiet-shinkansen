@@ -1,0 +1,1414 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>安靜新幹線 - 慢活鐵道小世界</title>
+<style>
+:root{--card:rgba(255,252,245,.94);--fg:#1e293b;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--card:rgba(24,32,46,.95);--fg:#f1f5f9}}
+html,body{margin:0;height:100%;overflow:hidden;background:#8ab4d8;color:var(--fg);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;user-select:none}
+canvas#c{position:fixed;inset:0;width:100%;height:100%}
+.card{background:var(--card);border-radius:20px;box-shadow:0 6px 20px rgba(0,0,0,.18);backdrop-filter:blur(8px)}
+button,select{font:inherit;border:1px solid #8885;border-radius:14px;background:var(--card);color:var(--fg);padding:8px 14px;cursor:pointer;transition:.2s}
+button:hover{transform:scale(1.02)}
+.ic{width:60px;height:60px;font-size:28px;padding:0;position:relative;display:inline-flex;align-items:center;justify-content:center}
+/* 3歲直覺表情燈號 + 底部溫和進度條 */
+#lamp{position:fixed;left:14px;top:calc(12px + env(safe-area-inset-top,0px));height:78px;padding:0 18px;font-size:40px;display:flex;align-items:center;justify-content:center;gap:10px;border:4px solid #4ade80;transition:border-color .4s;overflow:hidden}
+#lampBar{position:absolute;left:0;bottom:0;height:7px;background:#22c55e;width:0%;transition:width .25s linear}
+#dots{position:fixed;left:50%;transform:translateX(-50%);top:calc(16px + env(safe-area-inset-top,0px));padding:8px 18px;font-size:clamp(12px,2.6vw,15px);white-space:nowrap;font-weight:700;display:flex;align-items:center;gap:10px}
+#dwellHint{font-size:13px;color:#15803d;background:#dcfce7;padding:3px 10px;border-radius:99px;font-weight:700}
+#top{position:fixed;right:14px;top:calc(12px + env(safe-area-inset-top,0px));display:flex;gap:8px}
+#badge{position:absolute;right:-6px;top:-6px;font-size:20px}
+#set{position:fixed;right:14px;top:calc(84px + env(safe-area-inset-top,0px));width:min(320px,calc(100vw - 28px));padding:14px;box-sizing:border-box;font-size:14px;z-index:20}
+#set label,#set .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:10px 0}#set input[type=range]{width:100%}
+.modal{position:fixed;inset:0;margin:auto;width:min(760px,95vw);height:fit-content;max-height:88vh;overflow:auto;padding:22px;box-sizing:border-box;text-align:center;z-index:30}
+.go{font-size:30px;padding:12px 48px;background:#2e7d32;color:#fff;border:0;border-radius:99px;box-shadow:0 4px 14px rgba(46,125,50,.35)}
+/* 角落自動收錄列車卡片 (溫和滑出) */
+#cornerCard{position:fixed;right:18px;bottom:18px;width:min(300px,84vw);padding:12px 16px;text-align:left;z-index:15;transform:translateY(140%);opacity:0;transition:transform .7s cubic-bezier(.22,1,.36,1),opacity .6s;border-left:6px solid #2563eb}
+#cornerCard.show{transform:translateY(0);opacity:1}
+#cornerCard .cc-top{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:#b45309}
+#cornerCard .cc-name{font-size:20px;font-weight:900;margin:4px 0 2px;display:flex;align-items:center;gap:6px}
+#cornerCard .cc-stars{color:#f59e0b;font-size:15px;letter-spacing:2px;margin-bottom:4px}
+#cornerCard .cc-route{font-size:13px;font-weight:700;background:#8882;padding:3px 9px;border-radius:8px;display:inline-block}
+/* 圖鑑收藏館 */
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:12px}
+.dex-item{background:#8882;border-radius:16px;padding:10px;font-size:13px;text-align:left;cursor:pointer;transition:.2s;border:2px solid transparent}
+.dex-item:hover{border-color:#3b82f6}
+.dex-item canvas{width:100%;height:auto;border-radius:10px;background:linear-gradient(180deg,#dbeafe,#f1f5f9)}
+.dex-item .di-title{font-weight:800;font-size:15px;margin-top:6px;display:flex;justify-content:space-between}
+.dex-item .di-route{font-size:12px;opacity:.8;margin-top:2px}
+#detailBox{background:#8881;border-radius:16px;padding:14px;margin-bottom:14px;text-align:left;border:1px solid #8884}
+#detailBox .db-head{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+#detailBox .db-photo{width:220px;height:130px;border-radius:12px;object-fit:cover;background:#0002;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;flex-shrink:0}
+#detailBox .db-photo img{width:100%;height:100%;object-fit:cover}
+[hidden]{display:none!important}
+</style></head><body>
+<canvas id="c"></canvas>
+
+<!-- 左上：3歲幼兒直覺燈號 + 底部進度條 -->
+<div id="lamp" class="card" hidden><span id="lampTxt">🟢🙂</span><div id="lampBar"></div></div>
+<div id="dots" class="card" hidden><span id="dotsTxt"></span><span id="dwellHint" hidden>🤫 安靜觀察中・列車停留延長</span></div>
+<div id="top" hidden>
+  <button id="callBtn" class="card ic" title="召喚列車 / 切換發車">🔔</button>
+  <button id="alb" class="card ic" title="鐵道探索收藏館">🚆<span id="badge" hidden>🎁</span></button>
+  <button id="gear" class="card ic" title="設定">⚙</button>
+</div>
+
+<!-- 右下：新車進站自動收錄卡片 -->
+<div id="cornerCard" class="card">
+  <div class="cc-top"><span id="ccStatus">✨ 新車進站收錄</span><span id="ccType">新幹線</span></div>
+  <div class="cc-name">🚄 <span id="ccName">E7 北陸新幹線</span></div>
+  <div class="cc-stars" id="ccStars">⭐⭐⭐</div>
+  <div class="cc-route" id="ccRoute">東京 → 金澤・敦賀</div>
+</div>
+
+<!-- 設定選單 -->
+<div id="set" class="card" hidden>
+  <div class="row">音量容忍度 <span><button data-g="18">嚴格</button> <button data-g="30">適中</button> <button data-g="42">寬鬆</button></span></div>
+  <input id="goal" type="range" min="8" max="50" value="30">
+  <div class="row"><button id="cal">🎚 重新校準環境音</button><button id="noise" hidden>按住=測試吵鬧</button></div>
+  <label>候車間隔
+    <select id="rate">
+      <option value="10">短 (10秒)</option>
+      <option value="18" selected>適中 (18秒)</option>
+      <option value="30">長 (30秒)</option>
+    </select>
+  </label>
+  <label>月台停靠時間
+    <select id="dwellT">
+      <option value="25">25 秒 (安靜可延至40秒)</option>
+      <option value="35" selected>35 秒 (安靜可延至55秒)</option>
+      <option value="45">45 秒 (安靜可延至65秒)</option>
+    </select>
+  </label>
+  <label>風景切換
+    <select id="sceneT">
+      <option value="0">立刻切換下一站風景</option>
+      <option value="180" selected>每 3 分鐘</option>
+      <option value="300">每 5 分鐘</option>
+    </select>
+  </label>
+  <label>溫和音效<input type="checkbox" id="snd" checked></label>
+  <div id="msg" style="font-size:12px;opacity:.85;color:#2563eb">提示：列車停靠時越安靜，停留時間越長喔！</div>
+</div>
+
+<!-- 啟動畫面 -->
+<div id="start" class="modal card">
+  <div style="font-size:64px">🚄 🟢🙂</div>
+  <h2 style="margin:6px 0">安靜新幹線：慢活車站小世界</h2>
+  <p style="font-size:16px;line-height:1.6;opacity:.9">
+    🟢🙂 保持安靜，列車會緩緩進站、打開車門，停下來陪伴大家。<br>
+    👀 仔細觀察看看：今天是登山客、滑雪客還是通勤族上下車呢？<br>
+    🔴🙉 太吵雜時，車門會關上並提前離站喔。
+  </p>
+  <button id="go" class="go">▶ 走進車站</button>
+</div>
+
+<!-- 鐵道探索收藏館（圖鑑 Modal） -->
+<div id="dex" class="modal card" hidden>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <h3 style="margin:0">📘 鐵道探索收藏館 <span id="dexCount" style="font-size:14px;font-weight:normal"></span></h3>
+    <button id="dx">✖ 關閉</button>
+  </div>
+  <div id="tabs" style="margin-bottom:10px"></div>
+  <div id="detailBox" hidden></div>
+  <div id="grid"></div>
+</div>
+
+<script>
+// ===================== 基本畫布與儲存工具 =====================
+const $=s=>document.querySelector(s),cv=$('#c'),g=cv.getContext('2d');let W,H;
+function rs(){const d=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;g.setTransform(d,0,0,d,0,0)}
+addEventListener('resize',rs);rs();
+const ld=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}},sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+// ===================== 列車資料庫 =====================
+const RAW=`E7 北陸新幹線|日本|3|#1b4370|#f4f2ed|#b87333|#1b4370|E7|12|V|東京 → 金澤・敦賀|車頂採用日本傳統「空色(深藍)」，搭配象牙白車身與銅色、空色雙飾帶，流線型鼻頭專為穿越北陸山岳隧道與陡坡設計。|Shinkansen-E7.jpg
+W7 北陸新幹線|日本|3|#1b4370|#f4f2ed|#b87333|#1b4370|E7|12|V|金澤・敦賀 → 東京|JR西日本所屬的北陸新幹線主力，外型與E7系雙胞胎，結合傳統工藝色彩與「Aero Double-Wing」圓潤流線車頭。|JRW_W7_Series_W2_20150110.jpg
+E5 隼號 Hayabusa|日本|3|#1f8a5b|#f5f5f7|#e84a90|#1f8a5b|E5|10|V|東京 → 新青森・新函館北斗|常盤綠搭配飛雲白與津輕粉紅飾帶，擁有長達15公尺的超長流線鼻頭，最高時速達 320 km/h。|JR-East-E5-Hayabusa.jpg
+H5 北海道新幹線|日本|3|#1f8a5b|#f5f5f7|#8a5ac8|#1f8a5b|E5|10|V|新青森 → 新函館北斗|E5系的姊妹車，中腰飾帶改為代表北海道薰衣草的「彩香紫」，能穿越青函海底隧道。|Shinkansen_H5.jpg
+E6 小町號 Komachi|日本|3|#d32029|#f6f6f8|#b0b5bc|#d32029|E6|7|V|東京 → 秋田|茜色亮紅車頂搭配飛雲白車身與銀色流線飾帶，屬於可直通迷你新幹線的 7 輛編組高速列車。|E6_Series_Shinkansen_2013.jpg
+N700S 東海道新幹線|日本|3|#f6f8fc|#f6f8fc|#1848a0|#1848a0|N700|16|V|東京 → 新大阪・博多|新幹線最新世代標準車，「Dual Supreme Wing」雙翼立體車頭搭配經典白底雙藍線塗裝。|JR_Central_N700S_J0_20200613.jpg
+N700A 東海道新幹線|日本|2|#f6f8fc|#f6f8fc|#1c4fa8|#1c4fa8|N700|16|V|東京 → 博多|東海道與山陽新幹線主力，白色車身配深藍雙腰帶，搭載中央締結式碟煞系統。|Shinkansen_N700A_X65.jpg
+700系 新幹線|日本|2|#f6f8fc|#f6f8fc|#2068c8|#2068c8|D|16|V|東京 → 博多|著名的「鴨嘴獸」造型車頭，有效降低進入隧道時的微氣壓波噪音。|700_Series_Shinkansen_C54.jpg
+500系 新幹線|日本|4|#9ba4b0|#d8dde4|#1c366c|#9ba4b0|P500|16|V|新大阪 → 博多|鐵道迷心中的傳奇！戰鬥機般的圓筒尖銳車頭與圓形斷面車身，曾創下商業運轉 300km/h 紀錄。|500_Series_Shinkansen_V2_2015.jpg
+800系 九州新幹線|日本|3|#9e1b24|#f8f8f5|#9e1b24|#d4af37|F800|6|V|博多 → 鹿兒島中央|燕子號(Tsubame)，純白車身搭配琉璃紅車頂與金線，內裝大量使用九州樟木與傳統工藝。|Kyushu_Shinkansen_800.jpg
+Doctor Yellow 檢測車|日本|4|#ffd100|#ffd100|#1b4ca0|#1b4ca0|D|7|V|東京 ↔ 博多 (不定期)|被稱為「新幹線醫生」的黃色高速軌道檢測車，因為班表不公開，看到它象徵帶來好運！|Doctor_Yellow_T4.jpg
+ALFA-X 次世代試驗車|日本|4|#cfd8e2|#e8eef5|#3090a0|#d8478a|ALFA|10|V|仙台 ↔ 新青森 (試運轉)|為時速 360 km/h 打造的次世代實驗車，擁有誇張的 22 公尺超長鼻頭與金屬銀綠漸層塗裝。|Shinkansen_E956_ALFA-X.jpg
+L0 超電導磁浮|日本|4|#f6f8fc|#f6f8fc|#1a6fc4|#1a6fc4|MAG|7|M|品川 → 名古屋 (中央新幹線)|時速高達 500 km/h 的超電導磁浮列車，採用無車輪懸浮推進與超長低風阻前鼻。|JR_Central_L0_Series.jpg
+台灣高鐵 700T|台灣|3|#f6f6f8|#f6f6f8|#e85d1a|#222b38|D|12|V|南港 → 左營|台灣高鐵主力車種，以日本700系為基礎改良，雪白車身搭配亮眼橘黑雙色飾帶。|THSR_700T_TR31.jpg
+普悠瑪號 TEMU2000|台灣|3|#f6f6f8|#f6f6f8|#d62828|#333333|F|8|G|樹林 → 花蓮・台東|台鐵傾斜式電聯車，潔白車身塗有鮮紅修長色帶與車頭大字TRA，過彎不需大幅減速。|TRA_TEMU2000_Puyuma.jpg
+太魯閣號 TEMU1000|台灣|3|#f6f6f8|#f6f6f8|#1d4ea0|#f2a900|F|8|G|樹林 → 花蓮・知本|台鐵首款傾斜式列車，原型為九州885系，白底搭配深藍與金黃飾帶。|TRA_TEMU1000_Taroko.jpg
+EMU3000 新自強號|台灣|2|#f6f6f8|#f6f6f8|#22252a|#d62828|B|12|G|台北 → 台東・左營|榮獲Good Design大獎的「靜謐移動」極簡美學設計，白底配黑色駕駛窗與細緻紅藍邊線。|TRA_EMU3000.jpg
+推拉式自強號 PP|台灣|2|#d8dde2|#d8dde2|#e85814|#f2b824|F|12|G|基隆 → 高雄・屏東|台灣人最熟悉的「豬鼻子」推拉式自強號，銀灰車身配經典橘黃警戒塗裝。|TRA_PP_Tze-Chiang.jpg
+台鐵區間車 EMU900|台灣|1|#d2d7df|#d2d7df|#20a878|#1d5bb8|B|10|G|基隆 ↔ 新竹・苗栗|被譽為「最美區間車」，銀色不鏽鋼車身搭配微笑般的湖水綠與亮藍飾帶。|TRA_EMU900.jpg
+山手線 E235系|日本|1|#d4d8de|#d4d8de|#7ac142|#22262c|B|11|G|東京環狀線 (新宿・澀谷)|東京最繁忙的環狀通勤電車，特色是垂直鶯綠色車門塗裝與黑色科技感車頭。|JR_East_E235_Yamanote.jpg
+中央線快速 E233系|日本|1|#d4d8de|#d4d8de|#e85a14|#d4d8de|B|10|G|東京 → 高尾|貫穿東京中心的通勤大動脈，不鏽鋼車身搭配醒目的橘色腰帶。|JR_East_E233_Chuo.jpg
+京濱東北線 E233系|日本|1|#d4d8de|#d4d8de|#00a0e9|#d4d8de|B|10|G|大宮 → 東京 → 橫濱|行駛於首都圈南北向的通勤電車，車身飾帶為清爽的天空藍。|JR_East_E233-1000.jpg
+江之電 300形|日本|2|#1f5c3e|#f2e6a8|#1f5c3e|#f2e6a8|B|4|G|鎌倉 ↔ 藤澤|穿梭於湘南海岸與平交道之間的復古路面電車，經典綠奶雙色塗裝。|Enoden_305.jpg
+成田特快 N'EX E259系|日本|2|#f5f5f7|#1f2229|#d62027|#f5f5f7|F|6|G|成田機場 → 東京・新宿|連接機場與東京都心的特快車，高聳駕駛艙搭配紅黑撞色設計。|JRE_Series-E259.jpg
+小田急羅曼史號 GSE|日本|2|#d23426|#d23426|#f5f5f7|#f29b38|F|7|G|新宿 → 箱根湯本|擁有超大全景展望席的觀光特急，薔薇紅車身奔馳在富士山腳下。|Odakyu_70000_GSE.jpg
+SL 蒸汽機關車 D51|日本|3|#1c1d21|#1c1d21|#c83228|#d4af37|SL|4|G|高崎 → 水上 (觀光保存線)|被暱稱為「デコイチ(Dekoichi)」的日本經典蒸汽火車，伴隨白煙與鳴笛聲前進。|JNR_D51_498.jpg
+法國 TGV Duplex|法國|3|#233d7a|#e6e9ef|#233d7a|#d62828|D|10|V|巴黎 → 里昂・馬賽|法國高速鐵路雙層列車，銀藍塗裝搭配雙層車窗配置。|TGV_Duplex_Dasye.jpg
+德國 ICE 3|德國|3|#f4f5f8|#f4f5f8|#d8222a|#22262e|E7|8|V|法蘭克福 → 科隆・慕尼黑|德國高鐵旗艦車種，白底紅線與一路延伸至車頭的連續黑色窗帶。|DB_BR_403_ICE_3.jpg
+歐洲之星 Eurostar e320|英國|3|#1d3461|#d8dee8|#f2b718|#1d3461|E7|8|V|倫敦 ↔ 巴黎・布魯塞爾|穿越英法海底隧道的跨國高鐵，藍金灰三色現代塗裝。|Eurostar_e320.jpg
+義大利紅箭 Frecciarossa|義大利|3|#c42026|#c42026|#e2e6ec|#22252a|E7|8|V|米蘭 → 羅馬・拿坡里|義大利高鐵「紅箭1000」，法拉利般的流線火紅車身。|Frecciarossa_1000.jpg
+黃金新幹線 (傳說隱藏)|傳說|4|#ffd700|#fff2a6|#f59e0b|#ffffff|E7|12|V|全圖鑑達成・夢幻特別運行|收集齊全所有列車後才會現身的傳說級黃金塗裝E7新幹線！|Shinkansen-E7.jpg`;
+
+const M=RAW.split('\n').map((s,idx)=>{const a=s.split('|');return{id:idx,n:a[0],c:a[1],r:+a[2],roof:a[3],body:a[4],st1:a[5],st2:a[6],nose:a[7],cars:+a[8],trk:a[9],route:a[10],desc:a[11],img:a[12]}});
+
+// 6 大場景的車站名與特色旅客設定
+const SCENES=[
+  {jp:'ふじさん', zh:'富士山站', role:'hiker', colors:['#d97706','#2563eb','#15803d','#b91c1c']},
+  {jp:'ほっかいどう', zh:'北海道站', role:'skier', colors:['#0284c7','#e11d48','#7c3aed','#0d9488']},
+  {jp:'とうきょう', zh:'東京站', role:'commuter', colors:['#334155','#1e293b','#475569','#3f3f46']},
+  {jp:'しょうなん', zh:'湘南海岸', role:'beach', colors:['#f59e0b','#ec4899','#06b6d4','#84cc16']},
+  {jp:'きゅうしゅう', zh:'九州溫泉', role:'onsen', colors:['#9f1239','#4338ca','#b45309','#115e59']},
+  {jp:'ぎんが', zh:'銀河站', role:'star', colors:['#6366f1','#8b5cf6','#0ea5e9','#f43f5e']}
+];
+
+// ===================== 車體比例與車門位置計算 =====================
+const CH=()=>cl(H*.22,64,W*.13);
+function noseRatio(tp){return {E7:3.6, E5:4.8, E6:4.5, N700:3.8, D:3.4, P500:5.0, ALFA:5.8, MAG:5.0, F800:2.6, F:1.8, B:0.45, SL:3.6}[tp]||3.2}
+function carWidthRatio(tp){return tp=='B'?3.4:4.2}
+const lenOf=(m,ch)=>m.nose=='SL'?ch*9.5:(noseRatio(m.nose)+Math.min(m.cars,6)*carWidthRatio(m.nose))*ch;
+
+// 取得列車停妥時，畫面可見的車門中心 X 座標陣列 (供乘客上下車對齊)
+function getVisibleDoorXs(m,hx,ch){
+  if(m.nose=='SL'){
+    const L=ch*3.5,l=hx-L;
+    return [l-ch*.2-ch*3.5+ch*3.1, l-ch*.2-ch*7.0+ch*3.1].filter(x=>x>W*.15 && x<W*.78);
+  }
+  const NL=noseRatio(m.nose)*ch, cw=carWidthRatio(m.nose)*ch, gp=ch*.07, nc=Math.min(m.cars,6);
+  const doors=[];
+  for(let i=0;i<nc;i++){
+    const r=hx-NL-i*(cw+gp), l=r-cw;
+    if(m.nose=='B'){
+      for(let d=0;d<3;d++) doors.push(l+cw*(.10+d*.32)+ch*.17);
+    }else{
+      doors.push(l+cw*.035+ch*.12);
+      if(i>0) doors.push(r-cw*.035-ch*.12);
+    }
+  }
+  return doors.filter(x=>x>W*.14 && x<W*.78);
+}
+
+// ===================== 繪製車頭輪廓與車廂（支援車門開闔與窗內乘客剪影） =====================
+function traceHeadPath(c,tp,l,r,NL,top,ch){
+  const yBot=top+ch, hx=r+NL;
+  c.beginPath();c.moveTo(l,top);c.lineTo(r,top);
+  if(tp=='E7'){
+    c.bezierCurveTo(r+NL*.22, top, r+NL*.42, top+ch*.16, r+NL*.58, top+ch*.32);
+    c.bezierCurveTo(r+NL*.82, top+ch*.52, r+NL*.98, top+ch*.68, hx, top+ch*.79);
+    c.bezierCurveTo(hx, top+ch*.91, r+NL*.86, yBot, r+NL*.65, yBot);
+  }else if(tp=='E5'||tp=='E6'){
+    c.bezierCurveTo(r+NL*.16, top, r+NL*.26, top+ch*.30, r+NL*.40, top+ch*.44);
+    c.bezierCurveTo(r+NL*.70, top+ch*.52, r+NL*.96, top+ch*.65, hx, top+ch*.77);
+    c.bezierCurveTo(hx, top+ch*.90, r+NL*.85, yBot, r+NL*.60, yBot);
+  }else if(tp=='N700'||tp=='D'){
+    c.bezierCurveTo(r+NL*.20, top, r+NL*.36, top+ch*.28, r+NL*.52, top+ch*.44);
+    c.bezierCurveTo(r+NL*.78, top+ch*.55, r+NL*.97, top+ch*.68, hx, top+ch*.80);
+    c.bezierCurveTo(hx, top+ch*.92, r+NL*.85, yBot, r+NL*.60, yBot);
+  }else if(tp=='P500'){
+    c.bezierCurveTo(r+NL*.32, top+ch*.04, r+NL*.72, top+ch*.35, hx, top+ch*.68);
+    c.bezierCurveTo(r+NL*.85, top+ch*.92, r+NL*.55, yBot, r+NL*.30, yBot);
+  }else if(tp=='ALFA'||tp=='MAG'){
+    c.bezierCurveTo(r+NL*.14, top, r+NL*.22, top+ch*.36, r+NL*.35, top+ch*.48);
+    c.bezierCurveTo(r+NL*.68, top+ch*.54, r+NL*.96, top+ch*.68, hx, top+ch*.80);
+    c.bezierCurveTo(hx, top+ch*.92, r+NL*.85, yBot, r+NL*.55, yBot);
+  }else if(tp=='F800'||tp=='F'){
+    c.bezierCurveTo(r+NL*.45, top, r+NL*.88, top+ch*.35, hx, top+ch*.82);
+    c.bezierCurveTo(hx, top+ch*.94, r+NL*.85, yBot, r+NL*.50, yBot);
+  }else{
+    c.lineTo(r+NL*.4, top);c.quadraticCurveTo(hx, top+ch*.08, hx, top+ch*.88);c.lineTo(hx-NL*.2, yBot);
+  }
+  c.lineTo(l,yBot);c.closePath();
+}
+
+// 繪製車窗內的乘客剪影 (安靜的小世界)
+function drawWindowSilhouette(c,wx,wy,ww,wh,seed,t,occRatio){
+  // 依據座位編號與當前車廂擁擠度決定是否有乘客
+  const hash = (seed*9301+49297)%233280 / 233280;
+  if(hash > occRatio) return;
+  const sway = Math.sin(t*0.9 + seed*1.7)*1.1; // 極緩慢自然的呼吸/微動
+  const cx = wx + ww*0.52 + sway*0.4;
+  const headY = wy + wh*0.42;
+  const r = Math.min(ww,wh)*0.22;
+
+  c.save();
+  c.beginPath();c.roundRect(wx,wy,ww,wh,2);c.clip();
+  c.fillStyle='rgba(22, 32, 46, 0.72)';
+  // 肩膀與身體
+  c.beginPath();
+  c.arc(cx, wy+wh*1.05, r*1.75, Math.PI, 0);
+  c.fill();
+  // 頭部
+  c.beginPath();
+  c.arc(cx, headY, r, 0, Math.PI*2);
+  c.fill();
+  // 偶爾幾位戴著帽子或靠窗看風景的細節
+  if(seed%4===0){
+    c.fillRect(cx-r*1.2, headY-r*0.85, r*2.4, r*0.35);
+  }
+  c.restore();
+}
+
+// 繪製可開闔的車門 (openRatio: 0=全關, 1=全開)
+function drawAnimatedDoor(c,dx,doorY,doorW,doorH,winCol,openRatio,bodyCol){
+  // 1. 車門背後的車廂內部空間 (門打開時露出溫暖燈光與扶手)
+  if(openRatio>0.02){
+    c.fillStyle='#fef3c7';
+    c.fillRect(dx,doorY,doorW,doorH);
+    // 車門內部陰影與階梯踏板
+    c.fillStyle='rgba(180,130,70,.28)';
+    c.fillRect(dx,doorY,doorW,ch*.06);
+    c.fillStyle='#64748b';
+    c.fillRect(dx,doorY+doorH-3,doorW,3);
+    // 車廂內站在門邊準備下車的淡淡剪影
+    if(openRatio>0.4 && openRatio<0.95){
+      c.fillStyle='rgba(30,41,59,.35)';
+      c.beginPath();c.arc(dx+doorW*.5,doorY+doorH*.38,doorW*.18,0,7);c.fill();
+      c.fillRect(dx+doorW*.32,doorY+doorH*.55,doorW*.36,doorH*.42);
+    }
+  }
+
+  // 2. 左右兩扇滑門葉片 (隨 openRatio 向兩側滑開)
+  c.save();
+  c.beginPath();c.roundRect(dx-1,doorY,doorW+2,doorH,2);c.clip();
+  const leafW = doorW/2;
+  const slide = openRatio * (leafW * 0.86);
+
+  // 左門扇
+  const lx = dx - slide;
+  c.fillStyle=bodyCol;c.fillRect(lx,doorY,leafW,doorH);
+  c.strokeStyle='rgba(30,40,55,.45)';c.lineWidth=1.1;c.strokeRect(lx,doorY,leafW,doorH);
+  c.fillStyle=winCol;c.beginPath();c.roundRect(lx+leafW*.22,doorY+doorH*.11,leafW*.56,doorH*.24,1.5);c.fill();
+
+  // 右門扇
+  const rx = dx + leafW + slide;
+  c.fillStyle=bodyCol;c.fillRect(rx,doorY,leafW,doorH);
+  c.strokeStyle='rgba(30,40,55,.45)';c.lineWidth=1.1;c.strokeRect(rx,doorY,leafW,doorH);
+  c.fillStyle=winCol;c.beginPath();c.roundRect(rx+leafW*.22,doorY+doorH*.11,leafW*.56,doorH*.24,1.5);c.fill();
+  c.restore();
+
+  // 門框外緣
+  c.strokeStyle='rgba(20,30,45,.5)';c.lineWidth=1.2;
+  c.beginPath();c.roundRect(dx,doorY,doorW,doorH,2);c.stroke();
+}
+
+function drawSteam(c,m,hx,y,ch,o){
+  const s=o.sil,F=a=>s?'#15181c':a,L=ch*3.5,l=hx-L,t=o.t||0,openR=o.door||0,occ=o.occ||0.65;
+  for(let k=0;k<2;k++){
+    const x=l-ch*.2-(k+1)*ch*3.5;
+    c.fillStyle=F('#5a2d1c');c.fillRect(x,y-ch*1.02,ch*3.35,ch*.84);
+    c.fillStyle=F('#382015');c.fillRect(x,y-ch*1.08,ch*3.35,ch*.09);
+    if(!s){
+      c.fillStyle='#c83228';c.fillRect(x,y-ch*.44,ch*3.35,ch*.06);
+      const winCol='#ffe9a0';
+      drawAnimatedDoor(c,x+ch*.1,y-ch*.88,ch*.28,ch*.64,winCol,openR,'#5a2d1c');
+      drawAnimatedDoor(c,x+ch*2.95,y-ch*.88,ch*.28,ch*.64,winCol,openR,'#5a2d1c');
+      for(let w=0;w<6;w++){
+        const wx=x+ch*(.52+w*.38),wy=y-ch*.82,ww=ch*.26,wh=ch*.28;
+        c.fillStyle=winCol;c.beginPath();c.roundRect(wx,wy,ww,wh,3);c.fill();
+        drawWindowSilhouette(c,wx,wy,ww,wh,k*10+w+1,t,occ);
+      }
+    }
+    c.fillStyle=F('#222');
+    for(const wx of [.4,.8,2.55,2.95]){c.beginPath();c.arc(x+ch*wx,y-ch*.1,ch*.1,0,7);c.fill()}
+  }
+  c.fillStyle=F('#1c1d22');
+  c.fillRect(l+ch*.9,y-ch*.98,L-ch*1.05,ch*.72);
+  c.fillRect(l,y-ch*1.18,ch*1.0,ch*.94);
+  c.fillRect(hx-ch*.65,y-ch*1.32,ch*.26,ch*.38);
+  c.fillRect(hx-ch*1.4,y-ch*1.16,ch*.45,ch*.2);
+  if(!s){
+    c.fillStyle='#c83228';c.fillRect(l,y-ch*.32,L,ch*.09);
+    c.fillStyle='#d4af37';c.fillRect(l+ch*1.3,y-ch*.98,ch*.04,ch*.66);c.fillRect(l+ch*2.2,y-ch*.98,ch*.04,ch*.66);
+    c.fillStyle='#ffe9a0';c.fillRect(l+ch*.2,y-ch*1.02,ch*.55,ch*.34);
+    drawWindowSilhouette(c,l+ch*.2,y-ch*1.02,ch*.55,ch*.34,99,t,1);
+    c.fillStyle='#d4af37';c.fillRect(hx-ch*.3,y-ch*.72,ch*.22,ch*.12);
+  }
+  for(const x of[.55,1.25,1.95,2.65]){
+    c.fillStyle=F('#22242a');c.beginPath();c.arc(l+ch*x,y-ch*.18,ch*.22,0,7);c.fill();
+    if(!s){
+      c.strokeStyle='#d4d8de';c.lineWidth=ch*.04;
+      const a=(o.p||0)/(ch*.24);
+      c.beginPath();c.moveTo(l+ch*x,y-ch*.18);c.lineTo(l+ch*x+Math.cos(a)*ch*.18,y-ch*.18+Math.sin(a)*ch*.18);c.stroke();
+    }
+  }
+  if(!s){
+    c.strokeStyle='#c0c6ce';c.lineWidth=ch*.05;
+    c.beginPath();c.moveTo(l+ch*.55,y-ch*.18);c.lineTo(l+ch*2.65,y-ch*.18);c.stroke();
+    for(let j=0;j<5;j++){
+      c.fillStyle='rgba(245,247,250,'+(.55-j*.09)+')';
+      c.beginPath();c.arc(hx-ch*.52-j*ch*.42-(t*ch*.18%(ch*.42)),y-ch*1.48-j*ch*.26,ch*(.15+j*.07),0,7);c.fill();
+    }
+  }
+}
+
+function drawTrain(c,m,hx,y,ch,o){
+  const sil=o.sil,N=o.night||0,F=a=>sil?'#181c22':a,t=o.t||0,openR=o.door||0,occ=o.occ??0.68;
+  if(m.nose=='SL'){drawSteam(c,m,hx,y,ch,o);return}
+  const nl=noseRatio(m.nose),NL=nl*ch,cw=carWidthRatio(m.nose)*ch,gp=ch*.07,top=y-ch*1.06,nc=Math.min(m.cars,6);
+
+  for(let i=nc-1;i>=0;i--){
+    const r=hx-NL-i*(cw+gp),l=r-cw;
+    if(i<nc-1){
+      const gx=r,gw=gp+2;
+      c.fillStyle=F('#2c323d');c.fillRect(gx-1,top+ch*.03,gw,ch*.92);
+      if(!sil){
+        c.fillStyle='#181c24';c.fillRect(gx+gw*.25,top+ch*.05,gw*.5,ch*.88);
+        c.strokeStyle='#495262';c.lineWidth=1;c.strokeRect(gx+1,top+ch*.04,gw-2,ch*.90);
+      }
+    }
+    c.fillStyle=F('#1a1e24');
+    for(const bx of [l+cw*.16, (i==0?r+NL*.15:r-cw*.26)]){
+      c.fillRect(bx-ch*.32,top+ch*.88,ch*.64,ch*.16);
+      c.fillStyle=F('#2e3440');
+      c.beginPath();c.arc(bx-ch*.18,y-ch*.04,ch*.075,0,7);c.arc(bx+ch*.18,y-ch*.04,ch*.075,0,7);c.fill();
+      c.fillStyle=F('#1a1e24');
+    }
+
+    c.save();
+    if(i==0)traceHeadPath(c,m.nose,l,r,NL,top,ch);
+    else{c.beginPath();c.roundRect(l,top,cw,ch,[ch*.05,ch*.05,0,0])}
+    c.clip();
+
+    const totalW=cw+(i==0?NL+4:2);
+    c.fillStyle=F(m.body);c.fillRect(l,top,totalW,ch);
+    const roofH = (m.nose=='E5'||m.nose=='E6') ? ch*.38 : ch*.21;
+    c.fillStyle=F(m.roof);c.fillRect(l,top,totalW,roofH);
+
+    if(!sil){
+      const hg=c.createLinearGradient(0,top,0,top+ch*.35);
+      hg.addColorStop(0,'rgba(255,255,255,.28)');hg.addColorStop(.5,'rgba(255,255,255,.08)');hg.addColorStop(1,'rgba(255,255,255,0)');
+      c.fillStyle=hg;c.fillRect(l,top,totalW,ch*.35);
+    }
+
+    if(m.nose=='E7'){
+      c.fillStyle=F(m.st1);c.fillRect(l,top+ch*.21,totalW,ch*.055);
+      c.fillStyle=F(m.st2);c.fillRect(l,top+ch*.56,totalW,ch*.035);
+      c.fillStyle=F(m.st1);c.fillRect(l,top+ch*.60,totalW,ch*.03);
+    }else if(m.nose=='E5'||m.nose=='E6'||m.nose=='ALFA'){
+      c.fillStyle=F(m.st1);c.fillRect(l,top+ch*.38,totalW,ch*.065);
+    }else if(m.nose=='N700'||m.nose=='D'){
+      c.fillStyle=F(m.st1);c.fillRect(l,top+ch*.53,totalW,ch*.055);c.fillRect(l,top+ch*.605,totalW,ch*.025);
+      if(i==0 && m.nose=='N700'){
+        c.beginPath();c.moveTo(r,top+ch*.53);c.lineTo(r+NL*.72,top+ch*.72);c.lineTo(r+NL*.65,top+ch*.78);c.lineTo(r,top+ch*.62);c.fill();
+      }
+    }else if(m.nose=='P500'){
+      c.fillStyle=F(m.st1);c.fillRect(l,top+ch*.26,totalW,ch*.22);
+    }else{
+      c.fillStyle=F(m.st1);c.fillRect(l,top+ch*.52,totalW,ch*.08);
+      if(m.st2&&m.st2!=m.st1){c.fillStyle=F(m.st2);c.fillRect(l,top+ch*.61,totalW,ch*.035)}
+    }
+
+    c.fillStyle=F('#d0d5dd');c.fillRect(l,top+ch*.78,totalW,ch*.14);
+    c.fillStyle=F('#2b313b');c.fillRect(l,top+ch*.90,totalW,ch*.10);
+    if(!sil){
+      c.strokeStyle='rgba(0,0,0,.22)';c.lineWidth=1.2;
+      c.strokeRect(l+cw*.08,top+ch*.79,cw*.20,ch*.11);
+      if(i>0)c.strokeRect(r-cw*.28,top+ch*.79,cw*.20,ch*.11);
+    }
+
+    if(!sil){
+      // 車廂內溫暖燈光底色 (讓車窗內的剪影清晰可見)
+      const winCol = N>.25 ? '#ffe58f' : '#d8e8f8';
+      const doorW = ch*.24, doorH = ch*.62, doorY = top+ch*.24;
+
+      if(m.nose=='B'){
+        for(let d=0;d<3;d++){
+          const dx=l+cw*(.10+d*.32);
+          const dCol=m.n.includes('山手')?m.st1:'#bfc6d0';
+          drawAnimatedDoor(c,dx,top+ch*.20,ch*.34,ch*.68,winCol,openR,dCol);
+          if(d<2){
+            const wx=dx+ch*.40,wy=top+ch*.24,ww=ch*.52,wh=ch*.25;
+            c.fillStyle=winCol;c.beginPath();c.roundRect(wx,wy,ww,wh,3);c.fill();
+            drawWindowSilhouette(c,wx,wy,ww*.48,wh,i*20+d*2+1,t,occ);
+            drawWindowSilhouette(c,wx+ww*.5,wy,ww*.48,wh,i*20+d*2+2,t,occ);
+          }
+        }
+      }else{
+        // 新幹線 / 特急：兩端滑門 + 行先顯示板
+        drawAnimatedDoor(c,l+cw*.035,doorY,doorW,doorH,winCol,openR,m.body);
+        c.fillStyle='#111';c.fillRect(l+cw*.035+doorW+ch*.03,doorY+ch*.08,ch*.17,ch*.06);
+        c.fillStyle='#ff9900';c.fillRect(l+cw*.035+doorW+ch*.04,doorY+ch*.095,ch*.13,ch*.03);
+        if(i>0){
+          drawAnimatedDoor(c,r-cw*.035-doorW,doorY,doorW,doorH,winCol,openR,m.body);
+        }
+
+        // 等間距小車窗 + 窗內乘客剪影
+        const wStart = l+cw*.14, wEnd = i==0 ? r-cw*.08 : r-cw*.14;
+        const wStep = ch*.34, wW = ch*.21, wH = ch*.15, wY = top+ch*.31;
+        let wIdx=0;
+        for(let wx=wStart; wx+wW<=wEnd; wx+=wStep, wIdx++){
+          c.fillStyle='#0f1824';c.beginPath();c.roundRect(wx-1,wY-1,wW+2,wH+2,ch*.028);c.fill();
+          c.fillStyle=winCol;c.beginPath();c.roundRect(wx,wY,wW,wH,ch*.025);c.fill();
+          drawWindowSilhouette(c,wx,wY,wW,wH,i*15+wIdx+3,t,occ);
+          // 窗戶玻璃淡淡反光
+          c.fillStyle='rgba(255,255,255,.22)';
+          c.beginPath();c.moveTo(wx+2,wY+2);c.lineTo(wx+wW*.55,wY+2);c.lineTo(wx+wW*.25,wY+wH-2);c.lineTo(wx+2,wY+wH-2);c.fill();
+        }
+      }
+
+      if(i==0){
+        if(m.nose=='B'){
+          c.fillStyle='#141c24';c.fillRect(r-ch*.15,top+ch*.12,NL*.95,ch*.38);
+          c.fillStyle=winCol;c.fillRect(r-ch*.08,top+ch*.16,NL*.7,ch*.28);
+        }else{
+          const cdx=r-ch*.18;
+          c.strokeStyle='rgba(30,40,55,.5)';c.lineWidth=1.2;c.strokeRect(cdx,top+ch*.26,ch*.15,ch*.56);
+          c.fillStyle=winCol;c.fillRect(cdx+ch*.03,top+ch*.30,ch*.09,ch*.14);
+
+          c.fillStyle='#121c28';c.beginPath();
+          if(m.nose=='E7'||m.nose=='P500'){
+            c.moveTo(r+NL*.05,top+ch*.10);c.quadraticCurveTo(r+NL*.28,top+ch*.08,r+NL*.48,top+ch*.26);
+            c.lineTo(r+NL*.42,top+ch*.34);c.quadraticCurveTo(r+NL*.22,top+ch*.22,r+NL*.05,top+ch*.24);
+          }else if(m.nose=='E5'||m.nose=='E6'||m.nose=='ALFA'||m.nose=='MAG'){
+            c.moveTo(r+NL*.02,top+ch*.08);c.quadraticCurveTo(r+NL*.18,top+ch*.08,r+NL*.34,top+ch*.36);
+            c.lineTo(r+NL*.26,top+ch*.41);c.quadraticCurveTo(r+NL*.14,top+ch*.24,r+NL*.02,top+ch*.23);
+          }else{
+            c.moveTo(r+NL*.06,top+ch*.12);c.quadraticCurveTo(r+NL*.24,top+ch*.14,r+NL*.44,top+ch*.36);
+            c.lineTo(r+NL*.36,top+ch*.42);c.quadraticCurveTo(r+NL*.18,top+ch*.28,r+NL*.06,top+ch*.26);
+          }
+          c.closePath();c.fill();
+          c.strokeStyle='rgba(190,225,255,.55)';c.lineWidth=2;c.stroke();
+
+          c.fillStyle=m.st1;c.beginPath();c.roundRect(r-ch*.55,top+ch*.33,ch*.26,ch*.12,2);c.fill();
+        }
+        const lx = m.nose=='B' ? hx-ch*.06 : r+NL*.66;
+        const ly = m.nose=='E7' ? top+ch*.46 : top+ch*.58;
+        c.fillStyle='#222';c.beginPath();c.ellipse(lx,ly,ch*.11,ch*.055,.25,0,7);c.fill();
+        c.fillStyle='#fffbe0';c.beginPath();c.ellipse(lx+ch*.02,ly,ch*.07,ch*.038,.25,0,7);c.fill();
+
+        c.strokeStyle='rgba(0,0,0,.28)';c.lineWidth=1.2;
+        c.beginPath();c.moveTo(hx-ch*.35,top+ch*.68);c.lineTo(hx-ch*.32,top+ch*.95);c.stroke();
+      }
+    }
+    c.restore();
+
+    c.save();
+    if(i==0)traceHeadPath(c,m.nose,l,r,NL,top,ch);
+    else{c.beginPath();c.roundRect(l,top,cw,ch,[ch*.05,ch*.05,0,0])}
+    c.strokeStyle=sil?'#000':'rgba(20,30,45,.32)';c.lineWidth=1.4;c.stroke();
+    c.restore();
+
+    if(!sil&&m.trk!='M'&&(i==1||i==3)){
+      const px=l+cw*.5;
+      c.fillStyle=m.roof;c.fillRect(px-ch*.26,top-ch*.06,ch*.52,ch*.07);
+      c.strokeStyle='#3a424e';c.lineWidth=ch*.026;c.lineCap='round';c.lineJoin='round';
+      c.beginPath();c.moveTo(px-ch*.12,top-ch*.04);c.lineTo(px+ch*.16,top-ch*.18);c.lineTo(px-ch*.04,top-ch*.31);c.stroke();
+      c.strokeStyle='#b87333';c.lineWidth=ch*.032;
+      c.beginPath();c.moveTo(px-ch*.18,top-ch*.31);c.lineTo(px+ch*.10,top-ch*.31);c.stroke();
+    }
+  }
+
+  if(!sil&&(N>.15||o.glow)){
+    const ly=top+ch*.56;
+    const q=c.createRadialGradient(hx,ly,0,hx+ch*1.2,ly,ch*2.2);
+    q.addColorStop(0,'rgba(255,248,195,.75)');q.addColorStop(1,'rgba(255,248,195,0)');
+    c.fillStyle=q;c.fillRect(hx-ch*.8,ly-ch*1.6,ch*3.6,ch*3.2);
+  }
+}
+
+// ===================== 車站小世界：特色旅客與站務員繪製 =====================
+// 繪製單一精緻小人物 (無臉孔極簡繪本風，附帶場景特色配件與緩慢步行/揮手動作)
+function drawPerson(c,p,platY,ch,t){
+  if(p.alpha<=0.02)return;
+  c.save();
+  c.globalAlpha = cl(p.alpha,0,1);
+  const h = ch * 0.44 * (p.scale||1);
+  const x = p.x, y = platY;
+  const dir = p.dir || 1;
+  // 緩慢自然的步行擺動 (不奔跑、不跳躍)
+  const walkPhase = p.walking ? Math.sin(t*3.6 + p.seed)*0.22 : 0;
+  const bob = p.walking ? Math.abs(Math.sin(t*3.6 + p.seed))*1.2 : 0;
+
+  // 腳步與雙腿
+  c.strokeStyle='#1e293b';c.lineWidth=Math.max(2, h*0.11);c.lineCap='round';
+  c.beginPath();
+  c.moveTo(x-h*.07, y-h*.38);
+  c.lineTo(x-h*.07 - Math.sin(walkPhase)*h*.18, y);
+  c.moveTo(x+h*.07, y-h*.38);
+  c.lineTo(x+h*.07 + Math.sin(walkPhase)*h*.18, y);
+  c.stroke();
+
+  // 場景特色背後配件 (登山大背包 / 滑雪板)
+  if(p.role=='hiker'){
+    // 登山大背包
+    c.fillStyle='#92400e';
+    c.beginPath();c.roundRect(x - dir*h*.28, y-h*.82-bob, h*.24, h*.42, 4);c.fill();
+    c.fillStyle='#f59e0b';
+    c.beginPath();c.roundRect(x - dir*h*.28, y-h*.86-bob, h*.24, h*.10, 3);c.fill();
+  }else if(p.role=='skier'){
+    // 斜背雙板滑雪板
+    c.save();
+    c.translate(x - dir*h*.12, y-h*.58-bob);
+    c.rotate(-dir*0.28);
+    c.fillStyle='#38bdf8';c.fillRect(-2, -h*.55, 4.5, h*1.05);
+    c.fillStyle='#0284c7';c.fillRect(-2, -h*.55, 4.5, h*.18);
+    c.restore();
+  }
+
+  // 身體大衣/服裝
+  c.fillStyle = p.color;
+  c.beginPath();
+  c.roundRect(x-h*.17, y-h*.78-bob, h*.34, h*.44, [h*.12,h*.12,3,3]);
+  c.fill();
+
+  // 站務員專屬制服金釦與紅領帶細節
+  if(p.role=='staff'){
+    c.fillStyle='#fbbf24';
+    c.fillRect(x-h*.17, y-h*.56-bob, h*.34, 2);
+  }
+
+  // 頭部與膚色
+  c.fillStyle='#fde68a';
+  c.beginPath();c.arc(x, y-h*.91-bob, h*.13, 0, Math.PI*2);c.fill();
+
+  // 帽子與頭部配件
+  if(p.role=='staff'){
+    // 日本站務員深藍制帽 + 金色帽徽 + 白線
+    c.fillStyle='#1e3a8a';
+    c.fillRect(x-h*.14, y-h*1.08-bob, h*.28, h*.10);
+    c.fillStyle='#ffffff';
+    c.fillRect(x-h*.14, y-h*1.01-bob, h*.28, h*.025);
+    c.fillStyle='#172554';
+    c.fillRect(x-h*.16, y-h*.99-bob, h*.34, h*.03);
+  }else if(p.role=='hiker'){
+    // 登山遮陽圓盤帽
+    c.fillStyle='#78716c';
+    c.beginPath();c.ellipse(x, y-h*1.0-bob, h*.21, h*.045, 0, 0, 7);c.fill();
+    c.beginPath();c.arc(x, y-h*1.0-bob, h*.12, Math.PI, 0);c.fill();
+  }else if(p.role=='skier'){
+    // 北海道毛線球球帽 + 雪鏡
+    c.fillStyle='#e11d48';
+    c.beginPath();c.arc(x, y-h*.96-bob, h*.135, Math.PI, 0);c.fill();
+    c.fillStyle='#fff';c.beginPath();c.arc(x, y-h*1.12-bob, h*.05, 0, 7);c.fill();
+  }else if(p.role=='beach'){
+    // 海邊草帽
+    c.fillStyle='#fcd34d';
+    c.beginPath();c.ellipse(x, y-h*1.0-bob, h*.22, h*.045, 0, 0, 7);c.fill();
+    c.beginPath();c.arc(x, y-h*1.0-bob, h*.12, Math.PI, 0);c.fill();
+    c.fillStyle='#ef4444';c.fillRect(x-h*.11, y-h*1.02-bob, h*.22, h*.025);
+  }else{
+    // 柔和髮型
+    c.fillStyle='#334155';
+    c.beginPath();c.arc(x, y-h*.94-bob, h*.135, Math.PI*.9, Math.PI*2.1);c.fill();
+  }
+
+  // 手臂與手持特色物品 / 緩慢揮手動畫
+  if(p.waving){
+    // 列車離站時：緩慢、溫柔地舉手揮別
+    const waveAng = -2.2 + Math.sin(t*3.2 + p.seed)*0.25;
+    const ax = x + dir*h*.12, ay = y-h*.72-bob;
+    const hx2 = ax + Math.cos(waveAng)*h*.26, hy2 = ay + Math.sin(waveAng)*h*.26;
+    c.strokeStyle = p.color; c.lineWidth = Math.max(2.2, h*.09);
+    c.beginPath();c.moveTo(ax,ay);c.lineTo(hx2,hy2);c.stroke();
+    // 站務員白手套 / 旅客手掌
+    c.fillStyle = p.role=='staff' ? '#ffffff' : '#fde68a';
+    c.beginPath();c.arc(hx2,hy2,h*.045,0,7);c.fill();
+  }else{
+    // 自然垂手與隨身物品
+    const handX = x + dir*h*.14 + Math.sin(walkPhase)*h*.08;
+    const handY = y - h*.48 - bob;
+    c.strokeStyle = p.color; c.lineWidth = Math.max(2, h*.09);
+    c.beginPath();c.moveTo(x+dir*h*.08, y-h*.70-bob);c.lineTo(handX, handY);c.stroke();
+
+    if(p.role=='hiker'){
+      // 登山杖
+      c.strokeStyle='#57534e';c.lineWidth=1.8;
+      c.beginPath();c.moveTo(handX+dir*h*.06, y-h*.68-bob);c.lineTo(handX+dir*h*.10, y);c.stroke();
+    }else if(p.role=='commuter'){
+      // 東京通勤公事包
+      c.fillStyle='#451a03';
+      c.beginPath();c.roundRect(handX-h*.11, handY, h*.22, h*.16, 2);c.fill();
+    }else if(p.role=='beach'){
+      // 海邊相機 / 小提袋
+      c.fillStyle='#0ea5e9';
+      c.beginPath();c.roundRect(handX-h*.08, handY, h*.16, h*.15, 3);c.fill();
+    }else if(p.role=='onsen'){
+      // 溫泉小竹籃
+      c.fillStyle='#d97706';
+      c.beginPath();c.roundRect(handX-h*.09, handY, h*.18, h*.14, 4);c.fill();
+    }else if(p.role=='star'){
+      // 銀河溫暖小提燈
+      c.fillStyle='#fef08a';
+      c.beginPath();c.arc(handX+dir*h*.06, handY+h*.06, h*.06, 0, 7);c.fill();
+    }
+  }
+  c.restore();
+}
+
+// ===================== 狀態管理與音效 =====================
+let seen=ld('ak_s',{}),cd=ld('ak_c',{}),cfg=ld('ak_cfg_v3',{}),customPhotos=ld('ak_ph',{});
+['goal','rate','dwellT','sceneT'].forEach(i=>{if(cfg[i]!=null && $('#'+i).querySelector(`option[value="${cfg[i]}"],input`))$('#'+i).value=cfg[i]});
+if(cfg.snd!=null)$('#snd').checked=cfg.snd;
+
+const st={
+  run:0,mic:0,lvl:0,acc:0,quiet:0,loud:0,loudT:0,qs:0,scT:0,
+  tr:null,arm:0,off:0,sim:0,sc:0,first:1,page:null,fade:null,pend:null,t:0,cue:0,ccTimer:0,
+  pax:[], // 月台上的少量旅客陣列
+  staff:{x:300, dir:-1, walking:false, waving:false, alpha:1, role:'staff', color:'#1e3a8a', seed:7, scale:1.04}
+};
+const bd=b=>[...Array(10).keys()].every(k=>seen[b*10+k]),nd=()=>[0,1,2].filter(bd).length,unl=()=>Math.min(6,1+2*nd());
+
+// 初始化月台上候車的 2 位安靜旅客
+function initWaitingPassengers(){
+  const scObj = SCENES[st.sc] || SCENES[0];
+  st.pax = [0,1].map(k=>({
+    x: W*(0.28 + k*0.24),
+    targetX: W*(0.28 + k*0.24),
+    dir: 1,
+    walking: false,
+    waving: false,
+    alpha: 1,
+    state: 'wait_board', // 等待上車
+    delay: 1.8 + k*2.4,
+    role: scObj.role,
+    color: scObj.colors[k % scObj.colors.length],
+    seed: k*13 + 1
+  }));
+  st.staff.x = W*0.79;
+  st.staff.dir = -1;
+}
+
+function saveCfg(){
+  if($('#sceneT').value==='0'){
+    // 立即切換下一站風景
+    $('#sceneT').value='180';
+    go2((st.sc+1)%6);
+  }
+  ['goal','rate','dwellT','sceneT'].forEach(i=>cfg[i]=$('#'+i).value);
+  cfg.snd=$('#snd').checked;sv('ak_cfg_v3',cfg);
+  document.querySelectorAll('[data-g]').forEach(b=>b.style.background=b.dataset.g==$('#goal').value?'#2e7d32':'');
+}
+document.querySelectorAll('#set input,#set select').forEach(e=>e.onchange=e.oninput=saveCfg);
+document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{$('#goal').value=b.dataset.g;saveCfg()});
+saveCfg();
+$('#gear').onclick=()=>$('#set').hidden=!$('#set').hidden;
+
+// 柔和木琴風車站音樂鈴 (低刺激、溫柔)
+function chime(freqs){
+  if(!$('#snd').checked)return;
+  try{
+    const a=st.ac||(st.ac=new(window.AudioContext||webkitAudioContext)());
+    (Array.isArray(freqs)?freqs:[freqs]).forEach((f,idx)=>{
+      const o=a.createOscillator(),v=a.createGain();
+      o.type='sine';o.frequency.value=f;o.connect(v);v.connect(a.destination);
+      const t0=a.currentTime+idx*.22;
+      v.gain.setValueAtTime(.05,t0);v.gain.exponentialRampToValueAtTime(.0008,t0+.95);
+      o.start(t0);o.stop(t0+.95);
+    });
+  }catch(e){}
+}
+
+// ===================== 麥克風與自動環境音校準 =====================
+let an,buf=new Float32Array(2048);
+const raw=()=>{
+  if(!an)return 4;
+  an.getFloatTimeDomainData(buf);
+  let s=0;for(const x of buf)s+=x*x;
+  return cl((20*Math.log10(Math.sqrt(s/buf.length)||1e-5)+82)*50/55,0,50);
+};
+
+function autoCalibrate(){
+  if(!st.mic)return;
+  let n=0,s=0;
+  const iv=setInterval(()=>{
+    s+=raw();
+    if(++n>=12){clearInterval(iv);st.off=cl(s/n-4, 0, 28)}
+  },100);
+}
+
+$('#go').onclick=async()=>{
+  $('#start').hidden=1;['lamp','dots','top'].forEach(i=>$('#'+i).hidden=0);
+  initWaitingPassengers();
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}}),
+    a=st.ac=new(window.AudioContext||webkitAudioContext)();a.resume();
+    an=a.createAnalyser();an.fftSize=2048;a.createMediaStreamSource(s).connect(an);st.mic=1;
+    autoCalibrate();
+  }catch(e){
+    $('#noise').hidden=0;$('#msg').textContent='未開啟麥克風：按住「按住=測試吵鬧」或空白鍵測試';
+  }
+  st.run=1;
+  st.first=1;
+  st.qs=2.0; // 啟動後平緩迎來第一班列車
+};
+
+$('#cal').onclick=()=>{autoCalibrate();$('#msg').textContent='✅ 已重新校準環境底噪！'};
+const nz=$('#noise');nz.onpointerdown=()=>st.sim=1;nz.onpointerup=nz.onpointerleave=()=>st.sim=0;
+addEventListener('keydown',e=>{if(e.code=='Space'&&!st.mic){st.sim=1;e.preventDefault()}});
+addEventListener('keyup',e=>{if(e.code=='Space')st.sim=0});
+
+// 右上角「🔔」：若無車則召喚進站；若停靠中則溫和關門準備發車
+$('#callBtn').onclick=()=>{
+  st.loud=0;st.acc=0;
+  if(!st.tr){
+    spawnTrain();
+  }else if(st.tr.ph=='stop' && st.tr.t < st.tr.maxDwell - 4){
+    st.tr.t = st.tr.maxDwell - 4; // 進入關門準備發車階段
+  }
+};
+
+// ===================== 抽車、進站與上下車劇本生成 =====================
+function pick(){
+  const b=[0,1,2].find(x=>!bd(x));
+  if(b==null&&!seen[30])return 30;
+  const un=b==null?[]:[...Array(10).keys()].map(k=>b*10+k).filter(i=>!seen[i]);
+  if(!Object.keys(seen).length)return 0;
+  if(un.length&&Math.random()<.78){
+    const w=un.map(i=>[1,1,.85,.6,.35][M[i].r]||.5);
+    let r=Math.random()*w.reduce((a,c)=>a+c,0),k=0;
+    for(;k<un.length-1&&(r-=w[k])>=0;k++);
+    return un[k];
+  }
+  const sn=Object.keys(seen).map(Number);
+  return sn.length?sn[Math.random()*sn.length|0]:0;
+}
+
+function spawnTrain(){
+  const idx = pick();
+  const baseDwell = +$('#dwellT').value || 35;
+  st.tr={
+    i: idx,
+    x: -30,
+    ph: 'in',
+    t: 0,
+    v: 0,
+    door: 0,        // 車門開度 0~1
+    occ: 0.65,      // 車廂內乘客比例
+    baseDwell: baseDwell,
+    maxDwell: baseDwell,
+    chimePlayed: false
+  };
+  st.qs=0;st.first=0;
+}
+
+function showCornerCard(m,isNew){
+  $('#ccStatus').textContent=isNew?'✨ 新車進站收錄':'✅ 已收錄列車 (第'+seen[m.id]+'次停靠)';
+  $('#ccStatus').style.color=isNew?'#b45309':'#15803d';
+  $('#ccType').textContent=m.trk=='V'?'高架新幹線':(m.trk=='M'?'超電導磁浮':'在來線・台鐵');
+  $('#ccName').textContent=m.n;
+  $('#ccStars').textContent='⭐'.repeat(m.r);
+  $('#ccRoute').textContent='📍 '+m.route;
+  $('#cornerCard').classList.add('show');
+  st.ccTimer=7.5;
+}
+
+// 當列車平穩停妥於月台時：觸發收錄與少量旅客上下車劇本
+function arrive(){
+  const T=st.tr, i=T.i, m=M[i], isNew=!seen[i];
+  seen[i]=(seen[i]||0)+1;sv('ak_s',seen);
+  showCornerCard(m,isNew);
+  if(isNew){$('#badge').hidden=0;chime([440,554,659])}else{chime([440,554])}
+
+  const ch=CH(), sx=W*.86;
+  const doors = getVisibleDoorXs(m,sx,ch);
+  const scObj = SCENES[st.sc] || SCENES[0];
+
+  if(doors.length>0){
+    // 1. 原本在月台等候的 1~2 位旅客：分配到最近的車門，準備等門開後緩慢上車
+    st.pax.forEach((p,idx)=>{
+      const dX = doors[idx % doors.length];
+      p.targetX = dX;
+      p.state = 'wait_board';
+      p.delay = 2.6 + idx*2.2;
+    });
+
+    // 2. 從其他車門緩慢下車的 2 位新旅客（攜帶符合場景特色的物品）
+    const alightCount = 2;
+    for(let k=0;k<alightCount;k++){
+      const dX = doors[(k+1) % doors.length];
+      const restSpot = cl(dX + (k%2===0 ? -ch*1.1 : ch*1.1), W*.18, W*.74);
+      st.pax.push({
+        x: dX,
+        targetX: restSpot,
+        dir: restSpot > dX ? 1 : -1,
+        walking: false,
+        waving: false,
+        alpha: 0, // 等門打開才從車廂現身
+        state: 'wait_alight',
+        delay: 2.2 + k*3.0,
+        role: scObj.role,
+        color: scObj.colors[(k+2) % scObj.colors.length],
+        seed: (k+3)*19
+      });
+    }
+  }
+
+  const b=i/10|0;
+  if(i<30&&bd(b)&&!cd[b]){cd[b]=1;sv('ak_c',cd);st.page={t:0};st.pend=1+2*b}
+}
+
+function endTrain(){
+  st.tr=null;st.qs=0;st.first=0;
+  $('#dwellHint').hidden=true;
+  // 留下的下車旅客轉為下一班車的候車旅客 (維持 2 人，避免畫面混亂)
+  st.pax = st.pax.filter(p=>p.alpha>0.5).slice(0,2);
+  st.pax.forEach((p,idx)=>{
+    p.waving=false;p.walking=false;p.state='wait_board';p.delay=2.5+idx*2;
+  });
+  st.staff.waving=false;
+  if(st.pend!=null){go(st.pend);st.pend=null}
+}
+const go2=i=>{st.fade={t:0,n:i,sw:0}};function go(i){if(!st.fade)go2(i)}
+
+// ===================== 核心更新迴圈：緩慢進站、20~60秒停靠、上下車與揮手 =====================
+function update(dt){
+  st.t+=dt;const ch=CH();
+  if(st.ccTimer>0){st.ccTimer-=dt;if(st.ccTimer<=0)$('#cornerCard').classList.remove('show')}
+
+  if(st.run){
+    const goal=+$('#goal').value,tg=st.mic?cl(raw()-st.off,0,50):(st.sim?46:4+Math.random()*2);
+    st.lvl+=(tg-st.lvl)*Math.min(1,dt*6);
+    const over=st.lvl-goal;
+    if(over>0){st.acc+=dt*(1+3.5*Math.min(1,over/12));st.quiet=0}
+    else{st.quiet+=dt;st.acc=Math.max(0,st.acc-dt*2.5)}
+    if(!st.loud&&st.acc>=4.5){st.loud=1;st.loudT=0}
+    if(st.loud&&st.quiet>=1.8){st.loud=0;st.acc=0}
+
+    const isWarn=!st.loud&&(st.lvl>goal*.82||st.acc>.8);
+    if(st.loud){
+      st.loudT+=dt;
+    }else{
+      if(!st.tr) st.qs += dt * (isWarn ? 0.5 : 1.0);
+      st.scT += dt;
+    }
+
+    // 左上角 3 歲直覺表情燈號 + 底部進度條
+    const lampEl=$('#lamp'), lampTxt=$('#lampTxt'), lampBar=$('#lampBar');
+    const INT = st.first ? 3.5 : +$('#rate').value;
+
+    if(!st.tr){
+      // 候車中：綠條代表距離火車進站的集氣進度
+      const prog = cl((st.qs/INT)*100, 0, 100);
+      lampBar.style.width = prog + '%';
+      $('#dwellHint').hidden = true;
+    }else if(st.tr.ph=='stop'){
+      // 停靠中：綠條代表列車在月台陪伴大家的時間
+      const remain = cl((1 - st.tr.t / st.tr.maxDwell)*100, 0, 100);
+      lampBar.style.width = remain + '%';
+      $('#dwellHint').hidden = st.loud || isWarn;
+    }else{
+      lampBar.style.width = '100%';
+      $('#dwellHint').hidden = true;
+    }
+
+    if(st.loud){
+      lampTxt.textContent='🔴🙉';lampEl.style.borderColor='#ef4444';lampBar.style.background='#ef4444';
+    }else if(isWarn){
+      lampTxt.textContent='🟡😐';lampEl.style.borderColor='#f59e0b';lampBar.style.background='#f59e0b';
+    }else{
+      lampTxt.textContent='🟢🙂';lampEl.style.borderColor='#4ade80';lampBar.style.background='#22c55e';
+    }
+
+    st.cue=!st.tr&&st.qs>=INT-4.0;
+    if(!st.tr&&!st.loud&&st.qs>=INT){
+      spawnTrain();
+    }
+
+    // ===================== 列車四階段慢速狀態機 =====================
+    const T=st.tr;
+    if(T){
+      const m=M[T.i],L=lenOf(m,ch),sx=W*.86;
+
+      // 若太吵超過 4 秒：關門並溫和退回或提前離站
+      if(st.loud && st.loudT>4.0){
+        if(T.ph=='in'){
+          T.ph='back';$('#cornerCard').classList.remove('show');
+        }else if(T.ph=='stop' && T.t < T.maxDwell - 3.5){
+          T.t = T.maxDwell - 3.5; // 提前進入關門程序
+        }
+      }
+
+      if(T.ph=='in'){
+        // 1. 緩慢平穩進站 (耗時約 8~10 秒，像真車一樣優雅滑入減速)
+        const dist = sx - T.x;
+        const spd = cl(dist * 0.42, W*0.022, W*0.145);
+        T.x += (st.loud ? spd*0.2 : spd) * dt;
+        if(dist <= 2.5){
+          T.x = sx;
+          T.ph = 'stop';
+          T.t = 0;
+          arrive();
+        }
+      }else if(T.ph=='stop'){
+        // 2. 停靠月台 25~60 秒 + 安靜延長獎勵
+        T.t += dt;
+        // 只要教室非常安靜(綠燈)，每安靜 1 秒，列車就多停留 0.35 秒 (最高可延長至 65 秒)
+        if(!st.loud && !isWarn && T.maxDwell < T.baseDwell + 22){
+          T.maxDwell += dt * 0.35;
+        }
+
+        // 車門開關時序：停妥 1.2 秒後緩慢開門；發車前 3.5 秒緩慢關門
+        const closeStart = T.maxDwell - 3.5;
+        if(T.t > 1.2 && T.t < closeStart){
+          T.door = Math.min(1, T.door + dt * 0.65); // 約 1.5 秒優雅全開
+        }else if(T.t >= closeStart){
+          if(!T.chimePlayed){
+            T.chimePlayed = true;
+            chime([523,659]); // 溫柔發車提示音
+          }
+          T.door = Math.max(0, T.door - dt * 0.65); // 緩慢關門
+        }
+
+        // 門完全關妥且時間到達後，開始緩慢起步離站
+        if(T.t >= T.maxDwell && T.door <= 0.01){
+          T.door = 0;
+          T.ph = 'out';
+          T.v = W * 0.012; // 極緩慢起步
+          // 月台上的旅客與站務員開始緩緩揮手送別
+          st.staff.waving = true;
+          st.staff.walking = false;
+          st.pax.forEach((p,idx)=>{if(p.alpha>0.8 && idx%2===0) p.waving=true});
+        }
+      }else if(T.ph=='out'){
+        // 3. 緩慢加速離站 (讓孩子能目送整列火車與揮手的站務員)
+        T.v = Math.min(W*0.24, T.v + W*0.032*dt);
+        T.x += T.v * dt;
+        if(T.x - L > W + 50) endTrain();
+      }else if(T.ph=='back'){
+        T.door = Math.max(0, T.door - dt*1.2);
+        T.x -= W*0.18*dt;
+        if(T.x < -40) endTrain();
+      }
+    }
+
+    // ===================== 月台旅客與站務員慢動作更新 =====================
+    const walkSpeed = cl(W*0.028, 22, 38); // 悠閒散步速度
+    st.pax.forEach(p=>{
+      if(st.tr && st.tr.ph=='stop' && st.tr.door > 0.75){
+        if(p.state=='wait_board'){
+          p.delay -= dt;
+          if(p.delay <= 0) p.state = 'boarding';
+        }else if(p.state=='boarding'){
+          const dx = p.targetX - p.x;
+          if(Math.abs(dx) > 3){
+            p.walking = true;
+            p.dir = dx > 0 ? 1 : -1;
+            p.x += p.dir * walkSpeed * dt;
+          }else{
+            // 走到車門前，緩慢走進車廂內淡出
+            p.walking = false;
+            p.alpha -= dt * 0.85;
+            if(p.alpha <= 0){
+              p.state = 'inside';
+              st.tr.occ = Math.min(0.9, st.tr.occ + 0.08);
+            }
+          }
+        }else if(p.state=='wait_alight'){
+          p.delay -= dt;
+          if(p.delay <= 0) p.state = 'alighting';
+        }else if(p.state=='alighting'){
+          // 從車廂門內緩慢走出來淡入
+          if(p.alpha < 1){
+            p.alpha = Math.min(1, p.alpha + dt * 0.85);
+          }else{
+            const dx = p.targetX - p.x;
+            if(Math.abs(dx) > 3){
+              p.walking = true;
+              p.dir = dx > 0 ? 1 : -1;
+              p.x += p.dir * walkSpeed * dt;
+            }else{
+              p.walking = false;
+              p.state = 'on_platform';
+            }
+          }
+        }
+      }else{
+        p.walking = false;
+      }
+    });
+
+    // 站務員偶爾在月台右側慢步巡視
+    const sf = st.staff;
+    if(st.tr && st.tr.ph=='stop' && st.tr.t > 3 && st.tr.t < st.tr.maxDwell - 5){
+      sf.walking = true;
+      sf.waving = false;
+      sf.x += sf.dir * (walkSpeed * 0.65) * dt;
+      if(sf.x < W*0.72) sf.dir = 1;
+      if(sf.x > W*0.82) sf.dir = -1;
+    }else if(st.tr && st.tr.ph=='out'){
+      sf.walking = false;
+      sf.dir = 1;
+      sf.waving = true;
+    }else{
+      sf.walking = false;
+    }
+
+    if(+$('#sceneT').value>0 && st.scT>=+$('#sceneT').value && !st.fade && !st.tr){
+      go2((st.sc+1)%unl());st.scT=0;
+    }
+  }
+
+  st.arm+=((st.loud?1:0)-st.arm)*Math.min(1,dt*2.0);
+  if(st.page){st.page.t+=dt;if(st.page.t>4)st.page=null}
+  if(st.fade){
+    st.fade.t+=dt/1.6;
+    if(st.fade.t>=.5&&!st.fade.sw){
+      st.fade.sw=1;st.sc=st.fade.n;st.scT=0;
+      initWaitingPassengers(); // 切換場景時更新對應特色的候車旅客
+    }
+    if(st.fade.t>=1)st.fade=null;
+  }
+  let b=[0,1,2].find(x=>!bd(x));
+  $('#dotsTxt').textContent=b==null?'👑 全圖鑑收集達成':'📘 '+SCENES[st.sc].zh+' '+[...Array(10).keys()].map(k=>seen[b*10+k]?'🟢':'⚪').join('');
+}
+
+// ===================== 遠景富士山 + 真實高架鐵道 + 活著的月台小世界 =====================
+function mix(a,b,f){const p=c=>[1,3,5].map(i=>parseInt(c.substr(i,2),16)),x=p(a),y=p(b);return'rgb('+x.map((v,i)=>v+(y[i]-v)*f|0)+')'}
+const SK=[['#f6c0a0','#ffeab8',0],['#70c6f5','#e4f4fe',0],['#7a68b0','#ff9f70',.3],['#10183c','#27356a',1]],
+      GR=['#76b068','#dfe9f2','#84a88c','#d8cba0','#8a7a5a','#b0b4be'];
+
+function drawDistantLandmark(i,t,hz){
+  const X=v=>W*v;
+  g.save();
+  g.globalAlpha=0.52;
+  if(i==0){
+    const peakY=hz - H*.24, cx=X(.34);
+    g.fillStyle='#7c92bd';
+    g.beginPath();
+    g.moveTo(cx-W*.26,hz);
+    g.quadraticCurveTo(cx-W*.08,hz-H*.10,cx-W*.025,peakY);
+    g.lineTo(cx+W*.025,peakY);
+    g.quadraticCurveTo(cx+W*.08,hz-H*.10,cx+W*.26,hz);
+    g.fill();
+    g.fillStyle='#ffffff';
+    g.beginPath();
+    g.moveTo(cx-W*.025,peakY);g.lineTo(cx+W*.025,peakY);
+    g.lineTo(cx+W*.075,peakY+H*.09);
+    g.lineTo(cx+W*.04,peakY+H*.07);g.lineTo(cx+W*.015,peakY+H*.095);
+    g.lineTo(cx-W*.015,peakY+H*.075);g.lineTo(cx-W*.045,peakY+H*.095);
+    g.lineTo(cx-W*.075,peakY+H*.085);
+    g.fill();
+  }else if(i==1){
+    [[.28,.34],[.65,.38]].forEach(([x,h])=>{
+      g.fillStyle='#b8c8e4';g.beginPath();g.moveTo(X(x-.22),hz);g.lineTo(X(x),H*h);g.lineTo(X(x+.22),hz);g.fill();
+      g.fillStyle='#fff';g.beginPath();g.moveTo(X(x),H*h);g.lineTo(X(x-.05),H*h+hz*.18);g.lineTo(X(x+.05),H*h+hz*.18);g.fill();
+    });
+  }else if(i==2){
+    const bx=X(.28),w=Math.min(W*.10,H*.20),ty=hz-H*.26,hh=hz-ty;
+    g.fillStyle='#e8502a';g.beginPath();g.moveTo(bx,ty);g.lineTo(bx+w/2,hz);g.lineTo(bx-w/2,hz);g.fill();
+    g.fillStyle='#fff';for(let k=1;k<4;k++){const y=ty+hh*.22*k,hw=w/2*(y-ty)/hh;g.fillRect(bx-hw,y,hw*2,hh*.05)}
+  }else if(i==3){
+    // 湘南海岸遠方帆船與海平線
+    g.fillStyle='#0284c7';g.fillRect(0,hz-H*.08,W,H*.08);
+    const sx=((t*12)%W);
+    g.fillStyle='#fff';g.beginPath();g.moveTo(sx,hz-H*.08);g.lineTo(sx+14,hz-H*.08);g.lineTo(sx+7,hz-H*.14);g.fill();
+  }else if(i==4){
+    g.fillStyle='#7a5c4c';g.beginPath();g.moveTo(X(.18),hz);g.lineTo(X(.36),hz-H*.20);g.lineTo(X(.46),hz-H*.20);g.lineTo(X(.64),hz);g.fill();
+  }else{
+    g.fillStyle='#4a7fcf';g.beginPath();g.arc(X(.72),H*.24,H*.09,0,7);g.fill();
+  }
+  g.restore();
+}
+
+// 繪製鐵道設施 + 後方車站遮雨棚/站名牌/候車椅
+function drawRailwayInfra(railY,ch,trkType,t){
+  // 1. 架線柱與懸垂電車線
+  if(trkType!='SL'){
+    const span = cl(W*.22, 160, 280);
+    const wireY = railY - ch*1.36;
+    const messengerY = wireY - ch*.22;
+
+    for(let x=span*.35; x<W; x+=span){
+      g.fillStyle='#7c8594';
+      g.fillRect(x-4, messengerY-14, 8, (railY-messengerY)+18);
+      g.strokeStyle='#5a6270';g.lineWidth=1.4;
+      g.beginPath();
+      for(let y=messengerY; y<railY; y+=18){
+        g.moveTo(x-4,y);g.lineTo(x+4,y+9);g.lineTo(x-4,y+18);
+      }
+      g.stroke();
+      g.strokeStyle='#636b78';g.lineWidth=3;
+      g.beginPath();
+      g.moveTo(x, messengerY-6);g.lineTo(x+26, wireY-2);
+      g.moveTo(x, wireY-2);g.lineTo(x+26, wireY-2);
+      g.stroke();
+      g.fillStyle='#f0f4f8';
+      g.fillRect(x+6, messengerY-9, 6, 5);
+      g.fillRect(x+6, wireY-5, 6, 5);
+    }
+
+    g.strokeStyle='rgba(40,50,65,.65)';g.lineWidth=1.8;
+    g.beginPath();g.moveTo(0,wireY);g.lineTo(W,wireY);g.stroke();
+
+    g.strokeStyle='rgba(40,50,65,.45)';g.lineWidth=1.3;
+    for(let x=-span*.65; x<W+span; x+=span){
+      const x1=x, x2=x+span, mx=(x1+x2)/2;
+      g.beginPath();g.moveTo(x1, messengerY);g.quadraticCurveTo(mx, wireY-4, x2, messengerY);g.stroke();
+      for(let f=.15; f<.9; f+=.18){
+        const dx=x1+(x2-x1)*f, u=2*(f-.5), dy=(wireY-6) - (wireY-6-messengerY)*u*u;
+        g.beginPath();g.moveTo(dx,dy);g.lineTo(dx,wireY);g.stroke();
+      }
+    }
+  }
+
+  // 2. 後方車站月台建築 (遮雨棚柱、日式站名牌)
+  const roofY = railY - ch*1.24;
+  const stL = W*0.12, stR = W*0.84;
+  // 遮雨棚支撐柱 (在列車後方)
+  g.fillStyle='#64748b';
+  for(let px=stL+W*.08; px<stR; px+=W*.22){
+    g.fillRect(px-4, roofY, 8, railY-roofY);
+  }
+  // 車站遮雨棚屋頂
+  g.fillStyle='#475569';
+  g.beginPath();
+  g.moveTo(stL-15, roofY+6);
+  g.lineTo(stL+10, roofY-8);
+  g.lineTo(stR-10, roofY-8);
+  g.lineTo(stR+15, roofY+6);
+  g.closePath();
+  g.fill();
+  g.fillStyle='#94a3b8';
+  g.fillRect(stL-10, roofY+4, (stR-stL)+20, 4);
+
+  // 懸掛式 JR 風格站名牌 (隨場景顯示：ふじさん / ほっかいどう / とうきょう 等)
+  const signX = W*0.48, signY = roofY + 10, signW = 126, signH = 32;
+  g.fillStyle='#ffffff';
+  g.beginPath();g.roundRect(signX-signW/2, signY, signW, signH, 4);g.fill();
+  g.strokeStyle='#334155';g.lineWidth=1.5;g.stroke();
+  g.fillStyle='#16a34a';
+  g.fillRect(signX-signW/2, signY+signH-7, signW, 5);
+  g.fillStyle='#0f172a';
+  g.font='bold 14px "PingFang TC","Noto Sans TC",sans-serif';
+  g.textAlign='center';
+  g.fillText((SCENES[st.sc]||SCENES[0]).jp, signX, signY+19);
+
+  // 3. 高架橋或地面軌道結構
+  if(trkType=='V'||trkType=='M'){
+    const deckH = ch*.54;
+    const pillarW = ch*.42, pillarSpan = cl(W*.22, 160, 280);
+    for(let x=pillarSpan*.35; x<W; x+=pillarSpan){
+      g.fillStyle='#aeb6c2';
+      g.fillRect(x-pillarW/2, railY+deckH*.7, pillarW, H-(railY+deckH*.7));
+      g.fillStyle='#9ba4b2';
+      g.beginPath();
+      g.moveTo(x-pillarW*.75, railY+deckH*.7);g.lineTo(x+pillarW*.75, railY+deckH*.7);
+      g.lineTo(x+pillarW*.5, railY+deckH*.98);g.lineTo(x-pillarW*.5, railY+deckH*.98);
+      g.fill();
+    }
+    g.fillStyle='#c4cbd6';g.fillRect(0, railY, W, deckH*.75);
+    g.fillStyle='#9ea7b5';g.fillRect(0, railY+deckH*.55, W, deckH*.25);
+
+    const wallH = ch*.24;
+    g.fillStyle='#dce2ec';g.fillRect(0, railY-wallH, W, wallH);
+    g.fillStyle='#8c96a6';g.fillRect(0, railY-wallH, W, 4);
+    g.fillStyle='#4a525e';g.fillRect(0, railY-4, W, 5);
+  }else{
+    g.fillStyle='#7c7872';g.fillRect(0, railY, W, ch*.28);
+    g.fillStyle='#5c5650';for(let x=0;x<W;x+=22)g.fillRect(x, railY-2, 12, 10);
+    g.fillStyle='#454c56';g.fillRect(0, railY-5, W, 5);
+  }
+
+  // 4. 右前方三色鐵道出發號誌機
+  const sigX = W*.935, sigTop = railY - ch*1.32;
+  g.fillStyle='#4a525e';g.fillRect(sigX-3, sigTop, 6, railY-sigTop);
+  g.fillStyle='#1e242c';g.beginPath();g.roundRect(sigX-14, sigTop-10, 28, 66, 14);g.fill();
+  g.strokeStyle='#dce2ec';g.lineWidth=2;g.stroke();
+  const goal=+$('#goal').value, isWarn=!st.loud&&(st.lvl>goal*.82||st.acc>.8);
+  const cols=[
+    [st.loud?'#ff2e2e':'#4a1c1c', st.loud],
+    [isWarn?'#fbbf24':'#4a3b18', isWarn],
+    [(!st.loud&&!isWarn)?'#22c55e':'#184226', !st.loud&&!isWarn]
+  ];
+  cols.forEach(([col,on],idx)=>{
+    const cy=sigTop+8+idx*20;
+    g.fillStyle=col;g.beginPath();g.arc(sigX,cy,7,0,7);g.fill();
+    if(on){g.fillStyle=col;g.globalAlpha=.35;g.beginPath();g.arc(sigX,cy,14,0,7);g.fill();g.globalAlpha=1}
+  });
+}
+
+// 繪製前景車站月台、木長椅、站務員與上下車旅客
+function drawStationPlatformAndPeople(railY,ch,trkType,t){
+  const platY = railY - ch*0.16; // 月台表面高度 (剛好對齊車門下緣，不擋住流線車頭)
+  const platL = W*0.11, platR = W*0.83, platW = platR - platL;
+  const platH = ch*0.26;
+
+  // 1. 月台混凝土基座與黃色安全導盲磚
+  g.fillStyle='#d6dce5';
+  g.beginPath();g.roundRect(platL, platY, platW, platH, [3,3,0,0]);g.fill();
+  g.fillStyle='#94a3b8';
+  g.fillRect(platL, platY+platH*0.45, platW, platH*0.55);
+  // 黃色安全警戒線 (Tactile Paving)
+  g.fillStyle='#eab308';
+  g.fillRect(platL+8, platY+3, platW-16, 4);
+
+  // 2. 月台上的木製候車長椅與站牌
+  for(const bx of [W*0.24, W*0.58]){
+    g.fillStyle='#92400e';
+    g.fillRect(bx-20, platY-11, 40, 5); // 椅背
+    g.fillStyle='#b45309';
+    g.fillRect(bx-22, platY-6, 44, 4);  // 椅面
+    g.fillStyle='#334155';
+    g.fillRect(bx-16, platY-2, 4, 4);
+    g.fillRect(bx+12, platY-2, 4, 4);
+  }
+
+  // 3. 繪製月台上的特色旅客與站務員 (活著的小世界)
+  st.pax.forEach(p=>drawPerson(g, p, platY+2, ch, t));
+  drawPerson(g, st.staff, platY+2, ch, t);
+
+  // 4. 在來線/台鐵專屬：左側經典平交道遮斷機
+  if(trkType!='V'&&trkType!='M'){
+    const px=W*.055;
+    g.fillStyle='#f59e0b';g.fillRect(px-4,railY-ch*1.45,8,ch*1.55);
+    g.fillStyle='#1e242c';for(let y=railY-ch*1.4;y<railY;y+=18)g.fillRect(px-4,y,8,9);
+    g.save();g.translate(px,railY-ch*1.38);
+    g.fillStyle='#fff';g.strokeStyle='#dc2626';g.lineWidth=2.5;
+    for(const a of[.6,-.6]){g.save();g.rotate(a);g.fillRect(-ch*.28,-4,ch*.56,8);g.strokeRect(-ch*.28,-4,ch*.56,8);g.restore()}
+    g.restore();
+    const bl=Math.floor(t/500)%2;
+    for(let k=0;k<2;k++){
+      const on=st.arm>.15&&bl==k;
+      g.fillStyle=on?'#ff2a2a':'#5a1c1c';
+      g.beginPath();g.arc(px+(k?10:-10),railY-ch*1.05,7,0,7);g.fill();
+    }
+    const L=ch*1.8,a=(1-st.arm)*1.42,ex=px+L*Math.cos(a),ey=railY-ch*.65-L*Math.sin(a);
+    g.lineCap='round';g.lineWidth=7;
+    g.strokeStyle='#f59e0b';g.beginPath();g.moveTo(px,railY-ch*.65);g.lineTo(ex,ey);g.stroke();
+    g.strokeStyle='#18181b';g.setLineDash([10,10]);g.stroke();g.setLineDash([]);
+  }
+}
+
+// ===================== 主場景繪圖迴圈 =====================
+function draw(t){
+  const hz=H*.56,ch=CH(),railY=H*.78,s=st.sc,p=st.t*.05%4,i=Math.floor(p),j=(i+1)%4,f=p-i,sm=f*f*(3-2*f);
+  let top=mix(SK[i][0],SK[j][0],sm),bot=mix(SK[i][1],SK[j][1],sm);
+  const night=SK[i][2]+(SK[j][2]-SK[i][2])*sm;
+  if(s==3){top='#38bdf8';bot='#bae6fd'}if(s==5){top='#04061a';bot='#141c48'}
+
+  const gr=g.createLinearGradient(0,0,0,hz);gr.addColorStop(0,top);gr.addColorStop(1,bot);
+  g.fillStyle=gr;g.fillRect(0,0,W,hz+2);
+  if(night>.4||s==5){
+    g.fillStyle='#fff';
+    for(let q=0;q<30;q++){g.globalAlpha=s==5?.8:(night-.3)*.9;g.fillRect((q*97)%W,(q*53)%(hz*.8),2,2)}
+    g.globalAlpha=1;
+  }
+
+  g.textAlign='center';
+  drawDistantLandmark(s,t,hz);
+
+  g.fillStyle=GR[s];g.fillRect(0,hz,W,H-hz);
+  if(night>.05&&s!=3&&s!=5){g.fillStyle='rgba(10,20,55,'+night*.26+')';g.fillRect(0,0,W,H)}
+
+  const T=st.tr, trkType = T ? M[T.i].trk : 'V';
+  drawRailwayInfra(railY,ch,trkType,t);
+
+  if(T){
+    const m=M[T.i];
+    drawTrain(g,m,T.x,railY,ch,{
+      night: s==5?0.8:night,
+      t: st.t,
+      p: T.x,
+      glow: T.ph=='in',
+      door: T.door,
+      occ: T.occ
+    });
+  }
+
+  if(st.cue){
+    const a=.45+.35*Math.sin(t/500),q=g.createRadialGradient(16,railY-ch*.55,0,16,railY-ch*.55,ch*2.0);
+    q.addColorStop(0,'rgba(255,246,184,'+a+')');q.addColorStop(1,'rgba(255,246,184,0)');
+    g.fillStyle=q;g.fillRect(0,railY-ch*2.2,ch*2.4,ch*3.2);
+  }
+
+  // 繪製前景車站月台、上下車旅客與站務員
+  drawStationPlatformAndPeople(railY,ch,trkType,t);
+
+  if(st.arm>.02){g.fillStyle='rgba(60,70,85,'+.18*st.arm+')';g.fillRect(0,0,W,H)}
+  if(st.page){
+    const u=st.page.t/4,a=Math.sin(Math.PI*u);
+    g.fillStyle='rgba(255,248,210,'+.35*a+')';g.fillRect(0,0,W,H);
+    g.globalAlpha=a;g.font=Math.round(ch*1.0)+'px serif';g.fillText('📖',W/2,H*.35);
+    g.font=Math.round(ch*.42)+'px serif';
+    for(let k=0;k<10;k++)if(k<=u*11)g.fillText('⭐',W/2+(k-4.5)*ch*.5,H*.46);
+    g.globalAlpha=1;
+  }
+  if(st.fade){
+    const u=st.fade.t<.5?st.fade.t*2:(1-st.fade.t)*2;
+    g.fillStyle='rgba(255,255,255,'+u+')';g.fillRect(0,0,W,H);
+  }
+}
+
+// ===================== 鐵道探索收藏館 =====================
+function showDetail(i){
+  const m=M[i],box=$('#detailBox'),isCollected=!!seen[i];
+  box.hidden=false;
+  if(!isCollected){
+    box.innerHTML=`<div style="text-align:center;padding:12px"><h4>🔒 尚未收錄此列車</h4><p style="margin:4px 0;opacity:.8">保持教室安靜 🟢🙂，等待這列火車緩緩進站吧！</p></div>`;
+    return;
+  }
+  const wikiUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(m.img)}?width=500`;
+  const photoSrc = customPhotos[i] || wikiUrl;
+  box.innerHTML=`
+    <div class="db-head">
+      <div class="db-photo">
+        <img id="dbImg" src="${photoSrc}" alt="${m.n}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+        <div style="display:none;padding:8px;text-align:center;font-size:12px">📷 離線模式<br>(可點擊下方上傳真車照片)</div>
+      </div>
+      <div style="flex:1;min-width:220px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:20px;font-weight:900">🚄 ${m.n}</span>
+          <span style="color:#f59e0b;font-size:16px">${'⭐'.repeat(m.r)}</span>
+        </div>
+        <div style="margin:6px 0;font-weight:700;color:#2563eb">📍 行駛區間：${m.route}</div>
+        <p style="margin:6px 0;font-size:13.5px;line-height:1.5">${m.desc}</p>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px">
+          <span style="background:#22c55e22;color:#16a34a;padding:3px 8px;border-radius:6px;font-weight:700">✅ 已收錄 (停靠 ${seen[i]} 次)</span>
+          <span style="background:#8882;padding:3px 8px;border-radius:6px">${m.cars} 輛編組・${m.trk=='V'?'高架專用軌':(m.trk=='M'?'磁浮軌道':'在來線軌道')}</span>
+          <label style="cursor:pointer;background:#3b82f622;color:#2563eb;padding:3px 8px;border-radius:6px;font-weight:700">
+            📷 更換真車照片 <input type="file" id="upPhoto" accept="image/*" hidden>
+          </label>
+        </div>
+      </div>
+    </div>`;
+  const up=$('#upPhoto');
+  if(up)up.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{customPhotos[i]=ev.target.result;sv('ak_ph',customPhotos);showDetail(i)};
+    r.readAsDataURL(f);
+  };
+}
+
+function album(pg){
+  const totalSeen=Object.keys(seen).length;
+  $('#dexCount').textContent=`(已收集 ${totalSeen} / ${M.length} 種)`;
+  const tabs=['第一冊：日本新幹線','第二冊：特快與台灣鐵道','第三冊：世界高速鐵道'].map((n,k)=>
+    `<button data-p="${k}" style="margin:3px;${k==pg?'background:#2563eb;color:#fff':''}">${bd(k)?'✅':'📘'} ${n}</button>`
+  ).join('')+`<button data-p="3" style="margin:3px;${pg==3?'background:#d97706;color:#fff':''}">${seen[30]?'👑 傳說':'❓ 傳說'}</button>`;
+  $('#tabs').innerHTML=tabs;
+  $('#detailBox').hidden=true;
+
+  const ids=pg==3?[30]:[...Array(10).keys()].map(k=>pg*10+k);
+  $('#grid').innerHTML=ids.map(i=>{
+    const m=M[i],ok=!!seen[i];
+    return `<div class="dex-item" data-idx="${i}">
+      <canvas width="520" height="160"></canvas>
+      <div class="di-title"><span>${ok?'🚄 '+m.n:'🔒 ？？？'}</span><span style="color:#f59e0b">${'⭐'.repeat(m.r)}</span></div>
+      <div class="di-route">${ok?'📍 '+m.route:'保持安靜即可解鎖收錄'}</div>
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('#grid canvas').forEach((c,k)=>{
+    const x=c.getContext('2d'),i=ids[k],m=M[i];
+    x.scale(2,2);
+    x.fillStyle='#cbd5e1';x.fillRect(0,64,260,16);
+    x.fillStyle='#475569';x.fillRect(0,62,260,3);
+    drawTrain(x,m,248,64,28,{sil:!seen[i],t:0,p:0,door:0,occ:0.6});
+  });
+
+  document.querySelectorAll('.dex-item').forEach(el=>el.onclick=()=>showDetail(+el.dataset.idx));
+  document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>album(+b.dataset.p));
+  const firstCollected=ids.find(i=>seen[i]);
+  if(firstCollected!=null)showDetail(firstCollected);
+  $('#dex').hidden=0;
+}
+
+$('#alb').onclick=()=>{$('#badge').hidden=1;album([0,1,2].find(x=>!bd(x))??0)};
+$('#dx').onclick=()=>$('#dex').hidden=1;
+
+initWaitingPassengers();
+let last=performance.now();
+(function loop(t){update(Math.min(.1,(t-last)/1000));last=t;draw(t);requestAnimationFrame(loop)})(last);
+</script></body></html>
