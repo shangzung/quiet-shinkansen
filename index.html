@@ -6,6 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="安靜新幹線">
 <title>安靜新幹線 - 慢活鐵道小世界</title>
 <style>
 :root{
@@ -15,7 +16,7 @@
   --safe-l:env(safe-area-inset-left,0px);
   --safe-r:env(safe-area-inset-right,0px);
   --ui-gap:10px;
-  --ic:56px;
+  --ic:54px;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--card:rgba(24,32,46,.95);--fg:#f1f5f9}}
 html,body{
@@ -27,11 +28,12 @@ html,body{
   touch-action:none;-webkit-touch-callout:none;
   overscroll-behavior:none;
 }
-canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:pointer}
 .card{background:var(--card);border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-button,select{font:inherit;border:1px solid #8885;border-radius:14px;background:var(--card);color:var(--fg);padding:8px 14px;cursor:pointer;transition:.2s;-webkit-tap-highlight-color:transparent}
+button,select,input[type=text]{font:inherit;border:1px solid #8885;border-radius:14px;background:var(--card);color:var(--fg);padding:7px 12px;cursor:pointer;transition:.2s;-webkit-tap-highlight-color:transparent;box-sizing:border-box}
 button:hover{transform:scale(1.02)}
-.ic{width:var(--ic);height:var(--ic);font-size:calc(var(--ic)*0.46);padding:0;position:relative;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+button:active{transform:scale(0.96)}
+.ic{width:var(--ic);height:var(--ic);font-size:calc(var(--ic)*0.45);padding:0;position:relative;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 
 /* 左上燈號 */
 #lamp{
@@ -49,7 +51,7 @@ button:hover{transform:scale(1.02)}
 #dots{
   position:fixed;left:50%;transform:translateX(-50%);
   top:calc(12px + var(--safe-t));
-  max-width:min(440px, calc(100vw - 170px - var(--safe-l) - var(--safe-r)));
+  max-width:min(440px, calc(100vw - 230px - var(--safe-l) - var(--safe-r)));
   padding:6px 14px;font-size:clamp(12px,2.4vw,14px);
   font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px 10px;
   flex-wrap:wrap;text-align:center;z-index:11;box-sizing:border-box;
@@ -63,21 +65,46 @@ button:hover{transform:scale(1.02)}
   right:calc(10px + var(--safe-r));
   top:calc(10px + var(--safe-t));
   display:flex;gap:6px;z-index:12;
+  align-items:center;
 }
 #badge{position:absolute;right:-6px;top:-6px;font-size:18px}
+
+/* 兒童鎖按鈕與長按解鎖環 */
+#lockBtn.locked{
+  background:#fef3c7;color:#b45309;border:2px solid #f59e0b;
+  box-shadow:0 0 14px rgba(245,158,11,.45);
+}
+#lockRing{
+  position:absolute;inset:-4px;width:calc(100% + 8px);height:calc(100% + 8px);
+  pointer-events:none;transform:rotate(-90deg);
+}
+#lockRing circle{
+  fill:none;stroke:#f59e0b;stroke-width:4;stroke-linecap:round;
+  stroke-dasharray:176;stroke-dashoffset:176;transition:stroke-dashoffset .05s linear;
+}
+#lockToast{
+  position:fixed;top:calc(14px + var(--safe-t) + var(--ic));right:calc(12px + var(--safe-r));
+  background:rgba(15,23,42,.88);color:#fff;padding:6px 12px;border-radius:99px;
+  font-size:12px;font-weight:700;z-index:25;pointer-events:none;
+  opacity:0;transform:translateY(-6px);transition:.25s;
+}
+#lockToast.show{opacity:1;transform:translateY(0)}
 
 /* 設定面板 */
 #set{
   position:fixed;
   right:calc(10px + var(--safe-r));
   top:calc(10px + var(--safe-t) + var(--ic) + 12px);
-  width:min(320px, calc(100vw - 20px - var(--safe-l) - var(--safe-r)));
+  width:min(340px, calc(100vw - 20px - var(--safe-l) - var(--safe-r)));
   max-height:calc(100dvh - var(--safe-t) - var(--safe-b) - var(--ic) - 28px);
   overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding:12px 14px;box-sizing:border-box;font-size:14px;z-index:20;
+  padding:12px 14px;box-sizing:border-box;font-size:13.5px;z-index:20;
+  touch-action:pan-y;
 }
 #set label,#set .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap}
 #set input[type=range]{width:100%;touch-action:pan-y}
+#set hr{border:0;border-top:1px solid #8883;margin:10px 0}
+.sec-title{font-weight:800;font-size:12.5px;color:#2563eb;margin-top:6px;display:block}
 
 /* Modal */
 .modal{
@@ -86,7 +113,7 @@ button:hover{transform:scale(1.02)}
   max-height:calc(100dvh - 16px - var(--safe-t) - var(--safe-b));
   overflow:auto;-webkit-overflow-scrolling:touch;
   padding:18px;box-sizing:border-box;text-align:center;z-index:30;
-  margin:0;
+  margin:0;touch-action:pan-y;
 }
 .go{font-size:clamp(22px,5vw,30px);padding:12px 40px;background:#2e7d32;color:#fff;border:0;border-radius:99px;box-shadow:0 4px 14px rgba(46,125,50,.35);width:auto;max-width:100%}
 
@@ -148,7 +175,7 @@ button:hover{transform:scale(1.02)}
 #volNum{font-size:12px;font-weight:800;min-width:2.5em;color:var(--fg)}
 
 @media (max-width:640px),(orientation:portrait){
-  :root{--ic:48px}
+  :root{--ic:46px}
   #lamp{height:58px;font-size:28px;padding:0 10px;border-width:3px;left:calc(8px + var(--safe-l));top:calc(8px + var(--safe-t))}
   #volWrap{top:calc(8px + var(--safe-t, 0px) + 62px); left:calc(8px + var(--safe-l, 0px));}
   #volBar{width:min(110px,32vw);height:10px}
@@ -175,7 +202,7 @@ button:hover{transform:scale(1.02)}
   #lamp{height:48px;font-size:24px;padding:0 8px;border-width:3px}
   #volWrap{top:calc(8px + var(--safe-t, 0px) + 52px); padding:4px 8px}
   #volBar{width:100px;height:9px}
-  #dots{top:calc(8px + var(--safe-t));font-size:12px;max-width:min(380px,calc(100vw - 220px))}
+  #dots{top:calc(8px + var(--safe-t));font-size:12px;max-width:min(360px,calc(100vw - 260px))}
   #set{max-height:calc(100dvh - var(--safe-t) - var(--safe-b) - 56px);font-size:13px;padding:8px 10px}
   #cornerCard{padding:8px 12px}
   #cornerCard .cc-name{font-size:15px}
@@ -183,7 +210,7 @@ button:hover{transform:scale(1.02)}
 }
 
 @media (max-width:360px){
-  :root{--ic:44px}
+  :root{--ic:42px}
   #lamp{font-size:24px;height:52px}
 }
 
@@ -213,11 +240,18 @@ button:hover{transform:scale(1.02)}
   <span id="volNum">0</span>
 </div>
 <div id="dots" class="card" hidden><span id="dotsTxt"></span><span id="dwellHint" hidden>🤫 安靜觀察中・列車停留延長</span></div>
+
+<!-- 右上：功能列 + 兒童防誤觸鎖 -->
 <div id="top" hidden>
   <button id="callBtn" class="card ic" title="召喚列車 / 切換發車">🔔</button>
   <button id="alb" class="card ic" title="鐵道探索收藏館">🚆<span id="badge" hidden>🎁</span></button>
   <button id="gear" class="card ic" title="設定 (長按開啟Debug)">⚙</button>
+  <button id="lockBtn" class="card ic" title="兒童防誤觸鎖 (點擊上鎖 / 長按1.5秒解鎖)">
+    <span id="lockIcon">🔓</span>
+    <svg id="lockRing" viewBox="0 0 60 60"><circle id="lockCircle" cx="30" cy="30" r="28"></circle></svg>
+  </button>
 </div>
+<div id="lockToast">🔒 已開啟兒童鎖（長按鎖頭 1.5 秒解鎖）</div>
 
 <!-- 右下：新車進站自動收錄卡片 -->
 <div id="cornerCard" class="card">
@@ -229,6 +263,7 @@ button:hover{transform:scale(1.02)}
 
 <!-- 設定選單 -->
 <div id="set" class="card" hidden>
+  <span class="sec-title">🎤 音量與安靜門檻設定</span>
   <div class="row">音量容忍度 <span>
     <button type="button" data-g="18">嚴格</button>
     <button type="button" data-g="30">適中</button>
@@ -238,10 +273,14 @@ button:hover{transform:scale(1.02)}
   <div class="row" style="font-size:12px;opacity:.9"><span>門檻預覽</span><span id="goalLive">30</span></div>
   <div class="row" style="font-size:12px;opacity:.9"><span>目前音量</span><span id="lvlReadout">— / 門檻 30</span></div>
   <div class="row"><button type="button" id="cal">🎚 重新校準環境音</button><button type="button" id="noise" hidden>按住=測試吵鬧</button></div>
-  <div class="row" style="margin-top:12px">
-    <button type="button" id="saveCfgBtn" style="width:100%;background:#2563eb;color:#fff;border:0;padding:10px 14px;font-weight:800">💾 儲存設定</button>
-  </div>
-  <div id="saveHint" style="font-size:12px;color:#16a34a;min-height:1.2em"></div>
+
+  <hr>
+  <span class="sec-title">🚄 列車班距與家長指定發車</span>
+  <label>🎯 指定下一班車
+    <select id="nextTrainSel" style="max-width:175px">
+      <option value="-1" selected>🎲 隨機驚喜進站</option>
+    </select>
+  </label>
   <label>候車間隔
     <select id="rate">
       <option value="10">短 (10秒)</option>
@@ -263,8 +302,32 @@ button:hover{transform:scale(1.02)}
       <option value="300">每 5 分鐘</option>
     </select>
   </label>
-  <label>溫和音效<input type="checkbox" id="snd" checked></label>
-  <div id="msg" style="font-size:12px;opacity:.85;color:#2563eb">提示：列車停靠時越安靜，停留時間越長喔！</div>
+
+  <hr>
+  <span class="sec-title">🌿 音效與長時間省電掛機</span>
+  <label>溫和木琴與互動音效<input type="checkbox" id="snd" checked></label>
+  <label>輕柔鐵軌喀噠聲 (進離站)<input type="checkbox" id="railSnd" checked></label>
+  <label>安撫環境白噪音 (微風/海浪)<input type="checkbox" id="ambSnd"></label>
+  <label>🔋 智慧省電 (候車時降幀減熱)<input type="checkbox" id="ecoMode" checked></label>
+
+  <div class="row" style="margin-top:10px">
+    <button type="button" id="saveCfgBtn" style="width:100%;background:#2563eb;color:#fff;border:0;padding:10px 14px;font-weight:800">💾 儲存設定</button>
+  </div>
+  <div id="saveHint" style="font-size:12px;color:#16a34a;min-height:1.2em"></div>
+
+  <hr>
+  <span class="sec-title">📘 圖鑑進度管理与備份</span>
+  <div class="row">
+    <button type="button" id="unlockAllBtn" style="font-size:12px;padding:6px 10px">🎁 一鍵解鎖全圖鑑</button>
+    <button type="button" id="exportBtn" style="font-size:12px;padding:6px 10px">📤 複製備份碼</button>
+    <button type="button" id="importBtn" style="font-size:12px;padding:6px 10px">📥 貼上還原</button>
+  </div>
+  <div id="importRow" class="row" hidden>
+    <input type="text" id="importInput" placeholder="請貼上備份碼..." style="flex:1;font-size:12px">
+    <button type="button" id="importConfirmBtn" style="font-size:12px;background:#16a34a;color:#fff;border:0">確定</button>
+  </div>
+
+  <div id="msg" style="font-size:12px;opacity:.85;color:#2563eb;margin-top:6px">提示：輕點火車或站務員會有溫柔小互動喔！</div>
 </div>
 
 <!-- 啟動畫面 -->
@@ -272,9 +335,9 @@ button:hover{transform:scale(1.02)}
   <div style="font-size:64px">🚄 🟢🙂</div>
   <h2 style="margin:6px 0">安靜新幹線：慢活車站小世界</h2>
   <p style="font-size:16px;line-height:1.6;opacity:.9">
-    🟢🙂 保持安靜，列車會緩緩進站、打開車門，停下來陪伴大家。<br>
-    👀 仔細觀察看看：今天是登山客、滑雪客還是通勤族上下車呢？<br>
-    🔴🙉 太吵雜時，車門會關上並提前離站喔。
+    🟢🙂 保持安靜，列車會伴隨輕柔鐵軌聲進站、開門陪伴大家。<br>
+    👆 輕點停靠的火車、站務員或遠方富士山，會有溫馨小彩蛋！<br>
+    🔒 右上角提供「兒童防誤觸鎖」，家長長時間掛機更安心。
   </p>
   <button id="go" class="go">▶ 走進車站</button>
 </div>
@@ -291,20 +354,43 @@ button:hover{transform:scale(1.02)}
 </div>
 
 <script>
+// ===================== PWA 全螢幕動態 Manifest 注入 =====================
+(function setupPWA() {
+  try {
+    const manifest = {
+      name: "安靜新幹線 - 慢活鐵道小世界",
+      short_name: "安靜新幹線",
+      display: "standalone",
+      orientation: "any",
+      background_color: "#8ab4d8",
+      theme_color: "#8ab4d8",
+      icons: [{
+        src: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231b4370'/><text x='50' y='68' font-size='56' text-anchor='middle'>🚄</text></svg>",
+        sizes: "192x192",
+        type: "image/svg+xml"
+      }]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = URL.createObjectURL(blob);
+    document.head.appendChild(link);
+  } catch (e) {}
+})();
+
 // ===================== 基本畫布、旋轉自適應與儲存工具 =====================
 const $ = s => document.querySelector(s);
 const cv = $('#c');
 const g = cv.getContext('2d');
 let W = 360, H = 640, isPortrait = true, dpr = 1;
 
-const ld = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
+const ld = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
 const sv = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 const cl = (v, a, b) => {
   if (!Number.isFinite(v)) return a;
   return Math.max(a, Math.min(b, v));
 };
 
-// 列車停靠目標 X 座標（依據直式/橫式動態計算）
 const getStopX = (w, portrait) => portrait ? w * 0.92 : w * 0.86;
 
 function rs() {
@@ -312,7 +398,6 @@ function rs() {
   const prevPortrait = isPortrait;
   dpr = Math.min(window.devicePixelRatio || 1, 3);
 
-  // 準確取得當下視口寬高（不使用 Math.max(w, vv.width)，避免橫轉直時沿用舊橫向寬度）
   const docW = document.documentElement.clientWidth || window.innerWidth || 360;
   const docH = document.documentElement.clientHeight || window.innerHeight || 640;
   const winW = window.innerWidth || docW;
@@ -328,7 +413,6 @@ function rs() {
   cv.style.height = H + 'px';
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  // 【關鍵修復】當螢幕旋轉或尺寸改變時，同步換算列車與月台人物的 X 座標，避免列車消失在畫面外
   if (typeof st !== 'undefined' && prevW > 0 && Math.abs(W - prevW) > 5) {
     const oldStopX = getStopX(prevW, prevPortrait);
     const newStopX = getStopX(W, isPortrait);
@@ -411,6 +495,17 @@ const M = RAW.split('\n').map((s, idx) => {
   return { id: idx, n: a[0], c: a[1], r: +a[2], roof: a[3], body: a[4], st1: a[5], st2: a[6], nose: a[7], cars: +a[8], trk: a[9], route: a[10], desc: a[11], img: a[12] };
 });
 
+// 初始化「指定下一班列車」選單
+const nextTrainSel = $('#nextTrainSel');
+if (nextTrainSel) {
+  M.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = String(m.id);
+    opt.textContent = `🚄 ${m.n} (${m.c})`;
+    nextTrainSel.appendChild(opt);
+  });
+}
+
 const SCENES = [
   { jp: 'ふじさん', zh: '富士山站', role: 'hiker', colors: ['#d97706', '#2563eb', '#15803d', '#b91c1c'] },
   { jp: 'ほっかいどう', zh: '北海道站', role: 'skier', colors: ['#0284c7', '#e11d48', '#7c3aed', '#0d9488'] },
@@ -461,7 +556,7 @@ function getVisibleDoorXs(m, hx, ch) {
   return doors.filter(x => x > W * 0.10 && x < (isPortrait ? W * 0.90 : W * 0.80));
 }
 
-// ===================== 繪製車頭輪廓與車廂（已徹底修復 ch 未定義與 clip 鎖死問題） =====================
+// ===================== 繪製車頭輪廓與車廂 =====================
 function traceHeadPath(c, tp, l, r, NL, top, ch) {
   const yBot = top + ch, hx = r + NL;
   c.beginPath(); c.moveTo(l, top); c.lineTo(r, top);
@@ -519,7 +614,6 @@ function drawWindowSilhouette(c, wx, wy, ww, wh, seed, t, occRatio) {
   }
 }
 
-// 【核心修正】將原本未定義的 ch * .06 修正為 doorH * 0.10，並加上 try/finally 保護 c.restore()
 function drawAnimatedDoor(c, dx, doorY, doorW, doorH, winCol, openRatio, bodyCol) {
   if (openRatio > 0.02) {
     c.fillStyle = '#fef3c7';
@@ -738,7 +832,8 @@ function drawTrain(c, m, hx, y, ch, o) {
           const lx = m.nose === 'B' ? hx - ch * 0.06 : r + NL * 0.66;
           const ly = m.nose === 'E7' ? top + ch * 0.46 : top + ch * 0.58;
           c.fillStyle = '#222'; c.beginPath(); c.ellipse(lx, ly, ch * 0.11, ch * 0.055, 0.25, 0, 7); c.fill();
-          c.fillStyle = '#fffbe0'; c.beginPath(); c.ellipse(lx + ch * 0.02, ly, ch * 0.07, ch * 0.038, 0.25, 0, 7); c.fill();
+          c.fillStyle = o.flash ? '#ffffff' : '#fffbe0';
+          c.beginPath(); c.ellipse(lx + ch * 0.02, ly, ch * (o.flash ? 0.10 : 0.07), ch * (o.flash ? 0.06 : 0.038), 0.25, 0, 7); c.fill();
 
           c.strokeStyle = 'rgba(0,0,0,.28)'; c.lineWidth = 1.2;
           c.beginPath(); c.moveTo(hx - ch * 0.35, top + ch * 0.68); c.lineTo(hx - ch * 0.32, top + ch * 0.95); c.stroke();
@@ -767,11 +862,14 @@ function drawTrain(c, m, hx, y, ch, o) {
     }
   }
 
-  if (!sil && (N > 0.15 || o.glow)) {
+  // 車頭燈光束（包含幼兒點擊車頭時的閃燈增強效果）
+  if (!sil && (N > 0.15 || o.glow || o.flash)) {
     const ly = top + ch * 0.56;
-    const q = c.createRadialGradient(hx, ly, 0, hx + ch * 1.2, ly, ch * 2.2);
-    q.addColorStop(0, 'rgba(255,248,195,.75)'); q.addColorStop(1, 'rgba(255,248,195,0)');
-    c.fillStyle = q; c.fillRect(hx - ch * 0.8, ly - ch * 1.6, ch * 3.6, ch * 3.2);
+    const beamLen = o.flash ? ch * 3.2 : ch * 2.2;
+    const q = c.createRadialGradient(hx, ly, 0, hx + ch * 1.2, ly, beamLen);
+    q.addColorStop(0, o.flash ? 'rgba(255,255,210,.95)' : 'rgba(255,248,195,.75)');
+    q.addColorStop(1, 'rgba(255,248,195,0)');
+    c.fillStyle = q; c.fillRect(hx - ch * 0.8, ly - ch * 1.6, ch * 4.2, ch * 3.2);
   }
 }
 
@@ -782,7 +880,7 @@ function drawPerson(c, p, platY, ch, t) {
   try {
     c.globalAlpha = cl(p.alpha, 0, 1);
     const h = ch * 0.44 * (p.scale || 1);
-    const x = p.x, y = platY;
+    const x = p.x, y = platY - (p.jumpY || 0);
     const dir = p.dir || 1;
     const walkPhase = p.walking ? Math.sin(t * 3.6 + p.seed) * 0.22 : 0;
     const bob = p.walking ? Math.abs(Math.sin(t * 3.6 + p.seed)) * 1.2 : 0;
@@ -847,8 +945,8 @@ function drawPerson(c, p, platY, ch, t) {
       c.beginPath(); c.arc(x, y - h * 0.94 - bob, h * 0.135, Math.PI * 0.9, Math.PI * 2.1); c.fill();
     }
 
-    if (p.waving) {
-      const waveAng = -2.2 + Math.sin(t * 3.2 + p.seed) * 0.25;
+    if (p.waving || (p.saluteT && p.saluteT > 0)) {
+      const waveAng = -2.2 + Math.sin(t * 5.0 + p.seed) * 0.28;
       const ax = x + dir * h * 0.12, ay = y - h * 0.72 - bob;
       const hx2 = ax + Math.cos(waveAng) * h * 0.26, hy2 = ay + Math.sin(waveAng) * h * 0.26;
       c.strokeStyle = p.color; c.lineWidth = Math.max(2.2, h * 0.09);
@@ -883,16 +981,22 @@ function drawPerson(c, p, platY, ch, t) {
   }
 }
 
-// ===================== 狀態管理與音效 =====================
+// ===================== 狀態管理、設定載入與儲存 =====================
 let seen = ld('ak_s', {}), cd = ld('ak_c', {}), cfg = ld('ak_cfg_v3', {}), customPhotos = ld('ak_ph', {});
 ['goal', 'rate', 'dwellT', 'sceneT'].forEach(i => { if (cfg[i] != null && $('#' + i).querySelector(`option[value="${cfg[i]}"],input`)) $('#' + i).value = cfg[i]; });
 if (cfg.snd != null) $('#snd').checked = cfg.snd;
+if (cfg.railSnd != null) $('#railSnd').checked = cfg.railSnd;
+if (cfg.ambSnd != null) $('#ambSnd').checked = cfg.ambSnd;
+if (cfg.ecoMode != null) $('#ecoMode').checked = cfg.ecoMode;
 
 const st = {
   run: 0, mic: 0, lvl: 0, acc: 0, quiet: 0, loud: 0, loudT: 0, qs: 0, scT: 0,
   tr: null, arm: 0, off: 0, sim: 0, sc: 0, first: 1, page: null, fade: null, pend: null, t: 0, cue: 0, ccTimer: 0,
+  locked: false,
+  forcedNextTrain: -1,
+  fx: [], // 幼兒點擊微互動特效陣列（星星/愛心/蒸汽白煙/音符）
   pax: [],
-  staff: { x: 300, dir: -1, walking: false, waving: false, alpha: 1, role: 'staff', color: '#1e3a8a', seed: 7, scale: 1.04 }
+  staff: { x: 300, dir: -1, walking: false, waving: false, saluteT: 0, jumpY: 0, alpha: 1, role: 'staff', color: '#1e3a8a', seed: 7, scale: 1.04 }
 };
 rs();
 
@@ -906,6 +1010,8 @@ function initWaitingPassengers() {
     dir: 1,
     walking: false,
     waving: false,
+    saluteT: 0,
+    jumpY: 0,
     alpha: 1,
     state: 'wait_board',
     delay: 1.8 + k * 2.4,
@@ -952,8 +1058,12 @@ function saveCfg(opts) {
     }
     ['goal', 'rate', 'dwellT', 'sceneT'].forEach(i => { cfg[i] = $('#' + i).value; });
     cfg.snd = $('#snd').checked;
+    cfg.railSnd = $('#railSnd').checked;
+    cfg.ambSnd = $('#ambSnd').checked;
+    cfg.ecoMode = $('#ecoMode').checked;
     cfg.goal = String(Math.round(st.goal));
     sv('ak_cfg_v3', cfg);
+    updateAmbientNoiseState();
     refreshGoalButtons();
     if (opts.toast) {
       const h = $('#saveHint');
@@ -980,7 +1090,16 @@ if (goalEl) {
   }, { passive: true });
 }
 
-document.querySelectorAll('#set select, #set input[type=checkbox]').forEach(e => {
+if (nextTrainSel) {
+  nextTrainSel.addEventListener('change', () => {
+    st.forcedNextTrain = +nextTrainSel.value;
+    if (st.forcedNextTrain >= 0) {
+      $('#msg').textContent = `🎯 下一班列車已指定為：${M[st.forcedNextTrain].n}`;
+    }
+  });
+}
+
+document.querySelectorAll('#set select:not(#nextTrainSel), #set input[type=checkbox]').forEach(e => {
   e.addEventListener('change', () => {
     saveCfg({ toast: false });
     kickAudio();
@@ -1014,9 +1133,134 @@ applyGoalFromUI();
 refreshGoalButtons();
 
 $('#gear').onclick = () => {
+  if (st.locked) return;
   $('#set').hidden = !$('#set').hidden;
   if (!$('#set').hidden) refreshGoalButtons();
   kickAudio();
+};
+
+// ===================== 🔒 兒童防誤觸鎖（點擊上鎖 / 長按 1.5 秒解鎖） =====================
+(function setupChildLock() {
+  const lockBtn = $('#lockBtn');
+  const lockIcon = $('#lockIcon');
+  const lockCircle = $('#lockCircle');
+  const lockToast = $('#lockToast');
+  let holdStart = 0, holdRAF = null, toastTimer = null;
+
+  function showLockToast(txt) {
+    if (!lockToast) return;
+    lockToast.textContent = txt;
+    lockToast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => lockToast.classList.remove('show'), 2600);
+  }
+
+  function applyLockState(locked) {
+    st.locked = locked;
+    lockBtn.classList.toggle('locked', locked);
+    lockIcon.textContent = locked ? '🔒' : '🔓';
+    lockCircle.style.strokeDashoffset = '176';
+    // 上鎖時隱藏其他操作按鈕與設定選單，防止幼兒誤觸
+    ['callBtn', 'alb', 'gear'].forEach(id => {
+      const el = $('#' + id);
+      if (el) el.hidden = locked;
+    });
+    if (locked) {
+      $('#set').hidden = true;
+      $('#dex').hidden = true;
+      showLockToast('🔒 已開啟兒童防誤觸鎖（長按鎖頭 1.5 秒解鎖）');
+      chime([523, 659]);
+    } else {
+      showLockToast('🔓 兒童鎖已解鎖');
+      chime([659, 523]);
+    }
+  }
+
+  function cancelHold() {
+    if (holdRAF) cancelAnimationFrame(holdRAF);
+    holdRAF = null;
+    lockCircle.style.strokeDashoffset = '176';
+  }
+
+  function stepHold(now) {
+    if (!st.locked) return;
+    const elapsed = (now - holdStart) / 1500;
+    const prog = cl(elapsed, 0, 1);
+    lockCircle.style.strokeDashoffset = String(176 * (1 - prog));
+    if (prog >= 1) {
+      cancelHold();
+      applyLockState(false);
+    } else {
+      holdRAF = requestAnimationFrame(stepHold);
+    }
+  }
+
+  lockBtn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (!st.locked) {
+      applyLockState(true);
+    } else {
+      holdStart = performance.now();
+      showLockToast('⏳ 請繼續按住鎖頭以解鎖...');
+      holdRAF = requestAnimationFrame(stepHold);
+    }
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => {
+    lockBtn.addEventListener(ev, cancelHold);
+  });
+})();
+
+// ===================== 📘 圖鑑進度備份、還原與一鍵全開 =====================
+$('#unlockAllBtn').onclick = () => {
+  for (let i = 0; i < M.length; i++) {
+    if (!seen[i]) seen[i] = 1;
+  }
+  cd = { 0: 1, 1: 1, 2: 1 };
+  sv('ak_s', seen);
+  sv('ak_c', cd);
+  $('#badge').hidden = false;
+  chime([440, 554, 659, 880]);
+  $('#msg').textContent = '🎉 已為您解鎖全部 31 種列車圖鑑與所有車站風景！';
+};
+
+$('#exportBtn').onclick = async () => {
+  const payload = btoa(encodeURIComponent(JSON.stringify({ s: seen, c: cd })));
+  try {
+    await navigator.clipboard.writeText(payload);
+    $('#msg').textContent = '✅ 備份碼已複製到剪貼簿！可貼上至其他設備還原';
+  } catch (e) {
+    $('#importRow').hidden = false;
+    $('#importInput').value = payload;
+    $('#importInput').select();
+    $('#msg').textContent = '📋 請複製下方輸入框內的備份碼';
+  }
+};
+
+$('#importBtn').onclick = () => {
+  $('#importRow').hidden = !$('#importRow').hidden;
+  if (!$('#importRow').hidden) {
+    $('#importInput').value = '';
+    $('#importInput').focus();
+  }
+};
+
+$('#importConfirmBtn').onclick = () => {
+  const code = ($('#importInput').value || '').trim();
+  if (!code) return;
+  try {
+    const data = JSON.parse(decodeURIComponent(atob(code)));
+    if (data && typeof data.s === 'object') {
+      seen = data.s;
+      cd = data.c || {};
+      sv('ak_s', seen);
+      sv('ak_c', cd);
+      $('#importRow').hidden = true;
+      chime([440, 554, 659]);
+      $('#msg').textContent = '✅ 圖鑑進度還原成功！';
+    }
+  } catch (e) {
+    $('#msg').textContent = '⚠️ 備份碼格式不正確，請確認後重試';
+  }
 };
 
 // 長按齒輪 0.8 秒開啟 Debug 面板
@@ -1062,32 +1306,211 @@ function updateDebugPanel() {
     'Threshold: ' + goal + '\n' +
     'Quiet qs: ' + (st.qs || 0).toFixed(1) + 's  loudT: ' + (st.loudT || 0).toFixed(1) + '\n' +
     'State: ' + phase + (st.tr ? ' (x=' + Math.round(st.tr.x) + '/' + Math.round(getStopX(W, isPortrait)) + ')' : '') + '\n' +
-    'Trains: ' + trainCount + '  silentFrames: ' + silentFrames + '\n' +
-    'WakeLock: ' + (wakeLock ? 'held' : 'off') + '\n' +
+    'Trains: ' + trainCount + '  ChildLock: ' + (st.locked ? 'ON' : 'OFF') + '\n' +
+    'WakeLock: ' + (wakeLock ? 'held' : 'off') + '  EcoFPS: ' + ($('#ecoMode').checked && !st.tr && st.fx.length === 0 ? '24' : '60') + '\n' +
     'Errors: ' + micErrCount + '  last: ' + (lastMicErr || '-');
 }
 
-// 溫和木琴風車站音樂鈴（共用單一常駐 AudioContext，避免雙 Context 在 iOS 搶佔）
+// ===================== 音效系統：木琴鈴聲、輕柔鐵軌喀噠聲、環境白噪音 =====================
+function getSharedAudioCtx() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!st.ac || st.ac.state === 'closed') {
+    st.ac = new AC();
+  }
+  if (st.ac.state === 'suspended' || st.ac.state === 'interrupted') {
+    st.ac.resume().catch(() => {});
+  }
+  return st.ac;
+}
+
 function chime(freqs) {
   if (!$('#snd').checked) return;
   try {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!st.ac || st.ac.state === 'closed') {
-      st.ac = new AC();
-    }
-    const a = st.ac;
-    a.resume().catch(() => {});
+    const a = getSharedAudioCtx();
     (Array.isArray(freqs) ? freqs : [freqs]).forEach((f, idx) => {
       const o = a.createOscillator(), v = a.createGain();
       o.type = 'sine'; o.frequency.value = f; o.connect(v); v.connect(a.destination);
-      const t0 = a.currentTime + idx * 0.22;
-      v.gain.setValueAtTime(0.045, t0); v.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.95);
-      o.start(t0); o.stop(t0 + 0.95);
+      const t0 = a.currentTime + idx * 0.20;
+      v.gain.setValueAtTime(0.04, t0); v.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.85);
+      o.start(t0); o.stop(t0 + 0.85);
     });
   } catch (e) {
     dbgErr('chime', e);
   }
 }
+
+// 幼兒點擊車頭時的溫柔雙音氣笛聲（或蒸汽火車鳴笛）
+function playTrainHorn(isSteam) {
+  if (!$('#snd').checked) return;
+  try {
+    const a = getSharedAudioCtx();
+    const notes = isSteam ? [293.66, 369.99] : [587.33, 783.99];
+    notes.forEach(f => {
+      const o = a.createOscillator(), v = a.createGain();
+      o.type = 'triangle';
+      o.frequency.value = f;
+      o.connect(v); v.connect(a.destination);
+      const t0 = a.currentTime;
+      v.gain.setValueAtTime(0.001, t0);
+      v.gain.linearRampToValueAtTime(0.035, t0 + 0.06);
+      v.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.55);
+      o.start(t0); o.stop(t0 + 0.56);
+    });
+  } catch (e) {}
+}
+
+// 列車進離站時的輕柔「ガタンゴトン (喀噠-喀噠)」鐵軌聲
+let nextRailClickTime = 0;
+function updateRailClackSound(dt, speedPxPerSec, isMaglev) {
+  if (!$('#snd').checked || !$('#railSnd').checked || isMaglev) return;
+  if (speedPxPerSec < 12) return;
+  if (st.t < nextRailClickTime) return;
+
+  try {
+    const a = getSharedAudioCtx();
+    const playClick = (delay, pitch) => {
+      const o = a.createOscillator(), v = a.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(pitch, a.currentTime + delay);
+      o.frequency.exponentialRampToValueAtTime(48, a.currentTime + delay + 0.045);
+      v.gain.setValueAtTime(0.016, a.currentTime + delay);
+      v.gain.exponentialRampToValueAtTime(0.0005, a.currentTime + delay + 0.05);
+      o.connect(v); v.connect(a.destination);
+      o.start(a.currentTime + delay);
+      o.stop(a.currentTime + delay + 0.055);
+    };
+    playClick(0, 115);
+    playClick(0.11, 95);
+    const interval = cl(110 / Math.max(25, speedPxPerSec), 0.38, 1.15);
+    nextRailClickTime = st.t + interval;
+  } catch (e) {}
+}
+
+// 安撫環境白噪音（粉紅噪音低通濾波：模擬遠方微風與海浪聲）
+let ambNode = null, ambGain = null;
+function updateAmbientNoiseState() {
+  try {
+    const wantAmb = st.run && $('#snd').checked && $('#ambSnd').checked;
+    if (!wantAmb) {
+      if (ambGain && st.ac) {
+        ambGain.gain.setTargetAtTime(0.0001, st.ac.currentTime, 0.2);
+      }
+      return;
+    }
+    const a = getSharedAudioCtx();
+    if (!ambNode) {
+      const bufSize = a.sampleRate * 3;
+      const buf = a.createBuffer(1, bufSize, a.sampleRate);
+      const out = buf.getChannelData(0);
+      let b0 = 0, b1 = 0, b2 = 0;
+      for (let i = 0; i < bufSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.997 * b0 + white * 0.029;
+        b1 = 0.985 * b1 + white * 0.032;
+        b2 = 0.950 * b2 + white * 0.048;
+        out[i] = (b0 + b1 + b2) * 0.12;
+      }
+      ambNode = a.createBufferSource();
+      ambNode.buffer = buf;
+      ambNode.loop = true;
+      const filter = a.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 360;
+      ambGain = a.createGain();
+      ambGain.gain.value = 0.012;
+      ambNode.connect(filter);
+      filter.connect(ambGain);
+      ambGain.connect(a.destination);
+      ambNode.start();
+    } else if (ambGain) {
+      ambGain.gain.setTargetAtTime(0.012, a.currentTime, 0.3);
+    }
+  } catch (e) {}
+}
+
+// ===================== ✨ 3 歲幼兒點擊畫面微互動彩蛋 =====================
+let lastInteractTime = 0;
+cv.addEventListener('pointerdown', e => {
+  if (!st.run) return;
+  lastInteractTime = performance.now();
+  const rect = cv.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const { hz, railY } = sceneLayout();
+  const ch = CH();
+  const platY = railY - ch * 0.16;
+
+  // 1. 檢查是否點到站務員或月台旅客
+  const people = [...st.pax.filter(p => p.alpha > 0.6), st.staff];
+  for (const p of people) {
+    if (Math.abs(x - p.x) < ch * 0.45 && y >= platY - ch * 0.65 && y <= platY + 12) {
+      p.saluteT = 2.0;
+      p.jumpT = 0.45;
+      st.fx.push({ type: 'emoji', txt: p.role === 'staff' ? '🫡' : '🎵', x: p.x, y: platY - ch * 0.55, vx: 0, vy: -28, life: 1.1, maxLife: 1.1, size: Math.round(ch * 0.32) });
+      chime(p.role === 'staff' ? [587, 880] : [523, 659]);
+      return;
+    }
+  }
+
+  // 2. 檢查是否點到正在畫面上的列車
+  if (st.tr) {
+    const T = st.tr, m = M[T.i], L = lenOf(m, ch);
+    const trainLeft = T.x - L, trainRight = T.x;
+    if (x >= trainLeft - 15 && x <= trainRight + 15 && y >= railY - ch * 1.25 && y <= railY + 10) {
+      T.flashT = 0.85;
+      playTrainHorn(m.nose === 'SL');
+      const icons = ['✨', '💛', '🎵', '⭐'];
+      for (let k = 0; k < 3; k++) {
+        st.fx.push({
+          type: 'emoji',
+          txt: icons[(k + Math.floor(st.t * 3)) % icons.length],
+          x: x + (k - 1) * 18,
+          y: y - 12,
+          vx: (k - 1) * 16,
+          vy: -35 - k * 8,
+          life: 1.2,
+          maxLife: 1.2,
+          size: Math.round(ch * 0.30)
+        });
+      }
+      // 若是蒸汽火車，額外噴出大朵可愛白煙
+      if (m.nose === 'SL') {
+        for (let k = 0; k < 4; k++) {
+          st.fx.push({
+            type: 'puff',
+            x: T.x - ch * 0.55 - k * 8,
+            y: railY - ch * 1.45,
+            vx: -18 - k * 6,
+            vy: -26 - k * 8,
+            r: ch * (0.18 + k * 0.05),
+            life: 1.5,
+            maxLife: 1.5
+          });
+        }
+      }
+      return;
+    }
+  }
+
+  // 3. 點擊天空或遠方富士山/地標：綻放柔和星光或櫻花瓣
+  if (y < railY - ch * 0.5) {
+    const skyIcons = st.sc === 0 ? ['🌸', '✨', '☁️'] : (st.sc === 1 ? ['❄️', '⛄', '✨'] : ['🌟', '✨', '🎈']);
+    for (let k = 0; k < 3; k++) {
+      st.fx.push({
+        type: 'emoji',
+        txt: skyIcons[k % skyIcons.length],
+        x: x + (k - 1) * 16,
+        y: y,
+        vx: (k - 1) * 18,
+        vy: -22 - k * 6,
+        life: 1.3,
+        maxLife: 1.3,
+        size: Math.round(ch * 0.28)
+      });
+    }
+    chime([659]);
+  }
+});
 
 // ===================== 麥克風系統（長時間穩定版） =====================
 let an = null, micStream = null, micSource = null, keepAliveGain = null, freqBuf = null;
@@ -1305,7 +1728,7 @@ function autoCalibrate(opts) {
       if (lr) lr.textContent = Math.round(st.lvl) + ' / 門檻 ' + ($('#goal').value || 30);
       setTimeout(() => {
         if (($('#msg').textContent || '').indexOf('已校準') === 0)
-          $('#msg').textContent = '提示：列車停靠時越安靜，停留時間越長喔！';
+          $('#msg').textContent = '提示：輕點停靠的火車或站務員會有溫柔小彩蛋喔！';
       }, 5000);
     }
   }, interval);
@@ -1335,8 +1758,7 @@ async function startMic() {
   micStream = stream;
   micSource = null; keepAliveGain = null; an = null;
 
-  const AC = window.AudioContext || window.webkitAudioContext;
-  const a = st.ac = st.ac || new AC();
+  const a = getSharedAudioCtx();
   await a.resume();
   an = a.createAnalyser();
   an.fftSize = 2048;
@@ -1382,6 +1804,7 @@ $('#go').onclick = async () => {
     console.warn('mic error', e);
   }
   st.run = 1; st.first = 1; st.qs = 2.0;
+  updateAmbientNoiseState();
   const resume = () => kickAudio();
   document.addEventListener('touchstart', resume, { passive: true });
   document.addEventListener('click', resume, { passive: true });
@@ -1409,6 +1832,7 @@ addEventListener('keydown', e => { if (e.code === 'Space' && !st.mic) { st.sim =
 addEventListener('keyup', e => { if (e.code === 'Space') st.sim = 0; });
 
 $('#callBtn').onclick = () => {
+  if (st.locked) return;
   st.loud = 0; st.acc = 0;
   if (!st.tr) {
     spawnTrain();
@@ -1417,8 +1841,14 @@ $('#callBtn').onclick = () => {
   }
 };
 
-// ===================== 抽車、進站與上下車劇本生成 =====================
+// ===================== 抽車（支援家長指定下一班列車）、進站與上下車劇本生成 =====================
 function pick() {
+  if (st.forcedNextTrain >= 0 && st.forcedNextTrain < M.length) {
+    const chosen = st.forcedNextTrain;
+    st.forcedNextTrain = -1;
+    if (nextTrainSel) nextTrainSel.value = '-1';
+    return chosen;
+  }
   const b = [0, 1, 2].find(x => !bd(x));
   if (b == null && !seen[30]) return 30;
   const un = b == null ? [] : [...Array(10).keys()].map(k => b * 10 + k).filter(i => !seen[i]);
@@ -1445,6 +1875,7 @@ function spawnTrain() {
     v: 0,
     door: 0,
     occ: 0.65,
+    flashT: 0,
     baseDwell: baseDwell,
     maxDwell: baseDwell,
     chimePlayed: false
@@ -1491,6 +1922,8 @@ function arrive() {
         dir: restSpot > dX ? 1 : -1,
         walking: false,
         waving: false,
+        saluteT: 0,
+        jumpY: 0,
         alpha: 0,
         state: 'wait_alight',
         delay: 2.2 + k * 3.0,
@@ -1529,6 +1962,19 @@ function go(i) { if (!st.fade) go2(i); }
 function update(dt) {
   st.t += dt; const ch = CH();
   if (st.ccTimer > 0) { st.ccTimer -= dt; if (st.ccTimer <= 0) $('#cornerCard').classList.remove('show'); }
+
+  // 更新微互動粒子特效
+  for (let i = st.fx.length - 1; i >= 0; i--) {
+    const f = st.fx[i];
+    f.life -= dt;
+    if (f.life <= 0) {
+      st.fx.splice(i, 1);
+      continue;
+    }
+    f.x += (f.vx || 0) * dt;
+    f.y += (f.vy || 0) * dt;
+    if (f.type === 'puff') f.r += ch * 0.12 * dt;
+  }
 
   if (st.run) {
     const goal = st.goal || +$('#goal').value || 30;
@@ -1621,6 +2067,7 @@ function update(dt) {
     const T = st.tr;
     if (T) {
       const m = M[T.i], L = lenOf(m, ch), sx = getStopX(W, isPortrait);
+      if (T.flashT > 0) T.flashT = Math.max(0, T.flashT - dt);
 
       if (st.loud && st.loudT > 4.0) {
         if (T.ph === 'in') {
@@ -1633,7 +2080,9 @@ function update(dt) {
       if (T.ph === 'in') {
         const dist = sx - T.x;
         const spd = cl(dist * 0.42, W * 0.028, W * 0.16);
-        T.x += (st.loud ? spd * 0.2 : spd) * dt;
+        const actualSpd = st.loud ? spd * 0.2 : spd;
+        T.x += actualSpd * dt;
+        updateRailClackSound(dt, actualSpd, m.trk === 'M');
         if (sx - T.x <= 2.5) {
           T.x = sx;
           T.ph = 'stop';
@@ -1641,7 +2090,6 @@ function update(dt) {
           arrive();
         }
       } else if (T.ph === 'stop') {
-        // 確保停靠時車頭永遠緊貼當前螢幕方向的月台停靠點
         T.x = sx;
         T.t += dt;
         if (!st.loud && !isWarn && T.maxDwell < T.baseDwell + 22) {
@@ -1670,16 +2118,29 @@ function update(dt) {
       } else if (T.ph === 'out') {
         T.v = Math.min(W * 0.24, T.v + W * 0.032 * dt);
         T.x += T.v * dt;
+        updateRailClackSound(dt, T.v, m.trk === 'M');
         if (T.x - L > W + 50) endTrain();
       } else if (T.ph === 'back') {
         T.door = Math.max(0, T.door - dt * 1.2);
-        T.x -= W * 0.18 * dt;
+        const backSpd = W * 0.18;
+        T.x -= backSpd * dt;
+        updateRailClackSound(dt, backSpd, m.trk === 'M');
         if (T.x < -40) endTrain();
       }
     }
 
     // ===================== 月台旅客與站務員慢動作更新 =====================
     const walkSpeed = cl(W * 0.028, 22, 38);
+    [...st.pax, st.staff].forEach(p => {
+      if (p.saluteT > 0) p.saluteT = Math.max(0, p.saluteT - dt);
+      if (p.jumpT > 0) {
+        p.jumpT = Math.max(0, p.jumpT - dt);
+        p.jumpY = Math.sin((p.jumpT / 0.45) * Math.PI) * (ch * 0.10);
+      } else {
+        p.jumpY = 0;
+      }
+    });
+
     st.pax.forEach(p => {
       if (st.tr && st.tr.ph === 'stop' && st.tr.door > 0.75) {
         if (p.state === 'wait_board') {
@@ -1723,7 +2184,7 @@ function update(dt) {
     });
 
     const sf = st.staff;
-    if (st.tr && st.tr.ph === 'stop' && st.tr.t > 3 && st.tr.t < st.tr.maxDwell - 5) {
+    if (st.tr && st.tr.ph === 'stop' && st.tr.t > 3 && st.tr.t < st.tr.maxDwell - 5 && (!sf.saluteT || sf.saluteT <= 0)) {
       sf.walking = true;
       sf.waving = false;
       sf.x += sf.dir * (walkSpeed * 0.65) * dt;
@@ -1965,7 +2426,7 @@ function drawStationPlatformAndPeople(railY, ch, trkType, t) {
   }
 }
 
-// ===================== 主場景繪圖迴圈（最外層 save/restore 保證不鎖死 Clip） =====================
+// ===================== 主場景繪圖迴圈 =====================
 function draw(t) {
   g.save();
   try {
@@ -2002,6 +2463,7 @@ function draw(t) {
           t: st.t,
           p: T.x,
           glow: T.ph === 'in',
+          flash: T.flashT && T.flashT > 0,
           door: T.door,
           occ: T.occ
         });
@@ -2017,6 +2479,23 @@ function draw(t) {
     }
 
     drawStationPlatformAndPeople(railY, ch, trkType, t);
+
+    // 繪製幼兒點擊互動特效（星星/愛心/蒸汽白煙圈）
+    if (st.fx.length > 0) {
+      g.save();
+      for (const f of st.fx) {
+        g.globalAlpha = cl(f.life / (f.maxLife || 1), 0, 1);
+        if (f.type === 'puff') {
+          g.fillStyle = 'rgba(255,255,255,0.85)';
+          g.beginPath(); g.arc(f.x, f.y, f.r, 0, Math.PI * 2); g.fill();
+        } else {
+          g.font = (f.size || 24) + 'px serif';
+          g.textAlign = 'center';
+          g.fillText(f.txt, f.x, f.y);
+        }
+      }
+      g.restore();
+    }
 
     if (st.arm > 0.02) { g.fillStyle = 'rgba(60,70,85,' + 0.18 * st.arm + ')'; g.fillRect(0, 0, W, H); }
     if (st.page) {
@@ -2041,7 +2520,7 @@ function showDetail(i) {
   const m = M[i], box = $('#detailBox'), isCollected = !!seen[i];
   box.hidden = false;
   if (!isCollected) {
-    box.innerHTML = `<div style="text-align:center;padding:12px"><h4>🔒 尚未收錄此列車</h4><p style="margin:4px 0;opacity:.8">保持教室安靜 🟢🙂，等待這列火車緩緩進站吧！</p></div>`;
+    box.innerHTML = `<div style="text-align:center;padding:12px"><h4>🔒 尚未收錄此列車</h4><p style="margin:4px 0;opacity:.8">保持教室安靜 🟢🙂，或在設定中指定此列車進站吧！</p></div>`;
     return;
   }
   const wikiUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(m.img)}?width=500`;
@@ -2062,12 +2541,20 @@ function showDetail(i) {
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px">
           <span style="background:#22c55e22;color:#16a34a;padding:3px 8px;border-radius:6px;font-weight:700">✅ 已收錄 (停靠 ${seen[i]} 次)</span>
           <span style="background:#8882;padding:3px 8px;border-radius:6px">${m.cars} 輛編組・${m.trk === 'V' ? '高架專用軌' : (m.trk === 'M' ? '磁浮軌道' : '在來線軌道')}</span>
+          <button type="button" id="callThisTrainBtn" style="font-size:12px;padding:3px 9px;background:#fef3c7;color:#b45309;border:1px solid #f59e0b;font-weight:800">🔔 召喚此列車進站</button>
           <label style="cursor:pointer;background:#3b82f622;color:#2563eb;padding:3px 8px;border-radius:6px;font-weight:700">
             📷 更換真車照片 <input type="file" id="upPhoto" accept="image/*" hidden>
           </label>
         </div>
       </div>
     </div>`;
+  const callThis = $('#callThisTrainBtn');
+  if (callThis) callThis.onclick = () => {
+    st.forcedNextTrain = i;
+    $('#dex').hidden = true;
+    if (!st.tr) spawnTrain();
+    else $('#msg').textContent = `🎯 已排定下一班進站：${m.n}`;
+  };
   const up = $('#upPhoto');
   if (up) up.onchange = e => {
     const f = e.target.files[0]; if (!f) return;
@@ -2116,23 +2603,42 @@ function album(pg) {
   $('#dex').hidden = 0;
 }
 
-$('#alb').onclick = () => { $('#badge').hidden = 1; album([0, 1, 2].find(x => !bd(x)) ?? 0); };
+$('#alb').onclick = () => {
+  if (st.locked) return;
+  $('#badge').hidden = 1;
+  album([0, 1, 2].find(x => !bd(x)) ?? 0);
+};
 $('#dx').onclick = () => $('#dex').hidden = 1;
 
+// ===================== 主迴圈（含智慧省電動態幀率調節） =====================
 initWaitingPassengers();
 let last = performance.now();
+let lastDrawTime = 0;
+
 (function loop(t) {
+  const dt = Math.min(0.1, (t - last) / 1000);
+  last = t;
+
+  // 麥克風偵測與狀態邏輯永遠維持 60Hz 全速更新
   try {
-    update(Math.min(0.1, (t - last) / 1000));
+    update(dt);
   } catch (e) {
     dbgErr('update', e);
   }
-  try {
-    draw(t);
-  } catch (e) {
-    dbgErr('draw', e);
+
+  // 智慧省電：候車無火車、無轉場、無點擊特效時，畫面渲染降為 24 FPS 省電降溫；有火車或互動時 60 FPS
+  const isIdle = $('#ecoMode').checked && !st.tr && !st.fade && !st.page && st.fx.length === 0 && (t - lastInteractTime > 2000);
+  const minDrawInterval = isIdle ? 40 : 0;
+
+  if (t - lastDrawTime >= minDrawInterval) {
+    lastDrawTime = t;
+    try {
+      draw(t);
+    } catch (e) {
+      dbgErr('draw', e);
+    }
   }
-  last = t;
+
   requestAnimationFrame(loop);
 })(last);
 </script>
