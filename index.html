@@ -17,7 +17,6 @@
   --safe-r:env(safe-area-inset-right,0px);
   --ui-gap:10px;
   --ic:54px;
-  /* OLED 防烙印微位移變數 (由 JS 動態平滑更新 ±3px) */
   --px-x:0px;
   --px-y:0px;
 }
@@ -38,7 +37,7 @@ button:hover{transform:scale(1.02)}
 button:active{transform:scale(0.96)}
 .ic{width:var(--ic);height:var(--ic);font-size:calc(var(--ic)*0.45);padding:0;position:relative;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 
-/* 左上燈號 (套用 OLED 防烙印微位移) */
+/* 左上燈號 */
 #lamp{
   position:fixed;
   left:calc(12px + var(--safe-l) + var(--px-x));
@@ -54,7 +53,7 @@ button:active{transform:scale(0.96)}
 #dots{
   position:fixed;left:calc(50% + var(--px-x));transform:translateX(-50%);
   top:calc(12px + var(--safe-t) + var(--px-y));
-  max-width:min(480px, calc(100vw - 230px - var(--safe-l) - var(--safe-r)));
+  max-width:min(520px, calc(100vw - 230px - var(--safe-l) - var(--safe-r)));
   padding:6px 14px;font-size:clamp(12px,2.4vw,14px);
   font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px 10px;
   flex-wrap:wrap;text-align:center;z-index:11;box-sizing:border-box;
@@ -62,6 +61,7 @@ button:active{transform:scale(0.96)}
 }
 #comboBadge{font-size:clamp(11px,2.1vw,12.5px);color:#b45309;background:#fef3c7;border:1px solid #f59e0b88;padding:1px 8px;border-radius:99px;font-weight:800;white-space:nowrap}
 #dwellHint{font-size:clamp(11px,2.2vw,13px);color:#15803d;background:#dcfce7;padding:2px 8px;border-radius:99px;font-weight:700;white-space:nowrap}
+#batHint{font-size:11px;color:#dc2626;background:#fee2e2;padding:1px 7px;border-radius:99px;font-weight:800;white-space:nowrap}
 
 /* 右上按鈕列 */
 #top{
@@ -99,7 +99,7 @@ button:active{transform:scale(0.96)}
   position:fixed;
   right:calc(10px + var(--safe-r));
   top:calc(10px + var(--safe-t) + var(--ic) + 12px);
-  width:min(340px, calc(100vw - 20px - var(--safe-l) - var(--safe-r)));
+  width:min(350px, calc(100vw - 20px - var(--safe-l) - var(--safe-r)));
   max-height:calc(100dvh - var(--safe-t) - var(--safe-b) - var(--ic) - 28px);
   overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:12px 14px;box-sizing:border-box;font-size:13.5px;z-index:20;
@@ -168,7 +168,7 @@ button:active{transform:scale(0.96)}
 .eki-stamp .st-name{font-size:11.5px;font-weight:900;color:var(--fg)}
 .eki-stamp .st-cond{font-size:10px;opacity:.75;margin-top:2px}
 
-/* 圖鑑 */
+/* 圖鑑與 100% 離線向量明信片 */
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(210px,100%),1fr));gap:12px;margin-top:12px}
 .dex-item{background:#8882;border-radius:16px;padding:10px;font-size:13px;text-align:left;cursor:pointer;transition:.2s;border:2px solid transparent}
 .dex-item:hover{border-color:#3b82f6}
@@ -177,8 +177,8 @@ button:active{transform:scale(0.96)}
 .dex-item .di-route{font-size:12px;opacity:.8;margin-top:2px}
 #detailBox{background:#8881;border-radius:16px;padding:14px;margin-bottom:14px;text-align:left;border:1px solid #8884}
 #detailBox .db-head{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
-#detailBox .db-photo{width:min(220px,100%);height:130px;border-radius:12px;object-fit:cover;background:#0002;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;flex-shrink:0}
-#detailBox .db-photo img{width:100%;height:100%;object-fit:cover}
+#detailBox .db-photo{width:min(240px,100%);height:140px;border-radius:12px;object-fit:cover;background:#0002;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+#detailBox .db-photo img,#detailBox .db-photo canvas{width:100%;height:100%;object-fit:cover;display:block}
 
 /* 常駐音量計 */
 #volWrap{
@@ -250,7 +250,7 @@ button:active{transform:scale(0.96)}
 /* Debug panel */
 #dbg{
   position:fixed;left:calc(8px + var(--safe-l));bottom:calc(8px + var(--safe-b));z-index:50;
-  max-width:min(320px,90vw);max-height:45vh;overflow:auto;
+  max-width:min(330px,92vw);max-height:48vh;overflow:auto;
   font:11px/1.35 ui-monospace,Menlo,monospace;
   background:rgba(15,23,42,.88);color:#e2e8f0;
   border-radius:12px;padding:8px 10px;
@@ -276,6 +276,7 @@ button:active{transform:scale(0.96)}
   <span id="dotsTxt"></span>
   <span id="comboBadge" hidden>🔥 連勝 1</span>
   <span id="dwellHint" hidden>🤫 安靜觀察中・列車停留延長</span>
+  <span id="batHint" hidden>🪫 低電量省電守護中</span>
 </div>
 
 <!-- 右上：功能列 + 兒童防誤觸鎖 -->
@@ -312,15 +313,19 @@ button:active{transform:scale(0.96)}
   <div class="row"><button type="button" id="cal">🎚 重新校準環境音</button><button type="button" id="noise" hidden>按住=測試吵鬧</button></div>
 
   <hr>
-  <span class="sec-title">🚄 列車班距、指定發車與雙車交會</span>
+  <span class="sec-title">🚄 列車班距、併結運轉與雙車交會</span>
   <label>🎯 指定下一班車
     <select id="nextTrainSel" style="max-width:175px">
       <option value="-1" selected>🎲 隨機驚喜進站</option>
     </select>
   </label>
   <div class="row">
+    <span>🔗 E5+E6 雙車併結奇觀</span>
+    <button type="button" id="testCoupleBtn" style="font-size:12px;padding:4px 10px;background:#dcfce7;color:#15803d;border-color:#22c55e;font-weight:800">🚄 立即召喚併結</button>
+  </div>
+  <div class="row">
     <span>✨ 連續安靜雙車交會</span>
-    <button type="button" id="testCrossBtn" style="font-size:12px;padding:4px 10px;background:#fef3c7;color:#b45309;border-color:#f59e0b;font-weight:800">🚄 立即召喚交會車</button>
+    <button type="button" id="testCrossBtn" style="font-size:12px;padding:4px 10px;background:#fef3c7;color:#b45309;border-color:#f59e0b;font-weight:800">🚄 立即召喚交會</button>
   </div>
   <label>候車間隔
     <select id="rate">
@@ -336,6 +341,26 @@ button:active{transform:scale(0.96)}
       <option value="45">45 秒 (安靜可延至65秒)</option>
     </select>
   </label>
+
+  <hr>
+  <span class="sec-title">🌦️ 動態天氣、隧道鐵橋與風景</span>
+  <label>天氣與四季粒子
+    <select id="weatherSel">
+      <option value="auto" selected>🌦️ 隨車站與時間自動變化</option>
+      <option value="clear">☀️ 晴朗微風 (歸巢飛鳥)</option>
+      <option value="sakura">🌸 櫻花紛飛 (春櫻花瓣)</option>
+      <option value="snow">❄️ 浪漫瑞雪 (冬日雪花)</option>
+      <option value="rain">🌧️ 午後細雨 (車頭雨刷+雨後彩虹)</option>
+    </select>
+  </label>
+  <label>左側進站地景
+    <select id="portalSel">
+      <option value="auto" selected>⛰️ 隨車站自動 (山洞/鐵橋)</option>
+      <option value="tunnel">🕳️ 山岳石造隧道口 (出洞燈光)</option>
+      <option value="bridge">🌉 紅色鋼構桁架鐵橋</option>
+      <option value="none">🌿 開闊平原</option>
+    </select>
+  </label>
   <label>風景切換
     <select id="sceneT">
       <option value="0">立刻切換下一站風景</option>
@@ -345,12 +370,13 @@ button:active{transform:scale(0.96)}
   </label>
 
   <hr>
-  <span class="sec-title">🎙️ 車站廣播、音效與 OLED 保護</span>
+  <span class="sec-title">🔢 早教認知、語音廣播與省電守護</span>
+  <label>🔢 離站數車廂與進站顏色早教<input type="checkbox" id="eduMode" checked></label>
   <label>🎙️ 溫柔雙語車站語音廣播<input type="checkbox" id="voiceSnd" checked></label>
   <label>溫和木琴與互動音效<input type="checkbox" id="snd" checked></label>
   <label>輕柔鐵軌喀噠聲 (進離站)<input type="checkbox" id="railSnd" checked></label>
   <label>安撫環境白噪音 (微風/海浪)<input type="checkbox" id="ambSnd"></label>
-  <label>🔋 智慧省電 & OLED 防烙印微位移<input type="checkbox" id="ecoMode" checked></label>
+  <label>🔋 智慧省電 & 低電量自動守護<input type="checkbox" id="ecoMode" checked></label>
 
   <div class="row" style="margin-top:10px">
     <button type="button" id="saveCfgBtn" style="width:100%;background:#2563eb;color:#fff;border:0;padding:10px 14px;font-weight:800">💾 儲存設定</button>
@@ -369,17 +395,17 @@ button:active{transform:scale(0.96)}
     <button type="button" id="importConfirmBtn" style="font-size:12px;background:#16a34a;color:#fff;border:0">確定</button>
   </div>
 
-  <div id="msg" style="font-size:12px;opacity:.85;color:#2563eb;margin-top:6px">提示：連續安靜迎接列車，會有雙車交會大驚喜喔！</div>
+  <div id="msg" style="font-size:12px;opacity:.85;color:#2563eb;margin-top:6px">提示：連續安靜可觸發 E5+E6 雙車併結與便當推車喔！</div>
 </div>
 
 <!-- 啟動畫面 -->
 <div id="start" class="modal card">
   <div style="font-size:64px">🚄 🟢🙂</div>
   <h2 style="margin:6px 0">安靜新幹線：慢活車站小世界</h2>
-  <p style="font-size:16px;line-height:1.6;opacity:.9">
-    🟢🙂 保持安靜，列車會伴隨溫柔雙語廣播進站、開門陪伴大家。<br>
-    🚄 連續安靜迎接火車，後方軌道還會出現「雙車高速交會」驚喜！<br>
-    🏅 收集各站紀念印章（Eki Stamp），成為最棒的今日小站長吧！
+  <p style="font-size:15.5px;line-height:1.6;opacity:.9">
+    🟢🙂 保持安靜，看列車從隧道照亮燈光駛出，伴隨櫻花、瑞雪與彩虹。<br>
+    🔗 連續安靜迎接火車，會上演「E5+E6 雙車連結」、便當小推車與清潔隊敬禮！<br>
+    🔢 離站時一起數車廂 1、2、3... 收集各站紀念印章（Eki Stamp）吧！
   </p>
   <button id="go" class="go">▶ 走進車站</button>
 </div>
@@ -391,7 +417,7 @@ button:active{transform:scale(0.96)}
     <button id="dx">✖ 關閉</button>
   </div>
 
-  <!-- 5. 今日小站長榮譽統計與日本車站紀念印章簿 -->
+  <!-- 今日小站長榮譽統計與日本車站紀念印章簿 -->
   <div id="stationMasterBox">
     <div style="font-weight:900;font-size:14px;color:#b45309;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
       <span>🏅 今日小站長榮譽紀錄</span>
@@ -412,7 +438,7 @@ button:active{transform:scale(0.96)}
 </div>
 
 <script>
-// ===================== PWA 全螢幕動態 Manifest 注入 =====================
+// ===================== PWA 全螢幕動態 Manifest 與離線快取支援 =====================
 (function setupPWA() {
   try {
     const manifest = {
@@ -436,6 +462,29 @@ button:active{transform:scale(0.96)}
   } catch (e) {}
 })();
 
+// ===================== 🔋 低電量自動守護 (Battery API Auto-Saver) =====================
+let batteryState = { level: 1.0, charging: true, lowPowerSaver: false };
+(function initBatteryMonitor() {
+  if ('getBattery' in navigator) {
+    navigator.getBattery().then(bat => {
+      const checkBat = () => {
+        batteryState.level = bat.level;
+        batteryState.charging = bat.charging;
+        const isLow = !bat.charging && bat.level <= 0.20;
+        if (batteryState.lowPowerSaver !== isLow) {
+          batteryState.lowPowerSaver = isLow;
+          const bh = document.querySelector('#batHint');
+          if (bh) bh.hidden = !isLow;
+          if (typeof rs === 'function') rs();
+        }
+      };
+      checkBat();
+      bat.addEventListener('levelchange', checkBat);
+      bat.addEventListener('chargingchange', checkBat);
+    }).catch(() => {});
+  }
+})();
+
 // ===================== 基本畫布、旋轉自適應與儲存工具 =====================
 const $ = s => document.querySelector(s);
 const cv = $('#c');
@@ -454,7 +503,9 @@ const getStopX = (w, portrait) => portrait ? w * 0.92 : w * 0.86;
 function rs() {
   const prevW = W || 360;
   const prevPortrait = isPortrait;
-  dpr = Math.min(window.devicePixelRatio || 1, 3);
+  // 若處於低電量自動守護模式，自動將 DPR 降為 1.0 以大幅降低 GPU 耗電與發熱
+  const maxDpr = batteryState.lowPowerSaver ? 1.0 : 2.5;
+  dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
 
   const docW = document.documentElement.clientWidth || window.innerWidth || 360;
   const docH = document.documentElement.clientHeight || window.innerHeight || 640;
@@ -476,13 +527,17 @@ function rs() {
     const newStopX = getStopX(W, isPortrait);
     if (st.tr) {
       if (st.tr.ph === 'stop') {
-        st.tr.x = newStopX;
+        st.tr.x = st.tr.isCoupling ? W * 0.56 : newStopX;
+        if (st.tr.rearTr && st.tr.rearTr.coupled) {
+          st.tr.rearTr.x = st.tr.x + 2;
+        }
       } else if (st.tr.ph === 'in' || st.tr.ph === 'back') {
         const ratio = oldStopX > 0 ? (st.tr.x / oldStopX) : 0.5;
         st.tr.x = ratio * newStopX;
       } else if (st.tr.ph === 'out') {
         const scaleRatio = W / prevW;
         st.tr.x = st.tr.x * scaleRatio;
+        if (st.tr.rearTr) st.tr.rearTr.x = st.tr.x + 2;
       }
     }
     if (st.bgTr) {
@@ -518,42 +573,42 @@ if (window.visualViewport) {
   visualViewport.addEventListener('resize', rsDebounced);
 }
 
-// ===================== 列車資料庫 =====================
-const RAW=`E7 北陸新幹線|日本|3|#1b4370|#f4f2ed|#b87333|#1b4370|E7|12|V|東京 → 金澤・敦賀|車頂採用日本傳統「空色(深藍)」，搭配象牙白車身與銅色、空色雙飾帶，流線型鼻頭專為穿越北陸山岳隧道與陡坡設計。|Shinkansen-E7.jpg
-W7 北陸新幹線|日本|3|#1b4370|#f4f2ed|#b87333|#1b4370|E7|12|V|金澤・敦賀 → 東京|JR西日本所屬的北陸新幹線主力，外型與E7系雙胞胎，結合傳統工藝色彩與「Aero Double-Wing」圓潤流線車頭。|JRW_W7_Series_W2_20150110.jpg
-E5 隼號 Hayabusa|日本|3|#1f8a5b|#f5f5f7|#e84a90|#1f8a5b|E5|10|V|東京 → 新青森・新函館北斗|常盤綠搭配飛雲白與津輕粉紅飾帶，擁有長達15公尺的超長流線鼻頭，最高時速達 320 km/h。|JR-East-E5-Hayabusa.jpg
-H5 北海道新幹線|日本|3|#1f8a5b|#f5f5f7|#8a5ac8|#1f8a5b|E5|10|V|新青森 → 新函館北斗|E5系的姊妹車，中腰飾帶改為代表北海道薰衣草的「彩香紫」，能穿越青函海底隧道。|Shinkansen_H5.jpg
-E6 小町號 Komachi|日本|3|#d32029|#f6f6f8|#b0b5bc|#d32029|E6|7|V|東京 → 秋田|茜色亮紅車頂搭配飛雲白車身與銀色流線飾帶，屬於可直通迷你新幹線的 7 輛編組高速列車。|E6_Series_Shinkansen_2013.jpg
-N700S 東海道新幹線|日本|3|#f6f8fc|#f6f8fc|#1848a0|#1848a0|N700|16|V|東京 → 新大阪・博多|新幹線最新世代標準車，「Dual Supreme Wing」雙翼立體車頭搭配經典白底雙藍線塗裝。|JR_Central_N700S_J0_20200613.jpg
-N700A 東海道新幹線|日本|2|#f6f8fc|#f6f8fc|#1c4fa8|#1c4fa8|N700|16|V|東京 → 博多|東海道與山陽新幹線主力，白色車身配深藍雙腰帶，搭載中央締結式碟煞系統。|Shinkansen_N700A_X65.jpg
-700系 新幹線|日本|2|#f6f8fc|#f6f8fc|#2068c8|#2068c8|D|16|V|東京 → 博多|著名的「鴨嘴獸」造型車頭，有效降低進入隧道時的微氣壓波噪音。|700_Series_Shinkansen_C54.jpg
-500系 新幹線|日本|4|#9ba4b0|#d8dde4|#1c366c|#9ba4b0|P500|16|V|新大阪 → 博多|鐵道迷心中的傳奇！戰鬥機般的圓筒尖銳車頭與圓形斷面車身，曾創下商業運轉 300km/h 紀錄。|500_Series_Shinkansen_V2_2015.jpg
-800系 九州新幹線|日本|3|#9e1b24|#f8f8f5|#9e1b24|#d4af37|F800|6|V|博多 → 鹿兒島中央|燕子號(Tsubame)，純白車身搭配琉璃紅車頂與金線，內裝大量使用九州樟木與傳統工藝。|Kyushu_Shinkansen_800.jpg
-Doctor Yellow 檢測車|日本|4|#ffd100|#ffd100|#1b4ca0|#1b4ca0|D|7|V|東京 ↔ 博多 (不定期)|被稱為「新幹線醫生」的黃色高速軌道檢測車，因為班表不公開，看到它象徵帶來好運！|Doctor_Yellow_T4.jpg
-ALFA-X 次世代試驗車|日本|4|#cfd8e2|#e8eef5|#3090a0|#d8478a|ALFA|10|V|仙台 ↔ 新青森 (試運轉)|為時速 360 km/h 打造的次世代實驗車，擁有誇張的 22 公尺超長鼻頭與金屬銀綠漸層塗裝。|Shinkansen_E956_ALFA-X.jpg
-L0 超電導磁浮|日本|4|#f6f8fc|#f6f8fc|#1a6fc4|#1a6fc4|MAG|7|M|品川 → 名古屋 (中央新幹線)|時速高達 500 km/h 的超電導磁浮列車，採用無車輪懸浮推進與超長低風阻前鼻。|JR_Central_L0_Series.jpg
-台灣高鐵 700T|台灣|3|#f6f6f8|#f6f6f8|#e85d1a|#222b38|D|12|V|南港 → 左營|台灣高鐵主力車種，以日本700系為基礎改良，雪白車身搭配亮眼橘黑雙色飾帶。|THSR_700T_TR31.jpg
-普悠瑪號 TEMU2000|台灣|3|#f6f6f8|#f6f6f8|#d62828|#333333|F|8|G|樹林 → 花蓮・台東|台鐵傾斜式電聯車，潔白車身塗有鮮紅修長色帶與車頭大字TRA，過彎不需大幅減速。|TRA_TEMU2000_Puyuma.jpg
-太魯閣號 TEMU1000|台灣|3|#f6f6f8|#f6f6f8|#1d4ea0|#f2a900|F|8|G|樹林 → 花蓮・知本|台鐵首款傾斜式列車，原型為九州885系，白底搭配深藍與金黃飾帶。|TRA_TEMU1000_Taroko.jpg
-EMU3000 新自強號|台灣|2|#f6f6f8|#f6f6f8|#22252a|#d62828|B|12|G|台北 → 台東・左營|榮獲Good Design大獎的「靜謐移動」極簡美學設計，白底配黑色駕駛窗與細緻紅藍邊線。|TRA_EMU3000.jpg
-推拉式自強號 PP|台灣|2|#d8dde2|#d8dde2|#e85814|#f2b824|F|12|G|基隆 → 高雄・屏東|台灣人最熟悉的「豬鼻子」推拉式自強號，銀灰車身配經典橘黃警戒塗裝。|TRA_PP_Tze-Chiang.jpg
-台鐵區間車 EMU900|台灣|1|#d2d7df|#d2d7df|#20a878|#1d5bb8|B|10|G|基隆 ↔ 新竹・苗栗|被譽為「最美區間車」，銀色不鏽鋼車身搭配微笑般的湖水綠與亮藍飾帶。|TRA_EMU900.jpg
-山手線 E235系|日本|1|#d4d8de|#d4d8de|#7ac142|#22262c|B|11|G|東京環狀線 (新宿・澀谷)|東京最繁忙的環狀通勤電車，特色是垂直鶯綠色車門塗裝與黑色科技感車頭。|JR_East_E235_Yamanote.jpg
-中央線快速 E233系|日本|1|#d4d8de|#d4d8de|#e85a14|#d4d8de|B|10|G|東京 → 高尾|貫穿東京中心的通勤大動脈，不鏽鋼車身搭配醒目的橘色腰帶。|JR_East_E233_Chuo.jpg
-京濱東北線 E233系|日本|1|#d4d8de|#d4d8de|#00a0e9|#d4d8de|B|10|G|大宮 → 東京 → 橫濱|行駛於首都圈南北向的通勤電車，車身飾帶為清爽的天空藍。|JR_East_E233-1000.jpg
-江之電 300形|日本|2|#1f5c3e|#f2e6a8|#1f5c3e|#f2e6a8|B|4|G|鎌倉 ↔ 藤澤|穿梭於湘南海岸與平交道之間的復古路面電車，經典綠奶雙色塗裝。|Enoden_305.jpg
-成田特快 N'EX E259系|日本|2|#f5f5f7|#1f2229|#d62027|#f5f5f7|F|6|G|成田機場 → 東京・新宿|連接機場與東京都心的特快車，高聳駕駛艙搭配紅黑撞色設計。|JRE_Series-E259.jpg
-小田急羅曼史號 GSE|日本|2|#d23426|#d23426|#f5f5f7|#f29b38|F|7|G|新宿 → 箱根湯本|擁有超大全景展望席的觀光特急，薔薇紅車身奔馳在富士山腳下。|Odakyu_70000_GSE.jpg
-SL 蒸汽機關車 D51|日本|3|#1c1d21|#1c1d21|#c83228|#d4af37|SL|4|G|高崎 → 水上 (觀光保存線)|被暱稱為「デコイチ(Dekoichi)」的日本經典蒸汽火車，伴隨白煙與鳴笛聲前進。|JNR_D51_498.jpg
-法國 TGV Duplex|法國|3|#233d7a|#e6e9ef|#233d7a|#d62828|D|10|V|巴黎 → 里昂・馬賽|法國高速鐵路雙層列車，銀藍塗裝搭配雙層車窗配置。|TGV_Duplex_Dasye.jpg
-德國 ICE 3|德國|3|#f4f5f8|#f4f5f8|#d8222a|#22262e|E7|8|V|法蘭克福 → 科隆・慕尼黑|德國高鐵旗艦車種，白底紅線與一路延伸至車頭的連續黑色窗帶。|DB_BR_403_ICE_3.jpg
-歐洲之星 Eurostar e320|英國|3|#1d3461|#d8dee8|#f2b718|#1d3461|E7|8|V|倫敦 ↔ 巴黎・布魯塞爾|穿越英法海底隧道的跨國高鐵，藍金灰三色現代塗裝。|Eurostar_e320.jpg
-義大利紅箭 Frecciarossa|義大利|3|#c42026|#c42026|#e2e6ec|#22252a|E7|8|V|米蘭 → 羅馬・拿坡里|義大利高鐵「紅箭1000」，法拉利般的流線火紅車身。|Frecciarossa_1000.jpg
-黃金新幹線 (傳說隱藏)|傳說|4|#ffd700|#fff2a6|#f59e0b|#ffffff|E7|12|V|全圖鑑達成・夢幻特別運行|收集齊全所有列車後才會現身的傳說級黃金塗裝E7新幹線！|Shinkansen-E7.jpg`;
+// ===================== 列車資料庫（含幼兒顏色早教名稱） =====================
+const RAW=`E7 北陸新幹線|日本|3|#1b4370|#f4f2ed|#b87333|#1b4370|E7|12|V|東京 → 金澤・敦賀|車頂採用日本傳統「空色(深藍)」，搭配象牙白車身與銅色、空色雙飾帶，流線型鼻頭專為穿越北陸山岳隧道與陡坡設計。|Shinkansen-E7.jpg|天空藍與象牙白色
+W7 北陸新幹線|日本|3|#1b4370|#f4f2ed|#b87333|#1b4370|E7|12|V|金澤・敦賀 → 東京|JR西日本所屬的北陸新幹線主力，外型與E7系雙胞胎，結合傳統工藝色彩與「Aero Double-Wing」圓潤流線車頭。|JRW_W7_Series_W2_20150110.jpg|深藍色與白色
+E5 隼號 Hayabusa|日本|3|#1f8a5b|#f5f5f7|#e84a90|#1f8a5b|E5|10|V|東京 → 新青森・新函館北斗|常盤綠搭配飛雲白與津輕粉紅飾帶，擁有長達15公尺的超長流線鼻頭，最高時速達 320 km/h。|JR-East-E5-Hayabusa.jpg|常盤綠色配粉紅線條
+H5 北海道新幹線|日本|3|#1f8a5b|#f5f5f7|#8a5ac8|#1f8a5b|E5|10|V|新青森 → 新函館北斗|E5系的姊妹車，中腰飾帶改為代表北海道薰衣草的「彩香紫」，能穿越青函海底隧道。|Shinkansen_H5.jpg|翠綠色配薰衣草紫色
+E6 小町號 Komachi|日本|3|#d32029|#f6f6f8|#b0b5bc|#d32029|E6|7|V|東京 → 秋田|茜色亮紅車頂搭配飛雲白車身與銀色流線飾帶，屬於可直通迷你新幹線的 7 輛編組高速列車。|E6_Series_Shinkansen_2013.jpg|亮紅色與白色
+N700S 東海道新幹線|日本|3|#f6f8fc|#f6f8fc|#1848a0|#1848a0|N700|16|V|東京 → 新大阪・博多|新幹線最新世代標準車，「Dual Supreme Wing」雙翼立體車頭搭配經典白底雙藍線塗裝。|JR_Central_N700S_J0_20200613.jpg|雪白色配藍色線條
+N700A 東海道新幹線|日本|2|#f6f8fc|#f6f8fc|#1c4fa8|#1c4fa8|N700|16|V|東京 → 博多|東海道與山陽新幹線主力，白色車身配深藍雙腰帶，搭載中央締結式碟煞系統。|Shinkansen_N700A_X65.jpg|白色配深藍色
+700系 新幹線|日本|2|#f6f8fc|#f6f8fc|#2068c8|#2068c8|D|16|V|東京 → 博多|著名的「鴨嘴獸」造型車頭，有效降低進入隧道時的微氣壓波噪音。|700_Series_Shinkansen_C54.jpg|純白色配水藍色
+500系 新幹線|日本|4|#9ba4b0|#d8dde4|#1c366c|#9ba4b0|P500|16|V|新大阪 → 博多|鐵道迷心中的傳奇！戰鬥機般的圓筒尖銳車頭與圓形斷面車身，曾創下商業運轉 300km/h 紀錄。|500_Series_Shinkansen_V2_2015.jpg|帥氣銀灰色與深藍色
+800系 九州新幹線|日本|3|#9e1b24|#f8f8f5|#9e1b24|#d4af37|F800|6|V|博多 → 鹿兒島中央|燕子號(Tsubame)，純白車身搭配琉璃紅車頂與金線，內裝大量使用九州樟木與傳統工藝。|Kyushu_Shinkansen_800.jpg|純白色配紅屋頂
+Doctor Yellow 檢測車|日本|4|#ffd100|#ffd100|#1b4ca0|#1b4ca0|D|7|V|東京 ↔ 博多 (不定期)|被稱為「新幹線醫生」的黃色高速軌道檢測車，因為班表不公開，看到它象徵帶來好運！|Doctor_Yellow_T4.jpg|幸運亮黃色
+ALFA-X 次世代試驗車|日本|4|#cfd8e2|#e8eef5|#3090a0|#d8478a|ALFA|10|V|仙台 ↔ 新青森 (試運轉)|為時速 360 km/h 打造的次世代實驗車，擁有誇張的 22 公尺超長鼻頭與金屬銀綠漸層塗裝。|Shinkansen_E956_ALFA-X.jpg|科技銀白色
+L0 超電導磁浮|日本|4|#f6f8fc|#f6f8fc|#1a6fc4|#1a6fc4|MAG|7|M|品川 → 名古屋 (中央新幹線)|時速高達 500 km/h 的超電導磁浮列車，採用無車輪懸浮推進與超長低風阻前鼻。|JR_Central_L0_Series.jpg|雪白色與寶藍色
+台灣高鐵 700T|台灣|3|#f6f6f8|#f6f6f8|#e85d1a|#222b38|D|12|V|南港 → 左營|台灣高鐵主力車種，以日本700系為基礎改良，雪白車身搭配亮眼橘黑雙色飾帶。|THSR_700T_TR31.jpg|白色配活力橘色
+普悠瑪號 TEMU2000|台灣|3|#f6f6f8|#f6f6f8|#d62828|#333333|F|8|G|樹林 → 花蓮・台東|台鐵傾斜式電聯車，潔白車身塗有鮮紅修長色帶與車頭大字TRA，過彎不需大幅減速。|TRA_TEMU2000_Puyuma.jpg|白色配鮮紅色
+太魯閣號 TEMU1000|台灣|3|#f6f6f8|#f6f6f8|#1d4ea0|#f2a900|F|8|G|樹林 → 花蓮・知本|台鐵首款傾斜式列車，原型為九州885系，白底搭配深藍與金黃飾帶。|TRA_TEMU1000_Taroko.jpg|白色配藍黃線條
+EMU3000 新自強號|台灣|2|#f6f6f8|#f6f6f8|#22252a|#d62828|B|12|G|台北 → 台東・左營|榮獲Good Design大獎的「靜謐移動」極簡美學設計，白底配黑色駕駛窗與細緻紅藍邊線。|TRA_EMU3000.jpg|極簡白色與黑色
+推拉式自強號 PP|台灣|2|#d8dde2|#d8dde2|#e85814|#f2b824|F|12|G|基隆 → 高雄・屏東|台灣人最熟悉的「豬鼻子」推拉式自強號，銀灰車身配經典橘黃警戒塗裝。|TRA_PP_Tze-Chiang.jpg|銀灰色配橘黃色
+台鐵區間車 EMU900|台灣|1|#d2d7df|#d2d7df|#20a878|#1d5bb8|B|10|G|基隆 ↔ 新竹・苗栗|被譽為「最美區間車」，銀色不鏽鋼車身搭配微笑般的湖水綠與亮藍飾帶。|TRA_EMU900.jpg|銀色配微笑綠色
+山手線 E235系|日本|1|#d4d8de|#d4d8de|#7ac142|#22262c|B|11|G|東京環狀線 (新宿・澀谷)|東京最繁忙的環狀通勤電車，特色是垂直鶯綠色車門塗裝與黑色科技感車頭。|JR_East_E235_Yamanote.jpg|青蘋果綠色
+中央線快速 E233系|日本|1|#d4d8de|#d4d8de|#e85a14|#d4d8de|B|10|G|東京 → 高尾|貫穿東京中心的通勤大動脈，不鏽鋼車身搭配醒目的橘色腰帶。|JR_East_E233_Chuo.jpg|銀色配亮橘色
+京濱東北線 E233系|日本|1|#d4d8de|#d4d8de|#00a0e9|#d4d8de|B|10|G|大宮 → 東京 → 橫濱|行駛於首都圈南北向的通勤電車，車身飾帶為清爽的天空藍。|JR_East_E233-1000.jpg|銀色配天空藍色
+江之電 300形|日本|2|#1f5c3e|#f2e6a8|#1f5c3e|#f2e6a8|B|4|G|鎌倉 ↔ 藤澤|穿梭於湘南海岸與平交道之間的復古路面電車，經典綠奶雙色塗裝。|Enoden_305.jpg|復古森林綠與奶油色
+成田特快 N'EX E259系|日本|2|#f5f5f7|#1f2229|#d62027|#f5f5f7|F|6|G|成田機場 → 東京・新宿|連接機場與東京都心的特快車，高聳駕駛艙搭配紅黑撞色設計。|JRE_Series-E259.jpg|紅黑白色
+小田急羅曼史號 GSE|日本|2|#d23426|#d23426|#f5f5f7|#f29b38|F|7|G|新宿 → 箱根湯本|擁有超大全景展望席的觀光特急，薔薇紅車身奔馳在富士山腳下。|Odakyu_70000_GSE.jpg|薔薇鮮紅色
+SL 蒸汽機關車 D51|日本|3|#1c1d21|#1c1d21|#c83228|#d4af37|SL|4|G|高崎 → 水上 (觀光保存線)|被暱稱為「デコイチ(Dekoichi)」的日本經典蒸汽火車，伴隨白煙與鳴笛聲前進。|JNR_D51_498.jpg|經典酷黑色
+法國 TGV Duplex|法國|3|#233d7a|#e6e9ef|#233d7a|#d62828|D|10|V|巴黎 → 里昂・馬賽|法國高速鐵路雙層列車，銀藍塗裝搭配雙層車窗配置。|TGV_Duplex_Dasye.jpg|皇家藍色與銀色
+德國 ICE 3|德國|3|#f4f5f8|#f4f5f8|#d8222a|#22262e|E7|8|V|法蘭克福 → 科隆・慕尼黑|德國高鐵旗艦車種，白底紅線與一路延伸至車頭的連續黑色窗帶。|DB_BR_403_ICE_3.jpg|白色配紅線條
+歐洲之星 Eurostar e320|英國|3|#1d3461|#d8dee8|#f2b718|#1d3461|E7|8|V|倫敦 ↔ 巴黎・布魯塞爾|穿越英法海底隧道的跨國高鐵，藍金灰三色現代塗裝。|Eurostar_e320.jpg|深藍色配金黃色
+義大利紅箭 Frecciarossa|義大利|3|#c42026|#c42026|#e2e6ec|#22252a|E7|8|V|米蘭 → 羅馬・拿坡里|義大利高鐵「紅箭1000」，法拉利般的流線火紅車身。|Frecciarossa_1000.jpg|法拉利火紅色
+黃金新幹線 (傳說隱藏)|傳說|4|#ffd700|#fff2a6|#f59e0b|#ffffff|E7|12|V|全圖鑑達成・夢幻特別運行|收集齊全所有列車後才會現身的傳說級黃金塗裝E7新幹線！|Shinkansen-E7.jpg|閃亮亮黃金色`;
 
 const M = RAW.split('\n').map((s, idx) => {
   const a = s.split('|');
-  return { id: idx, n: a[0], c: a[1], r: +a[2], roof: a[3], body: a[4], st1: a[5], st2: a[6], nose: a[7], cars: +a[8], trk: a[9], route: a[10], desc: a[11], img: a[12] };
+  return { id: idx, n: a[0], c: a[1], r: +a[2], roof: a[3], body: a[4], st1: a[5], st2: a[6], nose: a[7], cars: +a[8], trk: a[9], route: a[10], desc: a[11], img: a[12], colorName: a[13] || '白色' };
 });
 
 const nextTrainSel = $('#nextTrainSel');
@@ -566,14 +621,14 @@ if (nextTrainSel) {
   });
 }
 
-// 6 大場景與日本車站紀念印章 (Eki Stamp) 設定
+// 6 大場景（含預設天氣與左側隧道/鐵橋設定）
 const SCENES = [
-  { jp: 'ふじさん', zh: '富士山站', role: 'hiker', colors: ['#d97706', '#2563eb', '#15803d', '#b91c1c'], stampIcon: '🗻', stampTitle: '富士山驛紀念', reqTrains: 1 },
-  { jp: 'ほっかいどう', zh: '北海道站', role: 'skier', colors: ['#0284c7', '#e11d48', '#7c3aed', '#0d9488'], stampIcon: '❄️', stampTitle: '北海道雪國印', reqTrains: 3 },
-  { jp: 'とうきょう', zh: '東京站', role: 'commuter', colors: ['#334155', '#1e293b', '#475569', '#3f3f46'], stampIcon: '🗼', stampTitle: '東京中央驛印', reqTrains: 5 },
-  { jp: 'しょうなん', zh: '湘南海岸', role: 'beach', colors: ['#f59e0b', '#ec4899', '#06b6d4', '#84cc16'], stampIcon: '🌊', stampTitle: '湘南鎌倉之印', reqTrains: 8 },
-  { jp: 'きゅうしゅう', zh: '九州溫泉', role: 'onsen', colors: ['#9f1239', '#4338ca', '#b45309', '#115e59'], stampIcon: '♨️', stampTitle: '九州湯けむり印', reqTrains: 12 },
-  { jp: 'ぎんが', zh: '銀河站', role: 'star', colors: ['#6366f1', '#8b5cf6', '#0ea5e9', '#f43f5e'], stampIcon: '🌌', stampTitle: '銀河鐵道特印', reqTrains: 16 }
+  { jp: 'ふじさん', zh: '富士山站', role: 'hiker', colors: ['#d97706', '#2563eb', '#15803d', '#b91c1c'], stampIcon: '🗻', stampTitle: '富士山驛紀念', reqTrains: 1, defaultWeather: 'sakura', defaultPortal: 'tunnel' },
+  { jp: 'ほっかいどう', zh: '北海道站', role: 'skier', colors: ['#0284c7', '#e11d48', '#7c3aed', '#0d9488'], stampIcon: '❄️', stampTitle: '北海道雪國印', reqTrains: 3, defaultWeather: 'snow', defaultPortal: 'tunnel' },
+  { jp: 'とうきょう', zh: '東京站', role: 'commuter', colors: ['#334155', '#1e293b', '#475569', '#3f3f46'], stampIcon: '🗼', stampTitle: '東京中央驛印', reqTrains: 5, defaultWeather: 'clear', defaultPortal: 'bridge' },
+  { jp: 'しょうなん', zh: '湘南海岸', role: 'beach', colors: ['#f59e0b', '#ec4899', '#06b6d4', '#84cc16'], stampIcon: '🌊', stampTitle: '湘南鎌倉之印', reqTrains: 8, defaultWeather: 'rain', defaultPortal: 'bridge' },
+  { jp: 'きゅうしゅう', zh: '九州溫泉', role: 'onsen', colors: ['#9f1239', '#4338ca', '#b45309', '#115e59'], stampIcon: '♨️', stampTitle: '九州湯けむり印', reqTrains: 12, defaultWeather: 'sakura', defaultPortal: 'tunnel' },
+  { jp: 'ぎんが', zh: '銀河站', role: 'star', colors: ['#6366f1', '#8b5cf6', '#0ea5e9', '#f43f5e'], stampIcon: '🌌', stampTitle: '銀河鐵道特印', reqTrains: 16, defaultWeather: 'clear', defaultPortal: 'none' }
 ];
 
 // ===================== 車體比例與車門位置計算 =====================
@@ -617,7 +672,7 @@ function getVisibleDoorXs(m, hx, ch) {
   return doors.filter(x => x > W * 0.10 && x < (isPortrait ? W * 0.90 : W * 0.80));
 }
 
-// ===================== 繪製車頭輪廓與車廂 =====================
+// ===================== 繪製車頭輪廓、雨刷、併結器與車廂 =====================
 function traceHeadPath(c, tp, l, r, NL, top, ch) {
   const yBot = top + ch, hx = r + NL;
   c.beginPath(); c.moveTo(l, top); c.lineTo(r, top);
@@ -766,7 +821,8 @@ function drawSteam(c, m, hx, y, ch, o) {
 function drawTrain(c, m, hx, y, ch, o) {
   const sil = o.sil, N = o.night || 0, F = a => sil ? '#181c22' : a, t = o.t || 0, openR = o.door || 0, occ = o.occ ?? 0.68;
   if (m.nose === 'SL') { drawSteam(c, m, hx, y, ch, o); return; }
-  const nl = noseRatio(m.nose), NL = nl * ch, cw = carWidthRatio(m.nose) * ch, gp = ch * 0.07, top = y - ch * 1.06, nc = Math.min(m.cars, 6);
+  const nl = noseRatio(m.nose), NL = nl * ch, cw = carWidthRatio(m.nose) * ch, gp = ch * 0.07, top = y - ch * 1.06;
+  const nc = o.maxCars || Math.min(m.cars, 6);
 
   for (let i = nc - 1; i >= 0; i--) {
     const r = hx - NL - i * (cw + gp), l = r - cw;
@@ -866,9 +922,11 @@ function drawTrain(c, m, hx, y, ch, o) {
         }
 
         if (i === 0) {
+          let wiperPivotX = r + NL * 0.22, wiperPivotY = top + ch * 0.24;
           if (m.nose === 'B') {
             c.fillStyle = '#141c24'; c.fillRect(r - ch * 0.15, top + ch * 0.12, NL * 0.95, ch * 0.38);
             c.fillStyle = winCol; c.fillRect(r - ch * 0.08, top + ch * 0.16, NL * 0.7, ch * 0.28);
+            wiperPivotX = r + NL * 0.35; wiperPivotY = top + ch * 0.42;
           } else {
             const cdx = r - ch * 0.18;
             c.strokeStyle = 'rgba(30,40,55,.5)'; c.lineWidth = 1.2; c.strokeRect(cdx, top + ch * 0.26, ch * 0.15, ch * 0.56);
@@ -878,18 +936,41 @@ function drawTrain(c, m, hx, y, ch, o) {
             if (m.nose === 'E7' || m.nose === 'P500') {
               c.moveTo(r + NL * 0.05, top + ch * 0.10); c.quadraticCurveTo(r + NL * 0.28, top + ch * 0.08, r + NL * 0.48, top + ch * 0.26);
               c.lineTo(r + NL * 0.42, top + ch * 0.34); c.quadraticCurveTo(r + NL * 0.22, top + ch * 0.22, r + NL * 0.05, top + ch * 0.24);
+              wiperPivotX = r + NL * 0.28; wiperPivotY = top + ch * 0.28;
             } else if (m.nose === 'E5' || m.nose === 'E6' || m.nose === 'ALFA' || m.nose === 'MAG') {
               c.moveTo(r + NL * 0.02, top + ch * 0.08); c.quadraticCurveTo(r + NL * 0.18, top + ch * 0.08, r + NL * 0.34, top + ch * 0.36);
               c.lineTo(r + NL * 0.26, top + ch * 0.41); c.quadraticCurveTo(r + NL * 0.14, top + ch * 0.24, r + NL * 0.02, top + ch * 0.23);
+              wiperPivotX = r + NL * 0.20; wiperPivotY = top + ch * 0.34;
             } else {
               c.moveTo(r + NL * 0.06, top + ch * 0.12); c.quadraticCurveTo(r + NL * 0.24, top + ch * 0.14, r + NL * 0.44, top + ch * 0.36);
               c.lineTo(r + NL * 0.36, top + ch * 0.42); c.quadraticCurveTo(r + NL * 0.18, top + ch * 0.28, r + NL * 0.06, top + ch * 0.26);
+              wiperPivotX = r + NL * 0.26; wiperPivotY = top + ch * 0.35;
             }
             c.closePath(); c.fill();
             c.strokeStyle = 'rgba(190,225,255,.55)'; c.lineWidth = 2; c.stroke();
 
             c.fillStyle = m.st1; c.beginPath(); c.roundRect(r - ch * 0.55, top + ch * 0.33, ch * 0.26, ch * 0.12, 2); c.fill();
           }
+
+          // 1. 🌦️ 下雨天時：車頭駕駛窗開啟雨刷左右擺動動畫！
+          if (o.raining) {
+            const wAngle = -Math.PI * 0.55 + Math.sin(t * 7.5) * 0.48;
+            c.strokeStyle = '#94a3b8';
+            c.lineWidth = 1.8;
+            c.beginPath();
+            c.moveTo(wiperPivotX, wiperPivotY);
+            c.lineTo(wiperPivotX + Math.cos(wAngle) * ch * 0.18, wiperPivotY + Math.sin(wAngle) * ch * 0.18);
+            c.stroke();
+          }
+
+          // 3. 🔗 雙編組併結運轉時：鼻頭打開連結器罩與伸出連結器細節
+          if (o.couplerOpen) {
+            c.fillStyle = '#1e293b';
+            c.fillRect(hx - ch * 0.16, top + ch * 0.72, ch * 0.18, ch * 0.16);
+            c.fillStyle = '#94a3b8';
+            c.fillRect(hx - ch * 0.04, top + ch * 0.76, ch * 0.12, ch * 0.08);
+          }
+
           const lx = m.nose === 'B' ? hx - ch * 0.06 : r + NL * 0.66;
           const ly = m.nose === 'E7' ? top + ch * 0.46 : top + ch * 0.58;
           c.fillStyle = '#222'; c.beginPath(); c.ellipse(lx, ly, ch * 0.11, ch * 0.055, 0.25, 0, 7); c.fill();
@@ -933,7 +1014,59 @@ function drawTrain(c, m, hx, y, ch, o) {
   }
 }
 
-// ===================== 車站小世界：特色旅客與站務員繪製 =====================
+// ===================== 車站小世界：特色旅客、站務員、便當小推車與新幹線清潔隊 =====================
+function drawEkibenCart(c, cart, platY, ch, t) {
+  if (!cart || !cart.active) return;
+  c.save();
+  try {
+    const h = ch * 0.44;
+    const x = cart.x, y = platY;
+    const dir = cart.dir || 1;
+    drawPerson(c, {
+      x: x - dir * h * 0.42,
+      alpha: 1,
+      scale: 0.96,
+      dir: dir,
+      walking: cart.moving,
+      waving: !cart.moving,
+      role: 'vendor',
+      color: '#e11d48',
+      seed: 33
+    }, platY, ch, t);
+
+    const cw = h * 0.62, chBox = h * 0.46;
+    const cx = x - cw * 0.5, cy = y - chBox - h * 0.12;
+    c.fillStyle = '#dc2626';
+    c.beginPath(); c.roundRect(cx - 3, cy - h * 0.38, cw + 6, h * 0.12, 3); c.fill();
+    c.fillStyle = '#ffffff';
+    c.fillRect(cx + cw * 0.25, cy - h * 0.38, cw * 0.2, h * 0.12);
+    c.fillRect(cx + cw * 0.65, cy - h * 0.38, cw * 0.2, h * 0.12);
+    c.strokeStyle = '#94a3b8'; c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(cx + 2, cy); c.lineTo(cx + 2, cy - h * 0.26);
+    c.moveTo(cx + cw - 2, cy); c.lineTo(cx + cw - 2, cy - h * 0.26);
+    c.stroke();
+    c.fillStyle = '#fde047';
+    c.fillRect(cx + 3, cy - h * 0.08, cw * 0.35, h * 0.08);
+    c.fillStyle = '#fb923c';
+    c.fillRect(cx + cw * 0.48, cy - h * 0.08, cw * 0.35, h * 0.08);
+    c.fillStyle = '#fffbeb';
+    c.beginPath(); c.roundRect(cx, cy, cw, chBox, 3); c.fill();
+    c.strokeStyle = '#d97706'; c.lineWidth = 1.5; c.stroke();
+    c.fillStyle = '#b45309';
+    c.font = `bold ${Math.max(8, Math.round(h * 0.22))}px sans-serif`;
+    c.textAlign = 'center';
+    c.fillText('駅弁', x, cy + chBox * 0.68);
+    c.fillStyle = '#1e293b';
+    c.beginPath();
+    c.arc(cx + cw * 0.22, y - h * 0.06, h * 0.08, 0, Math.PI * 2);
+    c.arc(cx + cw * 0.78, y - h * 0.06, h * 0.08, 0, Math.PI * 2);
+    c.fill();
+  } finally {
+    c.restore();
+  }
+}
+
 function drawPerson(c, p, platY, ch, t) {
   if (p.alpha <= 0.02) return;
   c.save();
@@ -944,6 +1077,7 @@ function drawPerson(c, p, platY, ch, t) {
     const dir = p.dir || 1;
     const walkPhase = p.walking ? Math.sin(t * 3.6 + p.seed) * 0.22 : 0;
     const bob = p.walking ? Math.abs(Math.sin(t * 3.6 + p.seed)) * 1.2 : 0;
+    const bowOffset = (p.bowing ? Math.sin(Math.min(1, p.bowT || 0) * Math.PI) * h * 0.10 : 0);
 
     c.strokeStyle = '#1e293b'; c.lineWidth = Math.max(2, h * 0.11); c.lineCap = 'round';
     c.beginPath();
@@ -969,40 +1103,49 @@ function drawPerson(c, p, platY, ch, t) {
 
     c.fillStyle = p.color;
     c.beginPath();
-    c.roundRect(x - h * 0.17, y - h * 0.78 - bob, h * 0.34, h * 0.44, [h * 0.12, h * 0.12, 3, 3]);
+    c.roundRect(x - h * 0.17, y - h * 0.78 - bob + bowOffset * 0.5, h * 0.34, h * 0.44, [h * 0.12, h * 0.12, 3, 3]);
     c.fill();
 
     if (p.role === 'staff') {
       c.fillStyle = '#fbbf24';
       c.fillRect(x - h * 0.17, y - h * 0.56 - bob, h * 0.34, 2);
+    } else if (p.role === 'cleaner') {
+      c.fillStyle = '#ef4444';
+      c.fillRect(x - h * 0.12, y - h * 0.76 - bob + bowOffset * 0.5, h * 0.24, h * 0.08);
     }
 
     c.fillStyle = '#fde68a';
-    c.beginPath(); c.arc(x, y - h * 0.91 - bob, h * 0.13, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(x + dir * bowOffset * 0.4, y - h * 0.91 - bob + bowOffset, h * 0.13, 0, Math.PI * 2); c.fill();
 
+    const headX = x + dir * bowOffset * 0.4;
+    const headY = y - bob + bowOffset;
     if (p.role === 'staff') {
       c.fillStyle = '#1e3a8a';
-      c.fillRect(x - h * 0.14, y - h * 1.08 - bob, h * 0.28, h * 0.10);
+      c.fillRect(headX - h * 0.14, headY - h * 1.08, h * 0.28, h * 0.10);
       c.fillStyle = '#ffffff';
-      c.fillRect(x - h * 0.14, y - h * 1.01 - bob, h * 0.28, h * 0.025);
+      c.fillRect(headX - h * 0.14, headY - h * 1.01, h * 0.28, h * 0.025);
       c.fillStyle = '#172554';
-      c.fillRect(x - h * 0.16, y - h * 0.99 - bob, h * 0.34, h * 0.03);
+      c.fillRect(headX - h * 0.16, headY - h * 0.99, h * 0.34, h * 0.03);
+    } else if (p.role === 'cleaner' || p.role === 'vendor') {
+      c.fillStyle = p.role === 'cleaner' ? '#eab308' : '#ffffff';
+      c.beginPath(); c.arc(headX, headY - h * 0.95, h * 0.14, Math.PI, 0); c.fill();
+      c.fillRect(headX - h * 0.16, headY - h * 0.97, h * 0.32, h * 0.035);
     } else if (p.role === 'hiker') {
       c.fillStyle = '#78716c';
-      c.beginPath(); c.ellipse(x, y - h * 1.0 - bob, h * 0.21, h * 0.045, 0, 0, 7); c.fill();
-      c.beginPath(); c.arc(x, y - h * 1.0 - bob, h * 0.12, Math.PI, 0); c.fill();
+      c.beginPath(); c.ellipse(headX, headY - h * 1.0, h * 0.21, h * 0.045, 0, 0, 7); c.fill();
+      c.beginPath(); c.arc(headX, headY - h * 1.0, h * 0.12, Math.PI, 0); c.fill();
     } else if (p.role === 'skier') {
       c.fillStyle = '#e11d48';
-      c.beginPath(); c.arc(x, y - h * 0.96 - bob, h * 0.135, Math.PI, 0); c.fill();
-      c.fillStyle = '#fff'; c.beginPath(); c.arc(x, y - h * 1.12 - bob, h * 0.05, 0, 7); c.fill();
+      c.beginPath(); c.arc(headX, headY - h * 0.96, h * 0.135, Math.PI, 0); c.fill();
+      c.fillStyle = '#fff'; c.beginPath(); c.arc(headX, headY - h * 1.12, h * 0.05, 0, 7); c.fill();
     } else if (p.role === 'beach') {
       c.fillStyle = '#fcd34d';
-      c.beginPath(); c.ellipse(x, y - h * 1.0 - bob, h * 0.22, h * 0.045, 0, 0, 7); c.fill();
-      c.beginPath(); c.arc(x, y - h * 1.0 - bob, h * 0.12, Math.PI, 0); c.fill();
-      c.fillStyle = '#ef4444'; c.fillRect(x - h * 0.11, y - h * 1.02 - bob, h * 0.22, h * 0.025);
+      c.beginPath(); c.ellipse(headX, headY - h * 1.0, h * 0.22, h * 0.045, 0, 0, 7); c.fill();
+      c.beginPath(); c.arc(headX, headY - h * 1.0, h * 0.12, Math.PI, 0); c.fill();
+      c.fillStyle = '#ef4444'; c.fillRect(headX - h * 0.11, headY - h * 1.02, h * 0.22, h * 0.025);
     } else {
       c.fillStyle = '#334155';
-      c.beginPath(); c.arc(x, y - h * 0.94 - bob, h * 0.135, Math.PI * 0.9, Math.PI * 2.1); c.fill();
+      c.beginPath(); c.arc(headX, headY - h * 0.94, h * 0.135, Math.PI * 0.9, Math.PI * 2.1); c.fill();
     }
 
     if (p.waving || (p.saluteT && p.saluteT > 0)) {
@@ -1019,7 +1162,10 @@ function drawPerson(c, p, platY, ch, t) {
       c.strokeStyle = p.color; c.lineWidth = Math.max(2, h * 0.09);
       c.beginPath(); c.moveTo(x + dir * h * 0.08, y - h * 0.70 - bob); c.lineTo(handX, handY); c.stroke();
 
-      if (p.role === 'hiker') {
+      if (p.role === 'cleaner') {
+        c.strokeStyle = '#0284c7'; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(handX + dir * h * 0.05, y - h * 0.62 - bob); c.lineTo(handX + dir * h * 0.08, y); c.stroke();
+      } else if (p.role === 'hiker') {
         c.strokeStyle = '#57534e'; c.lineWidth = 1.8;
         c.beginPath(); c.moveTo(handX + dir * h * 0.06, y - h * 0.68 - bob); c.lineTo(handX + dir * h * 0.10, y); c.stroke();
       } else if (p.role === 'commuter') {
@@ -1051,7 +1197,11 @@ if (dailyStats.date !== todayKey) {
   sv('ak_daily', dailyStats);
 }
 
-['goal', 'rate', 'dwellT', 'sceneT'].forEach(i => { if (cfg[i] != null && $('#' + i).querySelector(`option[value="${cfg[i]}"],input`)) $('#' + i).value = cfg[i]; });
+['goal', 'rate', 'dwellT', 'sceneT', 'weatherSel', 'portalSel'].forEach(i => {
+  const el = $('#' + i);
+  if (el && cfg[i] != null && el.querySelector(`option[value="${cfg[i]}"],input`)) el.value = cfg[i];
+});
+if (cfg.eduMode != null) $('#eduMode').checked = cfg.eduMode;
 if (cfg.voiceSnd != null) $('#voiceSnd').checked = cfg.voiceSnd;
 if (cfg.snd != null) $('#snd').checked = cfg.snd;
 if (cfg.railSnd != null) $('#railSnd').checked = cfg.railSnd;
@@ -1061,21 +1211,58 @@ if (cfg.ecoMode != null) $('#ecoMode').checked = cfg.ecoMode;
 const st = {
   run: 0, mic: 0, lvl: 0, acc: 0, quiet: 0, loud: 0, loudT: 0, qs: 0, scT: 0,
   tr: null,
-  bgTr: null, // 3. 後方軌道反向高速交會列車 (雙車同框彩蛋)
-  streak: 0,  // 連續安靜迎接列車次數
+  bgTr: null,
+  streak: 0,
   arm: 0, off: 0, sim: 0, sc: 0, first: 1, page: null, fade: null, pend: null, t: 0, cue: 0, ccTimer: 0,
   locked: false,
   forcedNextTrain: -1,
-  pxX: 0, pxY: 0, // 4. OLED 螢幕防烙印微位移偏移量
-  speechGuardUntil: 0, // 語音廣播防迴授保護時間戳
+  forceNextCoupling: false,
+  pxX: 0, pxY: 0,
+  speechGuardUntil: 0,
   lastNoiseWarnSpeech: 0,
+  rainbowAlpha: 0,
+  weatherParticles: [],
+  birds: [],
+  cart: { active: false, x: 100, targetX: 250, dir: 1, moving: false },
+  cleaner: { active: false, x: 200, bowT: 0, bowing: false, alpha: 0, role: 'cleaner', color: '#facc15', seed: 88, scale: 1.0 },
   fx: [],
   pax: [],
   staff: { x: 300, dir: -1, walking: false, waving: false, saluteT: 0, jumpY: 0, alpha: 1, role: 'staff', color: '#1e3a8a', seed: 7, scale: 1.04 }
 };
 rs();
 
+(function initEnvParticles() {
+  for (let i = 0; i < 42; i++) {
+    st.weatherParticles.push({
+      x: Math.random() * 1200,
+      y: Math.random() * 800,
+      s: 0.6 + Math.random() * 0.8,
+      p: Math.random() * Math.PI * 2
+    });
+  }
+  for (let i = 0; i < 5; i++) {
+    st.birds.push({
+      dx: i * 16 - 32,
+      dy: Math.abs(i - 2) * 7,
+      phase: i * 0.7
+    });
+  }
+})();
+
 const bd = b => [...Array(10).keys()].every(k => seen[b * 10 + k]), nd = () => [0, 1, 2].filter(bd).length, unl = () => Math.min(6, 1 + 2 * nd());
+
+function getCurrentWeather() {
+  const sel = $('#weatherSel') ? $('#weatherSel').value : 'auto';
+  if (sel !== 'auto') return sel;
+  return (SCENES[st.sc] || SCENES[0]).defaultWeather || 'clear';
+}
+
+function getCurrentPortal() {
+  const el = $('#portalSel');
+  const sel = el ? el.value : 'auto';
+  if (sel !== 'auto') return sel;
+  return (SCENES[st.sc] || SCENES[0]).defaultPortal || 'tunnel';
+}
 
 function initWaitingPassengers() {
   const scObj = SCENES[st.sc] || SCENES[0];
@@ -1131,7 +1318,10 @@ function saveCfg(opts) {
       $('#sceneT').value = '180';
       if (typeof go2 === 'function') go2((st.sc + 1) % 6);
     }
-    ['goal', 'rate', 'dwellT', 'sceneT'].forEach(i => { cfg[i] = $('#' + i).value; });
+    ['goal', 'rate', 'dwellT', 'sceneT', 'weatherSel', 'portalSel'].forEach(i => {
+      if ($('#' + i)) cfg[i] = $('#' + i).value;
+    });
+    cfg.eduMode = $('#eduMode').checked;
     cfg.voiceSnd = $('#voiceSnd').checked;
     cfg.snd = $('#snd').checked;
     cfg.railSnd = $('#railSnd').checked;
@@ -1177,6 +1367,9 @@ if (nextTrainSel) {
 
 document.querySelectorAll('#set select:not(#nextTrainSel), #set input[type=checkbox]').forEach(e => {
   e.addEventListener('change', () => {
+    if (e.id === 'weatherSel' && e.value !== 'rain') {
+      st.rainbowAlpha = 0.85;
+    }
     saveCfg({ toast: false });
     kickAudio();
   });
@@ -1215,7 +1408,7 @@ $('#gear').onclick = () => {
   kickAudio();
 };
 
-// ===================== 🔒 兒童防誤觸鎖（點擊上鎖 / 長按 1.5 秒解鎖） =====================
+// ===================== 🔒 兒童防誤觸鎖 =====================
 (function setupChildLock() {
   const lockBtn = $('#lockBtn');
   const lockIcon = $('#lockIcon');
@@ -1375,7 +1568,7 @@ function updateDebugPanel() {
   if (st.loud) phase = 'Noise';
   else if (!st.tr) phase = st.qs > 0 ? 'WaitingTrain' : 'Listening';
   else if (st.tr.ph === 'in') phase = 'TrainIn';
-  else if (st.tr.ph === 'stop') phase = 'StationStop';
+  else if (st.tr.ph === 'stop') phase = st.tr.isCoupling ? 'CouplingStop' : 'StationStop';
   else if (st.tr.ph === 'out') phase = 'TrainOut';
   else if (st.tr.ph === 'back') phase = 'TrainBack';
   const goal = st.goal || +$('#goal').value || 30;
@@ -1384,22 +1577,21 @@ function updateDebugPanel() {
     'Microphone: <span class="' + (live ? 'ok' : 'bad') + '">' + micState + '</span> (' + live + ' live)\n' +
     'Analyser: <span class="' + (an ? 'ok' : 'bad') + '">' + anState + '</span>\n' +
     'Volume: ' + Math.round(st.lvlFast || st.lvl || 0) + '  rawOff: ' + (st.off || 0).toFixed(1) + '\n' +
-    'Threshold: ' + goal + '\n' +
+    'Threshold: ' + goal + '  Weather: ' + getCurrentWeather() + '\n' +
     'Quiet qs: ' + (st.qs || 0).toFixed(1) + 's  Streak: ' + st.streak + '\n' +
-    'State: ' + phase + (st.tr ? ' (x=' + Math.round(st.tr.x) + '/' + Math.round(getStopX(W, isPortrait)) + ')' : '') + '\n' +
-    'Trains: ' + trainCount + '  PixelShift: (' + st.pxX.toFixed(1) + ',' + st.pxY.toFixed(1) + ')\n' +
-    'WakeLock: ' + (wakeLock ? 'held' : 'off') + '  EcoFPS: ' + ($('#ecoMode').checked && !st.tr && !st.bgTr && st.fx.length === 0 ? '24' : '60') + '\n' +
+    'State: ' + phase + (st.tr ? ' (x=' + Math.round(st.tr.x) + ')' : '') + '\n' +
+    'Battery: ' + Math.round(batteryState.level * 100) + '%' + (batteryState.charging ? '⚡' : '') + ' DPR:' + dpr.toFixed(1) + '\n' +
+    'WakeLock: ' + (wakeLock ? 'held' : 'off') + '  Trains: ' + trainCount + '\n' +
     'Errors: ' + micErrCount + '  last: ' + (lastMicErr || '-');
 }
 
-// ===================== 1. 🎙️ 溫柔雙語車站廣播（Web Speech API 語音合成） =====================
-function speakAnnouncement(zhText, jpText) {
+// ===================== 🎙️ 溫柔雙語車站廣播 & 數數早教語音 =====================
+function speakAnnouncement(zhText, jpText, quickMode) {
   if (!$('#snd').checked || !$('#voiceSnd').checked) return;
   if (!('speechSynthesis' in window)) return;
   try {
-    window.speechSynthesis.cancel();
-    // 開啟麥克風防自激保護（避免設備放出來的廣播聲音被當成吵鬧）
-    st.speechGuardUntil = performance.now() + 7500;
+    if (!quickMode) window.speechSynthesis.cancel();
+    st.speechGuardUntil = performance.now() + (quickMode ? 1800 : 8000);
 
     const voices = window.speechSynthesis.getVoices() || [];
     if (jpText) {
@@ -1415,25 +1607,24 @@ function speakAnnouncement(zhText, jpText) {
     if (zhText) {
       const uZh = new SpeechSynthesisUtterance(zhText);
       uZh.lang = 'zh-TW';
-      uZh.rate = 0.88;
-      uZh.pitch = 1.08;
+      uZh.rate = quickMode ? 1.05 : 0.88;
+      uZh.pitch = 1.10;
       uZh.volume = 0.60;
       const zhVoice = voices.find(v => v.lang && (v.lang.includes('zh-TW') || v.lang.includes('zh_TW') || v.lang.includes('zh-HK'))) ||
                       voices.find(v => v.lang && v.lang.includes('zh'));
       if (zhVoice) uZh.voice = zhVoice;
-      uZh.onend = () => { st.speechGuardUntil = performance.now() + 600; };
+      uZh.onend = () => { st.speechGuardUntil = performance.now() + 500; };
       window.speechSynthesis.speak(uZh);
     }
   } catch (e) {}
 }
 
-// 預先載入瀏覽器語音列表
 if ('speechSynthesis' in window) {
   window.speechSynthesis.getVoices();
   window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 }
 
-// ===================== 音效系統：木琴鈴聲、輕柔鐵軌喀噠聲、環境白噪音 =====================
+// ===================== 音效系統：木琴鈴聲、併結機械音、鐵軌喀噠聲 =====================
 function getSharedAudioCtx() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!st.ac || st.ac.state === 'closed') {
@@ -1459,6 +1650,25 @@ function chime(freqs) {
   } catch (e) {
     dbgErr('chime', e);
   }
+}
+
+function playCouplingClankSound() {
+  if (!$('#snd').checked) return;
+  try {
+    const a = getSharedAudioCtx();
+    [160, 240].forEach((freq, idx) => {
+      const o = a.createOscillator(), v = a.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(freq, a.currentTime + idx * 0.08);
+      o.frequency.exponentialRampToValueAtTime(65, a.currentTime + idx * 0.08 + 0.09);
+      v.gain.setValueAtTime(0.06, a.currentTime + idx * 0.08);
+      v.gain.exponentialRampToValueAtTime(0.001, a.currentTime + idx * 0.08 + 0.10);
+      o.connect(v); v.connect(a.destination);
+      o.start(a.currentTime + idx * 0.08);
+      o.stop(a.currentTime + idx * 0.08 + 0.11);
+    });
+    setTimeout(() => chime([523.25, 659.25, 783.99, 1046.5]), 220);
+  } catch (e) {}
 }
 
 function playTrainHorn(isSteam) {
@@ -1547,9 +1757,8 @@ function updateAmbientNoiseState() {
   } catch (e) {}
 }
 
-// ===================== 3. 🚄 「雙向交會 / 雙車同框」超級安靜大獎 =====================
+// ===================== 🚄 雙向交會與 E5+E6 雙編組併結觸發 =====================
 function spawnPassingTrain() {
-  // 優先挑選夢幻高速車種（Doctor Yellow、ALFA-X、L0磁浮、500系、E5、台灣高鐵）作為交會驚喜
   const specialPool = [10, 11, 12, 8, 2, 13, 0, 5];
   let pickIdx = specialPool[Math.floor(Math.random() * specialPool.length)];
   if (st.tr && st.tr.i === pickIdx) pickIdx = 10;
@@ -1577,6 +1786,16 @@ $('#testCrossBtn').onclick = () => {
   spawnPassingTrain();
 };
 
+$('#testCoupleBtn').onclick = () => {
+  $('#set').hidden = true;
+  st.forceNextCoupling = true;
+  if (!st.tr) {
+    spawnTrain();
+  } else {
+    $('#msg').textContent = '🔗 已排定下一班為「E5 隼號 + E6 小町號」雙車併結運轉！';
+  }
+};
+
 // ===================== ✨ 3 歲幼兒點擊畫面微互動彩蛋 =====================
 let lastInteractTime = 0;
 cv.addEventListener('pointerdown', e => {
@@ -1589,7 +1808,24 @@ cv.addEventListener('pointerdown', e => {
   const ch = CH();
   const platY = railY - ch * 0.16;
 
-  // 1. 檢查是否點到站務員或月台旅客
+  // 檢查是否點到便當小推車
+  if (st.cart && st.cart.active && Math.abs(x - st.cart.x) < ch * 0.55 && y >= platY - ch * 0.7 && y <= platY + 12) {
+    st.fx.push({ type: 'emoji', txt: '🍱 おべんとう！', x: st.cart.x, y: platY - ch * 0.65, vx: 0, vy: -24, life: 1.4, maxLife: 1.4, size: Math.round(ch * 0.28) });
+    chime([523, 659, 784]);
+    speakAnnouncement('好吃的鐵路便當喔！', 'おべんとう！', true);
+    return;
+  }
+
+  // 檢查是否點到新幹線清潔隊員
+  if (st.cleaner && st.cleaner.active && st.cleaner.alpha > 0.5 && Math.abs(x - st.cleaner.x) < ch * 0.45 && y >= platY - ch * 0.65 && y <= platY + 12) {
+    st.cleaner.bowing = true;
+    st.cleaner.bowT = 0;
+    st.fx.push({ type: 'emoji', txt: '✨ 謝謝清潔隊！', x: st.cleaner.x, y: platY - ch * 0.6, vx: 0, vy: -24, life: 1.4, maxLife: 1.4, size: Math.round(ch * 0.28) });
+    chime([659, 880]);
+    return;
+  }
+
+  // 檢查是否點到站務員或月台旅客
   const people = [...st.pax.filter(p => p.alpha > 0.6), st.staff];
   for (const p of people) {
     if (Math.abs(x - p.x) < ch * 0.45 && y >= platY - ch * 0.65 && y <= platY + 12) {
@@ -1601,10 +1837,10 @@ cv.addEventListener('pointerdown', e => {
     }
   }
 
-  // 2. 檢查是否點到正在畫面上的列車
+  // 檢查是否點到正在畫面上的列車
   if (st.tr) {
     const T = st.tr, m = M[T.i], L = lenOf(m, ch);
-    const trainLeft = T.x - L, trainRight = T.x;
+    const trainLeft = T.rearTr ? (T.rearTr.x - L) : (T.x - L), trainRight = T.rearTr ? (T.x + L) : T.x;
     if (x >= trainLeft - 15 && x <= trainRight + 15 && y >= railY - ch * 1.25 && y <= railY + 10) {
       T.flashT = 0.85;
       playTrainHorn(m.nose === 'SL');
@@ -1640,9 +1876,9 @@ cv.addEventListener('pointerdown', e => {
     }
   }
 
-  // 3. 點擊天空或遠方富士山/地標
+  // 點擊天空或遠方富士山/地標
   if (y < railY - ch * 0.5) {
-    const skyIcons = st.sc === 0 ? ['🌸', '✨', '☁️'] : (st.sc === 1 ? ['❄️', '⛄', '✨'] : ['🌟', '✨', '🎈']);
+    const skyIcons = st.sc === 0 ? ['🌸', '✨', '☁️'] : (st.sc === 1 ? ['❄️', '⛄', '✨'] : ['🌟', '✨', '🌈']);
     for (let k = 0; k < 3; k++) {
       st.fx.push({
         type: 'emoji',
@@ -1876,7 +2112,7 @@ function autoCalibrate(opts) {
       if (lr) lr.textContent = Math.round(st.lvl) + ' / 門檻 ' + ($('#goal').value || 30);
       setTimeout(() => {
         if (($('#msg').textContent || '').indexOf('已校準') === 0)
-          $('#msg').textContent = '提示：連續安靜迎接列車，會有雙車交會大驚喜喔！';
+          $('#msg').textContent = '提示：連續安靜可觸發 E5+E6 雙車併結與便當推車喔！';
       }, 5000);
     }
   }, interval);
@@ -1989,7 +2225,7 @@ $('#callBtn').onclick = () => {
   }
 };
 
-// ===================== 抽車、進站、雙語廣播、紀念印章與雙車交會 =====================
+// ===================== 抽車、E5+E6 雙車併結、便當推車、數數顏色早教 =====================
 function pick() {
   if (st.forcedNextTrain >= 0 && st.forcedNextTrain < M.length) {
     const chosen = st.forcedNextTrain;
@@ -2012,7 +2248,10 @@ function pick() {
 }
 
 function spawnTrain() {
-  const idx = pick();
+  const shouldCouple = st.forceNextCoupling || (st.streak > 0 && (st.streak + 1) % 3 === 0 && st.forcedNextTrain < 0);
+  st.forceNextCoupling = false;
+
+  const idx = shouldCouple ? 2 : pick(); // 2 = E5 隼號, 4 = E6 小町號
   const baseDwell = +$('#dwellT').value || 35;
   trainCount++;
   st.tr = {
@@ -2025,6 +2264,14 @@ function spawnTrain() {
     occ: 0.65,
     flashT: 0,
     crossingTriggered: false,
+    isCoupling: shouldCouple,
+    rearTr: shouldCouple ? {
+      i: 4,
+      x: -120,
+      coupled: false,
+      clankPlayed: false
+    } : null,
+    countedCars: {},
     baseDwell: baseDwell,
     maxDwell: baseDwell,
     chimePlayed: false
@@ -2032,15 +2279,15 @@ function spawnTrain() {
   st.qs = 0; st.first = 0;
 }
 
-function showCornerCard(m, isNew) {
-  $('#ccStatus').textContent = isNew ? '✨ 新車進站收錄' : '✅ 已收錄列車 (第' + seen[m.id] + '次停靠)';
-  $('#ccStatus').style.color = isNew ? '#b45309' : '#15803d';
+function showCornerCard(m, isNew, isCoupling) {
+  $('#ccStatus').textContent = isCoupling ? '🔗 新幹線雙編組併結運轉' : (isNew ? '✨ 新車進站收錄' : '✅ 已收錄列車 (第' + seen[m.id] + '次停靠)');
+  $('#ccStatus').style.color = isNew || isCoupling ? '#b45309' : '#15803d';
   $('#ccType').textContent = m.trk === 'V' ? '高架新幹線' : (m.trk === 'M' ? '超電導磁浮' : '在來線・台鐵');
-  $('#ccName').textContent = m.n;
-  $('#ccStars').textContent = '⭐'.repeat(m.r);
-  $('#ccRoute').textContent = '📍 ' + m.route;
+  $('#ccName').textContent = isCoupling ? 'E5 隼號 ＋ E6 小町號' : m.n;
+  $('#ccStars').textContent = '⭐'.repeat(isCoupling ? 4 : m.r);
+  $('#ccRoute').textContent = '📍 ' + (isCoupling ? '東京 → 盛岡・秋田・新青森' : m.route);
   $('#cornerCard').classList.add('show');
-  st.ccTimer = 7.5;
+  st.ccTimer = 8.0;
 }
 
 function updateComboBadge() {
@@ -2057,7 +2304,6 @@ function updateComboBadge() {
 function checkAndAwardEkiStamp() {
   const scIdx = st.sc;
   let newStampAwarded = false;
-  // 到訪該站且接待列車，或累積今日列車班次達標即可蓋上紀念印章
   if (!stamps[scIdx]) {
     stamps[scIdx] = 1;
     newStampAwarded = true;
@@ -2088,9 +2334,10 @@ function checkAndAwardEkiStamp() {
 
 function arrive() {
   const T = st.tr, i = T.i, m = M[i], isNew = !seen[i];
-  seen[i] = (seen[i] || 0) + 1; sv('ak_s', seen);
+  seen[i] = (seen[i] || 0) + 1;
+  if (T.isCoupling) seen[4] = (seen[4] || 0) + 1;
+  sv('ak_s', seen);
 
-  // 更新今日小站長統計與連勝紀錄
   st.streak++;
   dailyStats.trains = (dailyStats.trains || 0) + 1;
   if (st.streak > (dailyStats.maxStreak || 0)) dailyStats.maxStreak = st.streak;
@@ -2098,16 +2345,36 @@ function arrive() {
   updateComboBadge();
   checkAndAwardEkiStamp();
 
-  showCornerCard(m, isNew);
-  if (isNew) { $('#badge').hidden = 0; chime([440, 554, 659]); } else { chime([440, 554]); }
+  showCornerCard(m, isNew, T.isCoupling);
+  if (isNew || T.isCoupling) { $('#badge').hidden = 0; chime([440, 554, 659]); } else { chime([440, 554]); }
 
-  // 1. 🎙️ 觸發溫柔雙語車站廣播
   const scObj = SCENES[st.sc] || SCENES[0];
+  const eduOn = $('#eduMode') && $('#eduMode').checked;
   const jpPart = m.c === '日本' ? `まもなく、${scObj.jp}えきです。` : '';
-  const zhPart = `${scObj.zh}到了，${m.n} 進站停靠，小朋友好安靜喔！`;
+  let zhPart = '';
+  if (T.isCoupling) {
+    zhPart = `${scObj.zh}到了！穿綠色衣服的 E5 隼號，準備和穿紅色衣服的 E6 小町號連結囉！`;
+  } else if (eduOn) {
+    zhPart = `${scObj.zh}到了，今天是穿${m.colorName}衣服的 ${m.n} 進站，小朋友好安靜喔！`;
+  } else {
+    zhPart = `${scObj.zh}到了，${m.n} 進站停靠，小朋友好安靜喔！`;
+  }
   setTimeout(() => speakAnnouncement(zhPart, jpPart), 650);
 
-  const ch = CH(), sx = getStopX(W, isPortrait);
+  st.cart.active = true;
+  st.cart.x = W * 0.22;
+  st.cart.targetX = W * 0.62;
+  st.cart.dir = 1;
+  st.cart.moving = true;
+
+  st.cleaner.active = true;
+  st.cleaner.x = W * 0.70;
+  st.cleaner.dir = -1;
+  st.cleaner.alpha = 1;
+  st.cleaner.bowing = true;
+  st.cleaner.bowT = 0;
+
+  const ch = CH(), sx = T.isCoupling ? W * 0.56 : getStopX(W, isPortrait);
   const doors = getVisibleDoorXs(m, sx, ch);
 
   if (doors.length > 0) {
@@ -2145,6 +2412,9 @@ function arrive() {
 }
 
 function endTrain() {
+  if (getCurrentWeather() === 'rain') {
+    st.rainbowAlpha = 0.9;
+  }
   st.tr = null;
   st.qs = 0;
   st.first = 0;
@@ -2152,6 +2422,8 @@ function endTrain() {
   st.loudT = 0;
   st.acc = 0;
   st.quiet = 1;
+  st.cart.active = false;
+  st.cleaner.active = false;
   $('#dwellHint').hidden = true;
   st.pax = st.pax.filter(p => p.alpha > 0.5).slice(0, 2);
   st.pax.forEach((p, idx) => {
@@ -2166,11 +2438,13 @@ function go(i) { if (!st.fade) go2(i); }
 
 // ===================== 核心更新迴圈 =====================
 let lastStatSaveTime = 0;
+const COUNT_NOTES = [523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50];
+
 function update(dt) {
   st.t += dt; const ch = CH();
   if (st.ccTimer > 0) { st.ccTimer -= dt; if (st.ccTimer <= 0) $('#cornerCard').classList.remove('show'); }
+  if (st.rainbowAlpha > 0) st.rainbowAlpha = Math.max(0, st.rainbowAlpha - dt * 0.025);
 
-  // 4. 🛡️ OLED 螢幕防烙印保護：緩慢平滑呼吸微位移 (±3px)
   if ($('#ecoMode').checked) {
     st.pxX = Math.sin(st.t * 0.035) * 3.0;
     st.pxY = Math.cos(st.t * 0.027) * 2.5;
@@ -2180,7 +2454,6 @@ function update(dt) {
   document.documentElement.style.setProperty('--px-x', st.pxX.toFixed(2) + 'px');
   document.documentElement.style.setProperty('--px-y', st.pxY.toFixed(2) + 'px');
 
-  // 更新微互動粒子特效
   for (let i = st.fx.length - 1; i >= 0; i--) {
     const f = st.fx[i];
     f.life -= dt;
@@ -2193,7 +2466,6 @@ function update(dt) {
     if (f.type === 'puff') f.r += ch * 0.12 * dt;
   }
 
-  // 3. 更新後方軌道反向交會列車
   if (st.bgTr) {
     const bgM = M[st.bgTr.i];
     const bgLen = lenOf(bgM, ch * 0.66);
@@ -2211,7 +2483,6 @@ function update(dt) {
     if (st.mic) {
       const instant = raw();
       tg = cl(instant - (st.off || 0), 0, 50);
-      // 廣播發聲期間，限制音量上限避免設備喇叭迴授誤判為吵鬧
       if (performance.now() < st.speechGuardUntil && !st.sim) {
         tg = Math.min(tg, goal * 0.65);
       }
@@ -2246,7 +2517,6 @@ function update(dt) {
     if (!st.loud && st.acc >= 4.8) {
       st.loud = 1;
       st.loudT = 0;
-      // 太吵時播放溫柔語音提醒（每 18 秒最多提醒一次）
       if (performance.now() - st.lastNoiseWarnSpeech > 18000) {
         st.lastNoiseWarnSpeech = performance.now();
         speakAnnouncement('噓，車長先生說太吵囉，我們小聲一點點喔。', '');
@@ -2259,7 +2529,6 @@ function update(dt) {
     else {
       if (!st.tr) st.qs += dt * (isWarn ? 0.4 : 1.0);
       st.scT += dt;
-      // 累積今日安靜時數
       dailyStats.quietSec = (dailyStats.quietSec || 0) + dt;
       if (st.t - lastStatSaveTime > 15) {
         lastStatSaveTime = st.t;
@@ -2310,10 +2579,11 @@ function update(dt) {
       spawnTrain();
     }
 
-    // ===================== 列車四階段慢速狀態機 =====================
+    // ===================== 列車四階段狀態機（含雙車併結與離站數車廂早教） =====================
     const T = st.tr;
     if (T) {
-      const m = M[T.i], L = lenOf(m, ch), sx = getStopX(W, isPortrait);
+      const m = M[T.i], L = lenOf(m, ch);
+      const sx = T.isCoupling ? W * 0.56 : getStopX(W, isPortrait);
       if (T.flashT > 0) T.flashT = Math.max(0, T.flashT - dt);
 
       if (st.loud && st.loudT > 4.0) {
@@ -2345,7 +2615,37 @@ function update(dt) {
           T.maxDwell += dt * 0.35;
         }
 
-        // 3. 🚄 連續安靜滿 2 的倍數班次（第 2、4、6... 班），停靠滿 4.5 秒觸發「雙車交會同框大獎」！
+        if (T.isCoupling && T.rearTr) {
+          const rt = T.rearTr;
+          const targetRearX = T.x + 2;
+          if (!rt.coupled) {
+            const dist = targetRearX - rt.x;
+            let rSpd = cl(dist * 0.48, W * 0.018, W * 0.11);
+            if (dist < 28 && dist > 14) rSpd = W * 0.012;
+            rt.x += rSpd * dt;
+            updateRailClackSound(dt, rSpd, false);
+            if (targetRearX - rt.x <= 1.8) {
+              rt.x = targetRearX;
+              rt.coupled = true;
+              playCouplingClankSound();
+              st.fx.push({
+                type: 'emoji',
+                txt: '🔗 ガチャン！連結完成！',
+                x: T.x,
+                y: sceneLayout().railY - ch * 1.42,
+                vx: 0,
+                vy: -18,
+                life: 2.5,
+                maxLife: 2.5,
+                size: Math.round(cl(W * 0.04, 15, 22))
+              });
+              speakAnnouncement('喀嚓！E5 號與 E6 號連結完成！', 'れんけつかんりょう！', true);
+            }
+          } else {
+            rt.x = targetRearX;
+          }
+        }
+
         if (!T.crossingTriggered && st.streak >= 2 && st.streak % 2 === 0 && T.t >= 4.5 && !st.loud && !st.bgTr) {
           T.crossingTriggered = true;
           spawnPassingTrain();
@@ -2368,23 +2668,57 @@ function update(dt) {
           T.v = W * 0.012;
           st.staff.waving = true;
           st.staff.walking = false;
+          st.cleaner.bowing = true;
+          st.cleaner.bowT = 0;
           st.pax.forEach((p, idx) => { if (p.alpha > 0.8 && idx % 2 === 0) p.waving = true; });
         }
       } else if (T.ph === 'out') {
         T.v = Math.min(W * 0.24, T.v + W * 0.032 * dt);
         T.x += T.v * dt;
+        if (T.rearTr) {
+          T.rearTr.x = T.x + 2;
+        }
         updateRailClackSound(dt, T.v, m.trk === 'M');
-        if (T.x - L > W + 50) endTrain();
+
+        if ($('#eduMode') && $('#eduMode').checked && m.nose !== 'SL') {
+          const NL = noseRatio(m.nose) * ch, cw = carWidthRatio(m.nose) * ch, gp = ch * 0.07;
+          const nc = T.isCoupling ? 3 : Math.min(m.cars, 6);
+          const countGateX = W * 0.52;
+          for (let cIdx = 0; cIdx < nc; cIdx++) {
+            const carCenter = T.x - NL - cIdx * (cw + gp) - cw * 0.5;
+            if (!T.countedCars[cIdx] && carCenter >= countGateX && carCenter <= countGateX + W * 0.12) {
+              T.countedCars[cIdx] = true;
+              const num = cIdx + 1;
+              st.fx.push({
+                type: 'count',
+                txt: String(num),
+                x: carCenter,
+                y: sceneLayout().railY - ch * 1.35,
+                vx: 0,
+                vy: -22,
+                life: 1.3,
+                maxLife: 1.3,
+                size: Math.round(ch * 0.52)
+              });
+              chime(COUNT_NOTES[(num - 1) % COUNT_NOTES.length]);
+              if (num <= 6) speakAnnouncement(String(num), '', true);
+            }
+          }
+        }
+
+        const totalTrainLen = T.rearTr ? (L * 1.8) : L;
+        if (T.x - totalTrainLen > W + 60) endTrain();
       } else if (T.ph === 'back') {
         T.door = Math.max(0, T.door - dt * 1.2);
         const backSpd = W * 0.18;
         T.x -= backSpd * dt;
+        if (T.rearTr) T.rearTr.x -= backSpd * dt;
         updateRailClackSound(dt, backSpd, m.trk === 'M');
         if (T.x < -40) endTrain();
       }
     }
 
-    // ===================== 月台旅客與站務員慢動作更新 =====================
+    // ===================== 月台旅客、站務員、便當推車與清潔隊更新 =====================
     const walkSpeed = cl(W * 0.028, 22, 38);
     [...st.pax, st.staff].forEach(p => {
       if (p.saluteT > 0) p.saluteT = Math.max(0, p.saluteT - dt);
@@ -2395,6 +2729,31 @@ function update(dt) {
         p.jumpY = 0;
       }
     });
+
+    if (st.cart.active) {
+      if (st.tr && st.tr.ph === 'stop' && st.tr.t > 2.0 && st.tr.t < st.tr.maxDwell - 4.0) {
+        const dx = st.cart.targetX - st.cart.x;
+        if (Math.abs(dx) > 4) {
+          st.cart.moving = true;
+          st.cart.dir = dx > 0 ? 1 : -1;
+          st.cart.x += st.cart.dir * (walkSpeed * 0.55) * dt;
+        } else {
+          st.cart.moving = false;
+        }
+      } else {
+        st.cart.moving = false;
+      }
+    }
+
+    if (st.cleaner.active) {
+      if (st.cleaner.bowing) {
+        st.cleaner.bowT += dt * 0.8;
+        if (st.cleaner.bowT >= 1.0) {
+          st.cleaner.bowing = false;
+          st.cleaner.bowT = 0;
+        }
+      }
+    }
 
     st.pax.forEach(p => {
       if (st.tr && st.tr.ph === 'stop' && st.tr.door > 0.75) {
@@ -2472,10 +2831,177 @@ function update(dt) {
   $('#dotsTxt').textContent = b == null ? '👑 全圖鑑收集達成' : '📘 ' + SCENES[st.sc].zh + ' ' + [...Array(10).keys()].map(k => seen[b * 10 + k] ? '🟢' : '⚪').join('');
 }
 
-// ===================== 遠景富士山 + 真實高架鐵道 + 雙車交會繪製 =====================
+// ===================== 遠景富士山、彩虹、歸巢飛鳥、隧道/鐵橋、天氣粒子繪製 =====================
 function mix(a, b, f) { const p = c => [1, 3, 5].map(i => parseInt(c.substr(i, 2), 16)), x = p(a), y = p(b); return 'rgb(' + x.map((v, i) => v + (y[i] - v) * f | 0) + ')'; }
 const SK = [['#f6c0a0', '#ffeab8', 0], ['#70c6f5', '#e4f4fe', 0], ['#7a68b0', '#ff9f70', 0.3], ['#10183c', '#27356a', 1]],
       GR = ['#76b068', '#dfe9f2', '#84a88c', '#d8cba0', '#8a7a5a', '#b0b4be'];
+
+function drawRainbowAndBirds(hz, t, weather) {
+  g.save();
+  try {
+    if (st.rainbowAlpha > 0.02 || weather === 'rain') {
+      const rbA = weather === 'rain' ? 0.22 : st.rainbowAlpha * 0.45;
+      const cx = W * 0.62, cy = hz + H * 0.05, rBase = Math.min(W, H) * 0.48;
+      const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#6366f1', '#a855f7'];
+      g.globalAlpha = rbA;
+      g.lineWidth = 4.5;
+      colors.forEach((col, idx) => {
+        g.strokeStyle = col;
+        g.beginPath();
+        g.arc(cx, cy, rBase - idx * 4.5, Math.PI * 1.08, Math.PI * 1.92);
+        g.stroke();
+      });
+    }
+
+    if (weather === 'clear' && st.sc !== 5) {
+      const flockX = ((t * 0.022) % (W + 180)) - 90;
+      const flockY = hz * 0.42 + Math.sin(t * 0.001) * 14;
+      g.strokeStyle = 'rgba(30, 41, 59, 0.55)';
+      g.lineWidth = 1.8;
+      g.globalAlpha = 0.75;
+      st.birds.forEach(b => {
+        const bx = flockX + b.dx, by = flockY + b.dy;
+        const wing = Math.sin(t * 0.008 + b.phase) * 5;
+        g.beginPath();
+        g.moveTo(bx - 6, by - wing);
+        g.quadraticCurveTo(bx - 2, by - 2, bx, by);
+        g.quadraticCurveTo(bx + 2, by - 2, bx + 6, by - wing);
+        g.stroke();
+      });
+    }
+  } finally {
+    g.restore();
+  }
+}
+
+function drawWeatherParticles(t, weather) {
+  if (weather === 'clear') return;
+  g.save();
+  try {
+    const sec = t * 0.001;
+    for (let i = 0; i < st.weatherParticles.length; i++) {
+      const pt = st.weatherParticles[i];
+      if (weather === 'sakura') {
+        const px = ((pt.x - sec * 28 * pt.s + Math.sin(sec * 1.8 + pt.p) * 18) % W + W) % W;
+        const py = ((pt.y + sec * 34 * pt.s) % H + H) % H;
+        g.save();
+        g.translate(px, py);
+        g.rotate(sec * 1.5 + pt.p);
+        g.fillStyle = i % 3 === 0 ? 'rgba(251, 207, 232, 0.88)' : 'rgba(244, 114, 182, 0.82)';
+        g.beginPath();
+        g.ellipse(0, 0, 4.5 * pt.s, 2.6 * pt.s, 0.3, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+      } else if (weather === 'snow') {
+        const px = ((pt.x + Math.sin(sec * 1.2 + pt.p) * 22) % W + W) % W;
+        const py = ((pt.y + sec * 42 * pt.s) % H + H) % H;
+        g.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        g.beginPath();
+        g.arc(px, py, 2.8 * pt.s, 0, Math.PI * 2);
+        g.fill();
+      } else if (weather === 'rain') {
+        const px = ((pt.x - sec * 65 * pt.s) % W + W) % W;
+        const py = ((pt.y + sec * 380 * pt.s) % H + H) % H;
+        g.strokeStyle = 'rgba(186, 230, 253, 0.55)';
+        g.lineWidth = 1.3;
+        g.beginPath();
+        g.moveTo(px, py);
+        g.lineTo(px - 3, py + 14 * pt.s);
+        g.stroke();
+      }
+    }
+  } finally {
+    g.restore();
+  }
+}
+
+function drawTunnelOrBridge(railY, ch, portalType, isForeground, t) {
+  if (portalType === 'none') return;
+  g.save();
+  try {
+    if (portalType === 'bridge') {
+      const bridgeW = cl(W * 0.24, 110, 220);
+      const topY = railY - ch * 1.32;
+      if (!isForeground) {
+        g.strokeStyle = '#b91c1c';
+        g.lineWidth = 3.5;
+        g.beginPath();
+        g.moveTo(0, topY); g.lineTo(bridgeW, topY);
+        const steps = 4, stepW = bridgeW / steps;
+        for (let k = 0; k < steps; k++) {
+          const x1 = k * stepW, x2 = (k + 1) * stepW;
+          g.moveTo(x1, railY); g.lineTo(x1 + stepW * 0.5, topY); g.lineTo(x2, railY);
+        }
+        g.stroke();
+      } else {
+        g.fillStyle = '#dc2626';
+        g.fillRect(0, topY - 4, bridgeW, 6);
+        g.fillRect(0, railY - 6, bridgeW, 7);
+        g.strokeStyle = '#ef4444';
+        g.lineWidth = 3;
+        const steps = 4, stepW = bridgeW / steps;
+        g.beginPath();
+        for (let k = 1; k <= steps; k++) {
+          const x = k * stepW;
+          g.moveTo(x, topY); g.lineTo(x, railY);
+        }
+        g.stroke();
+      }
+    } else if (portalType === 'tunnel') {
+      const tunW = cl(W * 0.11, 46, 95);
+      const archTop = railY - ch * 1.35;
+      if (!isForeground) {
+        g.fillStyle = '#0f172a';
+        g.beginPath();
+        g.moveTo(0, railY + 2);
+        g.lineTo(0, archTop);
+        g.lineTo(tunW, archTop + ch * 0.15);
+        g.lineTo(tunW, railY + 2);
+        g.closePath();
+        g.fill();
+
+        const T = st.tr;
+        const inTunnelGlow = st.cue || (T && T.ph === 'in' && T.x < tunW + ch * 3.5);
+        if (inTunnelGlow) {
+          const pulse = 0.65 + 0.30 * Math.sin(t / 280);
+          const q = g.createRadialGradient(tunW * 0.5, railY - ch * 0.52, 4, tunW * 1.2, railY - ch * 0.52, ch * 2.8);
+          q.addColorStop(0, `rgba(255, 250, 190, ${pulse})`);
+          q.addColorStop(0.5, `rgba(253, 224, 71, ${pulse * 0.45})`);
+          q.addColorStop(1, 'rgba(255, 248, 195, 0)');
+          g.fillStyle = q;
+          g.fillRect(0, archTop - 20, tunW + ch * 3.0, ch * 2.0);
+        }
+      } else {
+        g.fillStyle = st.sc === 1 ? '#cbd5e1' : '#57534e';
+        g.beginPath();
+        g.moveTo(0, railY + 4);
+        g.lineTo(0, archTop - ch * 0.75);
+        g.quadraticCurveTo(tunW * 0.75, archTop - ch * 0.55, tunW * 1.15, archTop + ch * 0.12);
+        g.lineTo(tunW * 0.82, archTop + ch * 0.12);
+        g.lineTo(tunW * 0.82, railY + 4);
+        g.closePath();
+        g.fill();
+
+        g.fillStyle = st.sc === 1 ? '#f8fafc' : '#4d7c0f';
+        g.beginPath();
+        g.moveTo(0, archTop - ch * 0.75);
+        g.quadraticCurveTo(tunW * 0.75, archTop - ch * 0.55, tunW * 1.15, archTop + ch * 0.12);
+        g.lineTo(tunW * 0.92, archTop + ch * 0.18);
+        g.quadraticCurveTo(tunW * 0.55, archTop - ch * 0.35, 0, archTop - ch * 0.50);
+        g.closePath();
+        g.fill();
+
+        g.fillStyle = '#94a3b8';
+        g.fillRect(tunW * 0.74, archTop + ch * 0.06, ch * 0.22, railY - (archTop + ch * 0.06) + 2);
+        g.strokeStyle = '#475569';
+        g.lineWidth = 2;
+        g.strokeRect(tunW * 0.74, archTop + ch * 0.06, ch * 0.22, railY - (archTop + ch * 0.06) + 2);
+      }
+    }
+  } finally {
+    g.restore();
+  }
+}
 
 function drawDistantLandmark(i, t, hz) {
   const X = v => W * v;
@@ -2653,6 +3179,11 @@ function drawStationPlatformAndPeople(railY, ch, trkType, t) {
     g.fillRect(bx + 12, platY - 2, 4, 4);
   }
 
+  drawEkibenCart(g, st.cart, platY + 2, ch, t);
+  if (st.cleaner && st.cleaner.active) {
+    drawPerson(g, st.cleaner, platY + 2, ch, t);
+  }
+
   st.pax.forEach(p => drawPerson(g, p, platY + 2, ch, t));
   drawPerson(g, st.staff, platY + 2, ch, t);
 
@@ -2687,8 +3218,11 @@ function draw(t) {
   try {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const { hz, railY: baseRailY } = sceneLayout(), ch = CH(), s = st.sc, p = st.t * 0.05 % 4, i = Math.floor(p), j = (i + 1) % 4, f = p - i, sm = f * f * (3 - 2 * f);
-    // 套用 OLED 垂直微位移保護固定邊線
     const railY = baseRailY + st.pxY * 0.6;
+    const weather = getCurrentWeather();
+    const portal = getCurrentPortal();
+    const isRaining = weather === 'rain';
+
     let top = mix(SK[i][0], SK[j][0], sm), bot = mix(SK[i][1], SK[j][1], sm);
     const night = SK[i][2] + (SK[j][2] - SK[i][2]) * sm;
     if (s === 3) { top = '#38bdf8'; bot = '#bae6fd'; }
@@ -2704,11 +3238,11 @@ function draw(t) {
 
     g.textAlign = 'center';
     drawDistantLandmark(s, t, hz);
+    drawRainbowAndBirds(hz, t, weather);
 
     g.fillStyle = GR[s]; g.fillRect(0, hz, W, H - hz);
     if (night > 0.05 && s !== 3 && s !== 5) { g.fillStyle = 'rgba(10,20,55,' + night * 0.26 + ')'; g.fillRect(0, 0, W, H); }
 
-    // 3. 繪製後方軌道反向高速交會列車 (雙車同框彩蛋)
     if (st.bgTr) {
       const bgM = M[st.bgTr.i];
       const bgCh = ch * 0.66;
@@ -2716,7 +3250,6 @@ function draw(t) {
       g.save();
       try {
         g.globalAlpha = 0.92;
-        // 水平鏡像翻轉繪製，使車頭朝左反方向行駛交會
         g.translate(st.bgTr.x, 0);
         g.scale(-1, 1);
         drawTrain(g, bgM, 0, bgRailY, bgCh, {
@@ -2725,6 +3258,7 @@ function draw(t) {
           p: st.bgTr.x,
           glow: true,
           flash: true,
+          raining: isRaining,
           door: 0,
           occ: 0.75
         });
@@ -2736,31 +3270,64 @@ function draw(t) {
     const T = st.tr, trkType = T ? M[T.i].trk : 'V';
     drawRailwayInfra(railY, ch, trkType, t);
 
+    drawTunnelOrBridge(railY, ch, portal, false, t);
+
     if (T) {
       const m = M[T.i];
       g.save();
       try {
-        drawTrain(g, m, T.x, railY, ch, {
-          night: s === 5 ? 0.8 : night,
-          t: st.t,
-          p: T.x,
-          glow: T.ph === 'in',
-          flash: T.flashT && T.flashT > 0,
-          door: T.door,
-          occ: T.occ
-        });
+        if (T.isCoupling && T.rearTr) {
+          const rearM = M[T.rearTr.i];
+          drawTrain(g, rearM, T.rearTr.x, railY, ch, {
+            night: s === 5 ? 0.8 : night,
+            t: st.t,
+            p: T.rearTr.x,
+            glow: !T.rearTr.coupled,
+            flash: T.flashT && T.flashT > 0,
+            raining: isRaining,
+            couplerOpen: true,
+            maxCars: 3,
+            door: T.door,
+            occ: T.occ
+          });
+          g.save();
+          g.translate(T.x * 2, 0);
+          g.scale(-1, 1);
+          drawTrain(g, m, T.x, railY, ch, {
+            night: s === 5 ? 0.8 : night,
+            t: st.t,
+            p: T.x,
+            glow: false,
+            flash: T.flashT && T.flashT > 0,
+            raining: isRaining,
+            couplerOpen: true,
+            maxCars: 3,
+            door: T.door,
+            occ: T.occ
+          });
+          g.restore();
+        } else {
+          drawTrain(g, m, T.x, railY, ch, {
+            night: s === 5 ? 0.8 : night,
+            t: st.t,
+            p: T.x,
+            glow: T.ph === 'in',
+            flash: T.flashT && T.flashT > 0,
+            raining: isRaining,
+            door: T.door,
+            occ: T.occ
+          });
+        }
       } finally {
         g.restore();
       }
     }
 
-    if (st.cue) {
-      const a = 0.45 + 0.35 * Math.sin(t / 500), q = g.createRadialGradient(16, railY - ch * 0.55, 0, 16, railY - ch * 0.55, ch * 2.0);
-      q.addColorStop(0, 'rgba(255,246,184,' + a + ')'); q.addColorStop(1, 'rgba(255,246,184,0)');
-      g.fillStyle = q; g.fillRect(0, railY - ch * 2.2, ch * 2.4, ch * 3.2);
-    }
+    drawTunnelOrBridge(railY, ch, portal, true, t);
 
     drawStationPlatformAndPeople(railY, ch, trkType, t);
+
+    drawWeatherParticles(t, weather);
 
     if (st.fx.length > 0) {
       g.save();
@@ -2769,6 +3336,15 @@ function draw(t) {
         if (f.type === 'puff') {
           g.fillStyle = 'rgba(255,255,255,0.85)';
           g.beginPath(); g.arc(f.x, f.y, f.r, 0, Math.PI * 2); g.fill();
+        } else if (f.type === 'count') {
+          const r = (f.size || 30) * 0.72;
+          g.fillStyle = '#fef08a';
+          g.beginPath(); g.arc(f.x, f.y - r * 0.35, r, 0, Math.PI * 2); g.fill();
+          g.lineWidth = 3; g.strokeStyle = '#ca8a04'; g.stroke();
+          g.font = '900 ' + (f.size || 30) + 'px "PingFang TC","Noto Sans TC",sans-serif';
+          g.textAlign = 'center';
+          g.fillStyle = '#b45309';
+          g.fillText(f.txt, f.x, f.y);
         } else {
           g.font = 'bold ' + (f.size || 24) + 'px "PingFang TC","Noto Sans TC",sans-serif';
           g.textAlign = 'center';
@@ -2797,7 +3373,51 @@ function draw(t) {
   }
 }
 
-// ===================== 5. 🏅 鐵道探索收藏館 + 今日小站長與紀念印章帳 =====================
+// ===================== 📦 100% 離線高解析度「專屬鐵道紀念明信片」插畫繪製器 =====================
+function renderOfflinePostcard(canvas, m) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cw = 240, ch = 140;
+  ctx.save();
+  ctx.scale(2, 2);
+
+  const sky = ctx.createLinearGradient(0, 0, 0, 95);
+  sky.addColorStop(0, '#7dd3fc');
+  sky.addColorStop(1, '#f0f9ff');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, cw, ch);
+
+  ctx.fillStyle = '#93c5fd';
+  ctx.beginPath();
+  ctx.moveTo(20, 95); ctx.quadraticCurveTo(65, 60, 82, 34);
+  ctx.lineTo(96, 34); ctx.quadraticCurveTo(112, 60, 158, 95);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(82, 34); ctx.lineTo(96, 34); ctx.lineTo(106, 52);
+  ctx.lineTo(95, 48); ctx.lineTo(89, 54); ctx.lineTo(82, 48); ctx.lineTo(73, 52);
+  ctx.fill();
+
+  ctx.fillStyle = '#86efac';
+  ctx.fillRect(0, 95, cw, ch - 95);
+  ctx.fillStyle = '#cbd5e1';
+  ctx.fillRect(0, 102, cw, 22);
+  ctx.fillStyle = '#475569';
+  ctx.fillRect(0, 99, cw, 3);
+
+  drawTrain(ctx, m, 226, 101, 32, { sil: false, t: 1.5, p: 50, door: 0, occ: 0.7 });
+
+  ctx.strokeStyle = 'rgba(30, 41, 59, 0.25)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(3, 3, cw - 6, ch - 6);
+
+  ctx.fillStyle = 'rgba(220, 38, 38, 0.82)';
+  ctx.font = 'bold 9px sans-serif';
+  ctx.fillText('💮 鐵道紀念明信片・' + m.c, 10, 16);
+  ctx.restore();
+}
+
+// ===================== 鐵道探索收藏館 + 今日小站長與紀念印章帳 =====================
 function renderStationMasterBox() {
   const qMin = Math.floor((dailyStats.quietSec || 0) / 60);
   const tCnt = dailyStats.trains || 0;
@@ -2842,27 +3462,37 @@ function showDetail(i) {
   box.innerHTML = `
     <div class="db-head">
       <div class="db-photo">
-        <img id="dbImg" src="${photoSrc}" alt="${m.n}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-        <div style="display:none;padding:8px;text-align:center;font-size:12px">📷 離線模式<br>(可點擊下方上傳真車照片)</div>
+        <canvas id="dbPostcard" width="480" height="280"></canvas>
+        <img id="dbImg" src="${photoSrc}" alt="${m.n}" style="position:absolute;inset:0" onload="this.style.opacity='1'" onerror="this.style.display='none'">
       </div>
       <div style="flex:1;min-width:220px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span style="font-size:20px;font-weight:900">🚄 ${m.n}</span>
           <span style="color:#f59e0b;font-size:16px">${'⭐'.repeat(m.r)}</span>
         </div>
-        <div style="margin:6px 0;font-weight:700;color:#2563eb">📍 行駛區間：${m.route}</div>
+        <div style="margin:6px 0;font-weight:700;color:#2563eb">📍 行駛區間：${m.route}（🎨 塗裝：${m.colorName}）</div>
         <p style="margin:6px 0;font-size:13.5px;line-height:1.5">${m.desc}</p>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px">
           <span style="background:#22c55e22;color:#16a34a;padding:3px 8px;border-radius:6px;font-weight:700">✅ 已收錄 (停靠 ${seen[i]} 次)</span>
           <span style="background:#8882;padding:3px 8px;border-radius:6px">${m.cars} 輛編組・${m.trk === 'V' ? '高架專用軌' : (m.trk === 'M' ? '磁浮軌道' : '在來線軌道')}</span>
           <button type="button" id="callThisTrainBtn" style="font-size:12px;padding:3px 9px;background:#fef3c7;color:#b45309;border:1px solid #f59e0b;font-weight:800">🔔 召喚此列車進站</button>
           <button type="button" id="speakThisTrainBtn" style="font-size:12px;padding:3px 9px;background:#dcfce7;color:#15803d;border:1px solid #22c55e;font-weight:800">🎙️ 聽站長介紹</button>
+          <button type="button" id="togglePostcardBtn" style="font-size:12px;padding:3px 9px;background:#e0e7ff;color:#1d4ed8;border:1px solid #6366f1;font-weight:800">🖼️ 切換插畫/照片</button>
           <label style="cursor:pointer;background:#3b82f622;color:#2563eb;padding:3px 8px;border-radius:6px;font-weight:700">
-            📷 更換真車照片 <input type="file" id="upPhoto" accept="image/*" hidden>
+            📷 自訂照片 <input type="file" id="upPhoto" accept="image/*" hidden>
           </label>
         </div>
       </div>
     </div>`;
+
+  renderOfflinePostcard($('#dbPostcard'), m);
+
+  const toggleBtn = $('#togglePostcardBtn');
+  if (toggleBtn) toggleBtn.onclick = () => {
+    const imgEl = $('#dbImg');
+    if (imgEl) imgEl.style.display = imgEl.style.display === 'none' ? 'block' : 'none';
+  };
+
   const callThis = $('#callThisTrainBtn');
   if (callThis) callThis.onclick = () => {
     st.forcedNextTrain = i;
@@ -2872,7 +3502,7 @@ function showDetail(i) {
   };
   const speakThis = $('#speakThisTrainBtn');
   if (speakThis) speakThis.onclick = () => {
-    speakAnnouncement(`${m.n}，行駛於 ${m.route.replace('→', '到').replace('↔', '往返')}。${m.desc}`, '');
+    speakAnnouncement(`${m.n}，身穿${m.colorName}的衣服，行駛於 ${m.route.replace('→', '到').replace('↔', '往返')}。${m.desc}`, '');
   };
   const up = $('#upPhoto');
   if (up) up.onchange = e => {
@@ -2930,7 +3560,7 @@ $('#alb').onclick = () => {
 };
 $('#dx').onclick = () => $('#dex').hidden = 1;
 
-// ===================== 主迴圈（含智慧省電動態幀率調節） =====================
+// ===================== 主迴圈（含智慧省電與低電量自動守護） =====================
 initWaitingPassengers();
 let last = performance.now();
 let lastDrawTime = 0;
@@ -2945,8 +3575,9 @@ let lastDrawTime = 0;
     dbgErr('update', e);
   }
 
-  const isIdle = $('#ecoMode').checked && !st.tr && !st.bgTr && !st.fade && !st.page && st.fx.length === 0 && (t - lastInteractTime > 2000);
-  const minDrawInterval = isIdle ? 40 : 0;
+  const wantEco = ($('#ecoMode') && $('#ecoMode').checked) || batteryState.lowPowerSaver;
+  const isIdle = wantEco && !st.tr && !st.bgTr && !st.fade && !st.page && st.fx.length === 0 && (t - lastInteractTime > 2000);
+  const minDrawInterval = batteryState.lowPowerSaver ? (st.tr ? 28 : 48) : (isIdle ? 40 : 0);
 
   if (t - lastDrawTime >= minDrawInterval) {
     lastDrawTime = t;
