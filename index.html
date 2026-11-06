@@ -1029,10 +1029,12 @@ $('#gear').onclick = ()=>{
 };
 
 // 柔和木琴風車站音樂鈴 (低刺激、溫柔)
+// 注意：iOS 播放音效後可能暫時中斷麥克風輸入，播完必須 softReconnect
 function chime(freqs){
   if(!$('#snd').checked)return;
   try{
     const a=st.ac||(st.ac=new(window.AudioContext||webkitAudioContext)());
+    a.resume().catch(()=>{});
     (Array.isArray(freqs)?freqs:[freqs]).forEach((f,idx)=>{
       const o=a.createOscillator(),v=a.createGain();
       o.type='sine';o.frequency.value=f;o.connect(v);v.connect(a.destination);
@@ -1040,14 +1042,20 @@ function chime(freqs){
       v.gain.setValueAtTime(.05,t0);v.gain.exponentialRampToValueAtTime(.0008,t0+.95);
       o.start(t0);o.stop(t0+.95);
     });
+    // 音效結束後強制重建麥克風分析路徑（核心修復）
+    clearTimeout(chime._re);
+    chime._re = setTimeout(()=>{ softReconnectMic(); }, 1200);
   }catch(e){}
 }
 
 // ===================== 麥克風與自動環境音校準（iOS 強化穩定版） =====================
-// 重要：必須把 MediaStreamSource 接到「增益=0 的 destination」，
-// 否則 iOS Safari 在拖曳滑桿／點按鈕後常會把僅接 Analyser 的輸入路徑掛起，
-// 造成 rawInstant 一直回傳接近底噪 → 畫面卡在校準值（約 6）。
+// 根因：
+// 1) MediaStreamSource 若只接 Analyser、不接 destination，iOS 在 UI／音效後常掛起輸入
+// 2) 自動 startMic() 若先 stop() 舊軌道再 getUserMedia，無 gesture 時會永久失去麥克風
+// 3) 發車提示音 (chime) 結束後輸入路徑常失效 → 第一班車後偵測死亡
 let an = null, micStream = null, micSource = null, keepAliveGain = null, freqBuf = null;
+let silentOsc = null, silentGain = null; // 額外 keepalive：極低音量持續振盪
+let micCloneStream = null; // softReconnect 用的 clone，避免洩漏
 const timeBuf = new Float32Array(2048);
 const byteBuf = new Uint8Array(2048);
 const lvlHist = [];
@@ -1057,6 +1065,7 @@ let adaptQuietT = 0;
 let lastMicOk = 0;
 let lastMicKick = 0;
 let micRecoverBusy = false;
+let silentFrames = 0; // 連續「全靜音 buffer」幀數 → 判定 graph 已死
 
 function ensureAudioRunning(){
   const a = st.ac;
@@ -1067,32 +1076,48 @@ function ensureAudioRunning(){
   return Promise.resolve();
 }
 
-/** 在 user gesture（滑桿／按鈕）當下強制喚醒，並檢查軌道是否仍活著 */
+/** 確保有一條極靜音的持續輸出，讓 iOS 維持 play-and-record 工作階段 */
+function ensureSilentKeepalive(){
+  const a = st.ac;
+  if(!a) return;
+  try{
+    if(silentOsc) return;
+    silentOsc = a.createOscillator();
+    silentGain = a.createGain();
+    silentGain.gain.value = 0.00001; // 幾乎聽不到，但維持 session
+    silentOsc.frequency.value = 20;
+    silentOsc.connect(silentGain);
+    silentGain.connect(a.destination);
+    silentOsc.start();
+  }catch(e){
+    silentOsc = null; silentGain = null;
+  }
+}
+
+/** 在 user gesture 或列車事件後強制喚醒 */
 function kickAudio(){
   lastMicKick = performance.now();
   ensureAudioRunning();
+  ensureSilentKeepalive();
   if(!micStream) return;
   try{
     const tracks = micStream.getAudioTracks();
-    let needReconnect = false;
+    let dead = !tracks.length;
     tracks.forEach(t=>{
-      if(t.readyState === 'ended') needReconnect = true;
-      else {
-        t.enabled = true;
-        if(typeof t.muted === 'boolean' && t.muted) needReconnect = true;
-      }
+      if(t.readyState === 'ended') dead = true;
+      else t.enabled = true;
     });
-    if(needReconnect || !an){
+    if(dead || !an){
       softReconnectMic();
     }
   }catch(e){}
 }
 
-/** 不重新要權限：用現有 stream 重建 Analyser + keepalive 路徑 */
+/** 不重新要權限、不 stop 軌道：重建 Analyser + keepalive */
 function softReconnectMic(){
   if(!micStream || !st.ac || micRecoverBusy) return false;
-  const tracks = micStream.getAudioTracks();
-  if(!tracks.length || tracks.every(t=>t.readyState==='ended')) return false;
+  const tracks = micStream.getAudioTracks().filter(t=>t.readyState==='live');
+  if(!tracks.length) return false;
   micRecoverBusy = true;
   try{
     if(micSource){ try{ micSource.disconnect(); }catch(e){} }
@@ -1102,15 +1127,27 @@ function softReconnectMic(){
     an.smoothingTimeConstant = 0.25;
     an.minDecibels = -90;
     an.maxDecibels = -10;
-    micSource = st.ac.createMediaStreamSource(micStream);
+    // 優先用 clone track，避免 iOS 對同一 track 多次 createMediaStreamSource 的怪問題
+    if(micCloneStream){
+      try{ micCloneStream.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} }); }catch(e){}
+      micCloneStream = null;
+    }
+    let srcStream = micStream;
+    try{
+      const cloned = tracks[0].clone();
+      micCloneStream = new MediaStream([cloned]);
+      srcStream = micCloneStream;
+    }catch(e){}
+    micSource = st.ac.createMediaStreamSource(srcStream);
     micSource.connect(an);
-    // keepalive：增益 0 接到喇叭，讓 iOS 維持輸入處理
     keepAliveGain = st.ac.createGain();
     keepAliveGain.gain.value = 0;
     micSource.connect(keepAliveGain);
     keepAliveGain.connect(st.ac.destination);
+    ensureSilentKeepalive();
     st.mic = 1;
     lastMicOk = performance.now();
+    silentFrames = 0;
     micRecoverBusy = false;
     return true;
   }catch(e){
@@ -1138,13 +1175,24 @@ function rawInstant(){
   // 方法 B：位元組時間域（部分 iOS 上 float 幾乎靜音，byte 仍有反應）
   an.getByteTimeDomainData(byteBuf);
   let bSum = 0, bPeak = 0;
+  let allSame = true;
+  const b0 = byteBuf[0];
   for(let i = 0; i < byteBuf.length; i++){
     const d = (byteBuf[i] - 128) / 128;
     bSum += d * d;
     const ad = d < 0 ? -d : d;
     if(ad > bPeak) bPeak = ad;
+    if(byteBuf[i] !== b0) allSame = false;
   }
   const bRms = Math.sqrt(bSum / byteBuf.length) || 1e-8;
+
+  // graph 已死：連續多幀 buffer 完全定值（通常全 128）
+  if(allSame && b0 === 128){
+    silentFrames++;
+  }else{
+    silentFrames = 0;
+    lastMicOk = performance.now();
+  }
 
   // 方法 C：頻譜能量（人聲約 200~4000Hz）
   if(!freqBuf || freqBuf.length !== an.frequencyBinCount){
@@ -1168,7 +1216,7 @@ function rawInstant(){
   const lvlFreq = cl(fAvg * 50 / 180, 0, 50); // 人聲中等響約 80~120 → 約 22~33
 
   const merged = Math.max(lvlRms, lvlPeak * 0.85, lvlFreq);
-  if(merged > 1) lastMicOk = performance.now();
+  if(merged > 0.5) lastMicOk = performance.now();
   return merged;
 }
 
@@ -1233,16 +1281,8 @@ async function startMic(){
     {audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:true}},
     {audio:true}
   ];
-  // 先關掉舊軌道，避免多路 stream 佔用
-  try{
-    if(micStream){
-      micStream.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} });
-    }
-    if(micSource){ try{ micSource.disconnect(); }catch(e){} }
-    if(keepAliveGain){ try{ keepAliveGain.disconnect(); }catch(e){} }
-  }catch(e){}
-  micStream = null; micSource = null; keepAliveGain = null; an = null;
-
+  // 關鍵：先取得新 stream，成功後再停舊軌道。
+  // 若先 stop 再 getUserMedia 失敗（無 gesture），麥克風會永久失效。
   let stream = null, lastErr = null;
   for(const c of tries){
     try{
@@ -1251,11 +1291,19 @@ async function startMic(){
     }catch(e){ lastErr = e; }
   }
   if(!stream) throw lastErr || new Error('getUserMedia failed');
+
+  const oldStream = micStream;
+  try{
+    if(micSource){ try{ micSource.disconnect(); }catch(e){} }
+    if(keepAliveGain){ try{ keepAliveGain.disconnect(); }catch(e){} }
+  }catch(e){}
+
   micStream = stream;
+  micSource = null; keepAliveGain = null; an = null;
+
   const AC = window.AudioContext || window.webkitAudioContext;
   const a = st.ac = st.ac || new AC();
   await a.resume();
-  // 重建分析器 + keepalive（關鍵：讓 iOS 維持輸入處理）
   an = a.createAnalyser();
   an.fftSize = 2048;
   an.smoothingTimeConstant = 0.25;
@@ -1264,17 +1312,24 @@ async function startMic(){
   micSource = a.createMediaStreamSource(stream);
   micSource.connect(an);
   keepAliveGain = a.createGain();
-  keepAliveGain.gain.value = 0; // 靜音，不產生回授，但維持 graph 活躍
+  keepAliveGain.gain.value = 0;
   micSource.connect(keepAliveGain);
   keepAliveGain.connect(a.destination);
+  ensureSilentKeepalive();
   st.mic = 1;
   lastMicOk = performance.now();
-  // 確認軌道活著
+  silentFrames = 0;
+
   stream.getAudioTracks().forEach(t=>{
     t.enabled = true;
     try{ t.applyConstraints && t.applyConstraints({autoGainControl:false}); }catch(e){}
     t.onended = ()=>{ console.warn('mic track ended'); };
   });
+
+  // 新 stream 已就緒，再釋放舊軌道
+  if(oldStream && oldStream !== stream){
+    try{ oldStream.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} }); }catch(e){}
+  }
   return true;
 }
 
@@ -1423,6 +1478,9 @@ function endTrain(){
     p.waving=false;p.walking=false;p.state='wait_board';p.delay=2.5+idx*2;
   });
   st.staff.waving=false;
+  // 列車離站（含發車 chime 後）強制重建麥克風路徑
+  kickAudio();
+  softReconnectMic();
   if(st.pend!=null){go(st.pend);st.pend=null}
 }
 const go2=i=>{st.fade={t:0,n:i,sw:0}};function go(i){if(!st.fade)go2(i)}
@@ -1440,15 +1498,12 @@ function update(dt){
     if(st.mic){
       const instant = raw();
       tg = cl(instant - (st.off||0), 0, 50);
-      // 看門狗：若超過約 4 秒沒有有效訊號，嘗試 soft reconnect（不重新要權限）
-      // 這是「改門檻後卡在 6」的主要自癒路徑
+      // 看門狗：只 softReconnect，絕不自動 startMic（避免無 gesture 時 stop 掉軌道）
       const now = performance.now();
-      if(now - lastMicOk > 4000 && st.t > 8 && !micRecoverBusy && !calBusy && now - lastMicKick > 2000){
+      const graphDead = silentFrames > 45; // 約 0.75 秒連續全靜音 buffer
+      if((graphDead || now - lastMicOk > 3000) && st.t > 5 && !micRecoverBusy && !calBusy && now - lastMicKick > 1500){
         lastMicKick = now;
-        if(!softReconnectMic()){
-          // stream 可能已 ended：嘗試完整重啟（需使用者曾授權）
-          startMic().then(()=>{ lastMicOk = performance.now(); }).catch(()=>{});
-        }
+        softReconnectMic();
       }
     }else{
       tg = st.sim ? 46 : 4 + Math.random() * 1.2;
@@ -1469,12 +1524,9 @@ function update(dt){
     }else{
       st.quiet += dt;
       st.acc = Math.max(0, st.acc - dt * 3.5);
-      if(st.lvl < goal * 0.5 && st.mic && !calBusy){
-        adaptQuietT += dt;
-        if(adaptQuietT > 10){
-          st.off = cl(st.off + (tg - 6) * 0.015 * Math.min(1, dt), 0, 35);
-        }
-      }else adaptQuietT = 0;
+      // 關閉持續自動校準：長時間安靜 + 錯誤 off 會把讀數鎖在 6
+      // 僅在校準後短時間、且 raw 有變化時微調
+      adaptQuietT = 0;
     }
     if(!st.loud && st.acc >= 4.8){ st.loud = 1; st.loudT = 0; }
     if(st.loud && st.quiet >= 1.2){ st.loud = 0; st.acc = 0; }
