@@ -17,6 +17,9 @@
   --safe-r:env(safe-area-inset-right,0px);
   --ui-gap:10px;
   --ic:54px;
+  /* OLED 防烙印微位移變數 (由 JS 動態平滑更新 ±3px) */
+  --px-x:0px;
+  --px-y:0px;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--card:rgba(24,32,46,.95);--fg:#f1f5f9}}
 html,body{
@@ -35,11 +38,11 @@ button:hover{transform:scale(1.02)}
 button:active{transform:scale(0.96)}
 .ic{width:var(--ic);height:var(--ic);font-size:calc(var(--ic)*0.45);padding:0;position:relative;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 
-/* 左上燈號 */
+/* 左上燈號 (套用 OLED 防烙印微位移) */
 #lamp{
   position:fixed;
-  left:calc(12px + var(--safe-l));
-  top:calc(10px + var(--safe-t));
+  left:calc(12px + var(--safe-l) + var(--px-x));
+  top:calc(10px + var(--safe-t) + var(--px-y));
   height:70px;min-width:72px;padding:0 14px;font-size:36px;
   display:flex;align-items:center;justify-content:center;gap:8px;
   border:4px solid #4ade80;transition:border-color .4s;overflow:hidden;z-index:12;
@@ -47,23 +50,24 @@ button:active{transform:scale(0.96)}
 }
 #lampBar{position:absolute;left:0;bottom:0;height:6px;background:#22c55e;width:0%;transition:width .25s linear}
 
-/* 中央進度／圖鑑進度 */
+/* 中央進度／圖鑑進度／連勝顯示 */
 #dots{
-  position:fixed;left:50%;transform:translateX(-50%);
-  top:calc(12px + var(--safe-t));
-  max-width:min(440px, calc(100vw - 230px - var(--safe-l) - var(--safe-r)));
+  position:fixed;left:calc(50% + var(--px-x));transform:translateX(-50%);
+  top:calc(12px + var(--safe-t) + var(--px-y));
+  max-width:min(480px, calc(100vw - 230px - var(--safe-l) - var(--safe-r)));
   padding:6px 14px;font-size:clamp(12px,2.4vw,14px);
   font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px 10px;
   flex-wrap:wrap;text-align:center;z-index:11;box-sizing:border-box;
   line-height:1.35;
 }
+#comboBadge{font-size:clamp(11px,2.1vw,12.5px);color:#b45309;background:#fef3c7;border:1px solid #f59e0b88;padding:1px 8px;border-radius:99px;font-weight:800;white-space:nowrap}
 #dwellHint{font-size:clamp(11px,2.2vw,13px);color:#15803d;background:#dcfce7;padding:2px 8px;border-radius:99px;font-weight:700;white-space:nowrap}
 
 /* 右上按鈕列 */
 #top{
   position:fixed;
-  right:calc(10px + var(--safe-r));
-  top:calc(10px + var(--safe-t));
+  right:calc(10px + var(--safe-r) - var(--px-x));
+  top:calc(10px + var(--safe-t) + var(--px-y));
   display:flex;gap:6px;z-index:12;
   align-items:center;
 }
@@ -109,7 +113,7 @@ button:active{transform:scale(0.96)}
 /* Modal */
 .modal{
   position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:min(760px, calc(100vw - 16px - var(--safe-l) - var(--safe-r)));
+  width:min(780px, calc(100vw - 16px - var(--safe-l) - var(--safe-r)));
   max-height:calc(100dvh - 16px - var(--safe-t) - var(--safe-b));
   overflow:auto;-webkit-overflow-scrolling:touch;
   padding:18px;box-sizing:border-box;text-align:center;z-index:30;
@@ -135,6 +139,35 @@ button:active{transform:scale(0.96)}
 #cornerCard .cc-stars{color:#f59e0b;font-size:14px;letter-spacing:2px;margin-bottom:4px}
 #cornerCard .cc-route{font-size:12px;font-weight:700;background:#8882;padding:3px 9px;border-radius:8px;display:inline-block;max-width:100%;word-break:break-all}
 
+/* 小站長榮譽卡與日本車站紀念印章 (Eki Stamp) */
+#stationMasterBox{
+  background:linear-gradient(135deg,rgba(254,243,199,.45),rgba(219,234,254,.45));
+  border:2px dashed #f59e0b88;border-radius:16px;padding:12px;margin-bottom:12px;text-align:left;
+}
+.sm-stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-around;margin-bottom:10px}
+.sm-stat-pill{background:var(--card);padding:6px 12px;border-radius:12px;font-size:13px;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.stamp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;text-align:center}
+.eki-stamp{
+  border:2px dashed #cbd5e1;border-radius:12px;padding:8px 4px;position:relative;
+  background:rgba(255,255,255,.45);transition:.25s;
+}
+.eki-stamp.stamped{
+  border:2px solid #dc2626;background:rgba(254,226,226,.35);
+  box-shadow:inset 0 0 0 2px rgba(220,38,38,.18);
+}
+.eki-stamp .st-circle{
+  width:52px;height:52px;margin:0 auto 4px;border-radius:50%;
+  border:2.5px solid #94a3b8;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:20px;color:#94a3b8;filter:grayscale(1);opacity:.45;
+}
+.eki-stamp.stamped .st-circle{
+  border-color:#dc2626;color:#dc2626;filter:none;opacity:1;
+  transform:rotate(-6deg);
+  background:radial-gradient(circle,rgba(220,38,38,.08) 0%,rgba(220,38,38,.22) 100%);
+}
+.eki-stamp .st-name{font-size:11.5px;font-weight:900;color:var(--fg)}
+.eki-stamp .st-cond{font-size:10px;opacity:.75;margin-top:2px}
+
 /* 圖鑑 */
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(210px,100%),1fr));gap:12px;margin-top:12px}
 .dex-item{background:#8882;border-radius:16px;padding:10px;font-size:13px;text-align:left;cursor:pointer;transition:.2s;border:2px solid transparent}
@@ -150,8 +183,8 @@ button:active{transform:scale(0.96)}
 /* 常駐音量計 */
 #volWrap{
   position:fixed;
-  left:calc(12px + var(--safe-l, 0px));
-  top:calc(10px + var(--safe-t, 0px) + 74px);
+  left:calc(12px + var(--safe-l, 0px) + var(--px-x));
+  top:calc(10px + var(--safe-t, 0px) + 74px + var(--px-y));
   z-index:13;
   display:flex;align-items:center;gap:8px;
   padding:6px 10px;min-width:120px;
@@ -176,16 +209,16 @@ button:active{transform:scale(0.96)}
 
 @media (max-width:640px),(orientation:portrait){
   :root{--ic:46px}
-  #lamp{height:58px;font-size:28px;padding:0 10px;border-width:3px;left:calc(8px + var(--safe-l));top:calc(8px + var(--safe-t))}
-  #volWrap{top:calc(8px + var(--safe-t, 0px) + 62px); left:calc(8px + var(--safe-l, 0px));}
+  #lamp{height:58px;font-size:28px;padding:0 10px;border-width:3px;left:calc(8px + var(--safe-l) + var(--px-x));top:calc(8px + var(--safe-t) + var(--px-y))}
+  #volWrap{top:calc(8px + var(--safe-t, 0px) + 62px + var(--px-y)); left:calc(8px + var(--safe-l, 0px) + var(--px-x));}
   #volBar{width:min(110px,32vw);height:10px}
   #dots{
-    top:calc(8px + var(--safe-t) + 96px);
-    left:calc(8px + var(--safe-l)); right:calc(8px + var(--safe-r));
+    top:calc(8px + var(--safe-t) + 96px + var(--px-y));
+    left:calc(8px + var(--safe-l) + var(--px-x)); right:calc(8px + var(--safe-r) - var(--px-x));
     transform:none;width:auto;max-width:none;
     justify-content:flex-start;
   }
-  #top{right:calc(8px + var(--safe-r));top:calc(8px + var(--safe-t));gap:5px}
+  #top{right:calc(8px + var(--safe-r) - var(--px-x));top:calc(8px + var(--safe-t) + var(--px-y));gap:5px}
   #set{
     left:calc(8px + var(--safe-l)); right:calc(8px + var(--safe-r));
     width:auto;top:calc(8px + var(--safe-t) + var(--ic) + 10px);
@@ -200,9 +233,9 @@ button:active{transform:scale(0.96)}
 @media (orientation:landscape) and (max-height:500px){
   :root{--ic:42px}
   #lamp{height:48px;font-size:24px;padding:0 8px;border-width:3px}
-  #volWrap{top:calc(8px + var(--safe-t, 0px) + 52px); padding:4px 8px}
+  #volWrap{top:calc(8px + var(--safe-t, 0px) + 52px + var(--px-y)); padding:4px 8px}
   #volBar{width:100px;height:9px}
-  #dots{top:calc(8px + var(--safe-t));font-size:12px;max-width:min(360px,calc(100vw - 260px))}
+  #dots{top:calc(8px + var(--safe-t) + var(--px-y));font-size:12px;max-width:min(380px,calc(100vw - 260px))}
   #set{max-height:calc(100dvh - var(--safe-t) - var(--safe-b) - 56px);font-size:13px;padding:8px 10px}
   #cornerCard{padding:8px 12px}
   #cornerCard .cc-name{font-size:15px}
@@ -239,12 +272,16 @@ button:active{transform:scale(0.96)}
   <div id="volBar"><div id="volFill"></div><div id="volGoal"></div></div>
   <span id="volNum">0</span>
 </div>
-<div id="dots" class="card" hidden><span id="dotsTxt"></span><span id="dwellHint" hidden>🤫 安靜觀察中・列車停留延長</span></div>
+<div id="dots" class="card" hidden>
+  <span id="dotsTxt"></span>
+  <span id="comboBadge" hidden>🔥 連勝 1</span>
+  <span id="dwellHint" hidden>🤫 安靜觀察中・列車停留延長</span>
+</div>
 
 <!-- 右上：功能列 + 兒童防誤觸鎖 -->
 <div id="top" hidden>
   <button id="callBtn" class="card ic" title="召喚列車 / 切換發車">🔔</button>
-  <button id="alb" class="card ic" title="鐵道探索收藏館">🚆<span id="badge" hidden>🎁</span></button>
+  <button id="alb" class="card ic" title="鐵道探索收藏館與今日小站長印章">🚆<span id="badge" hidden>🎁</span></button>
   <button id="gear" class="card ic" title="設定 (長按開啟Debug)">⚙</button>
   <button id="lockBtn" class="card ic" title="兒童防誤觸鎖 (點擊上鎖 / 長按1.5秒解鎖)">
     <span id="lockIcon">🔓</span>
@@ -275,12 +312,16 @@ button:active{transform:scale(0.96)}
   <div class="row"><button type="button" id="cal">🎚 重新校準環境音</button><button type="button" id="noise" hidden>按住=測試吵鬧</button></div>
 
   <hr>
-  <span class="sec-title">🚄 列車班距與家長指定發車</span>
+  <span class="sec-title">🚄 列車班距、指定發車與雙車交會</span>
   <label>🎯 指定下一班車
     <select id="nextTrainSel" style="max-width:175px">
       <option value="-1" selected>🎲 隨機驚喜進站</option>
     </select>
   </label>
+  <div class="row">
+    <span>✨ 連續安靜雙車交會</span>
+    <button type="button" id="testCrossBtn" style="font-size:12px;padding:4px 10px;background:#fef3c7;color:#b45309;border-color:#f59e0b;font-weight:800">🚄 立即召喚交會車</button>
+  </div>
   <label>候車間隔
     <select id="rate">
       <option value="10">短 (10秒)</option>
@@ -304,11 +345,12 @@ button:active{transform:scale(0.96)}
   </label>
 
   <hr>
-  <span class="sec-title">🌿 音效與長時間省電掛機</span>
+  <span class="sec-title">🎙️ 車站廣播、音效與 OLED 保護</span>
+  <label>🎙️ 溫柔雙語車站語音廣播<input type="checkbox" id="voiceSnd" checked></label>
   <label>溫和木琴與互動音效<input type="checkbox" id="snd" checked></label>
   <label>輕柔鐵軌喀噠聲 (進離站)<input type="checkbox" id="railSnd" checked></label>
   <label>安撫環境白噪音 (微風/海浪)<input type="checkbox" id="ambSnd"></label>
-  <label>🔋 智慧省電 (候車時降幀減熱)<input type="checkbox" id="ecoMode" checked></label>
+  <label>🔋 智慧省電 & OLED 防烙印微位移<input type="checkbox" id="ecoMode" checked></label>
 
   <div class="row" style="margin-top:10px">
     <button type="button" id="saveCfgBtn" style="width:100%;background:#2563eb;color:#fff;border:0;padding:10px 14px;font-weight:800">💾 儲存設定</button>
@@ -316,7 +358,7 @@ button:active{transform:scale(0.96)}
   <div id="saveHint" style="font-size:12px;color:#16a34a;min-height:1.2em"></div>
 
   <hr>
-  <span class="sec-title">📘 圖鑑進度管理与備份</span>
+  <span class="sec-title">📘 圖鑑與紀念印章備份管理</span>
   <div class="row">
     <button type="button" id="unlockAllBtn" style="font-size:12px;padding:6px 10px">🎁 一鍵解鎖全圖鑑</button>
     <button type="button" id="exportBtn" style="font-size:12px;padding:6px 10px">📤 複製備份碼</button>
@@ -327,7 +369,7 @@ button:active{transform:scale(0.96)}
     <button type="button" id="importConfirmBtn" style="font-size:12px;background:#16a34a;color:#fff;border:0">確定</button>
   </div>
 
-  <div id="msg" style="font-size:12px;opacity:.85;color:#2563eb;margin-top:6px">提示：輕點火車或站務員會有溫柔小互動喔！</div>
+  <div id="msg" style="font-size:12px;opacity:.85;color:#2563eb;margin-top:6px">提示：連續安靜迎接列車，會有雙車交會大驚喜喔！</div>
 </div>
 
 <!-- 啟動畫面 -->
@@ -335,19 +377,35 @@ button:active{transform:scale(0.96)}
   <div style="font-size:64px">🚄 🟢🙂</div>
   <h2 style="margin:6px 0">安靜新幹線：慢活車站小世界</h2>
   <p style="font-size:16px;line-height:1.6;opacity:.9">
-    🟢🙂 保持安靜，列車會伴隨輕柔鐵軌聲進站、開門陪伴大家。<br>
-    👆 輕點停靠的火車、站務員或遠方富士山，會有溫馨小彩蛋！<br>
-    🔒 右上角提供「兒童防誤觸鎖」，家長長時間掛機更安心。
+    🟢🙂 保持安靜，列車會伴隨溫柔雙語廣播進站、開門陪伴大家。<br>
+    🚄 連續安靜迎接火車，後方軌道還會出現「雙車高速交會」驚喜！<br>
+    🏅 收集各站紀念印章（Eki Stamp），成為最棒的今日小站長吧！
   </p>
   <button id="go" class="go">▶ 走進車站</button>
 </div>
 
-<!-- 鐵道探索收藏館（圖鑑 Modal） -->
+<!-- 鐵道探索收藏館（圖鑑 + 今日小站長紀念印章 Modal） -->
 <div id="dex" class="modal card" hidden>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
     <h3 style="margin:0">📘 鐵道探索收藏館 <span id="dexCount" style="font-size:14px;font-weight:normal"></span></h3>
     <button id="dx">✖ 關閉</button>
   </div>
+
+  <!-- 5. 今日小站長榮譽統計與日本車站紀念印章簿 -->
+  <div id="stationMasterBox">
+    <div style="font-weight:900;font-size:14px;color:#b45309;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+      <span>🏅 今日小站長榮譽紀錄</span>
+      <span id="smTitleBadge" style="background:#f59e0b;color:#fff;padding:2px 8px;border-radius:99px;font-size:11.5px">見習小站長</span>
+    </div>
+    <div class="sm-stats">
+      <div class="sm-stat-pill">🤫 今日安靜：<span id="statQuietMin" style="color:#16a34a">0</span> 分鐘</div>
+      <div class="sm-stat-pill">🚄 今日接待：<span id="statTodayTrains" style="color:#2563eb">0</span> 班車</div>
+      <div class="sm-stat-pill">🔥 連續安靜：<span id="statStreak" style="color:#d97706">0</span> 班</div>
+    </div>
+    <div style="font-size:12px;font-weight:800;margin-bottom:6px;color:#dc2626">💮 日本車站紀念印章帳（Eki Stamp・安靜接待列車自動蓋印）</div>
+    <div id="stampGrid" class="stamp-grid"></div>
+  </div>
+
   <div id="tabs" style="margin-bottom:10px"></div>
   <div id="detailBox" hidden></div>
   <div id="grid"></div>
@@ -427,6 +485,9 @@ function rs() {
         st.tr.x = st.tr.x * scaleRatio;
       }
     }
+    if (st.bgTr) {
+      st.bgTr.x = st.bgTr.x * (W / prevW);
+    }
     if (st.pax && st.pax.length) {
       const scaleRatio = W / prevW;
       st.pax.forEach(p => {
@@ -495,7 +556,6 @@ const M = RAW.split('\n').map((s, idx) => {
   return { id: idx, n: a[0], c: a[1], r: +a[2], roof: a[3], body: a[4], st1: a[5], st2: a[6], nose: a[7], cars: +a[8], trk: a[9], route: a[10], desc: a[11], img: a[12] };
 });
 
-// 初始化「指定下一班列車」選單
 const nextTrainSel = $('#nextTrainSel');
 if (nextTrainSel) {
   M.forEach(m => {
@@ -506,13 +566,14 @@ if (nextTrainSel) {
   });
 }
 
+// 6 大場景與日本車站紀念印章 (Eki Stamp) 設定
 const SCENES = [
-  { jp: 'ふじさん', zh: '富士山站', role: 'hiker', colors: ['#d97706', '#2563eb', '#15803d', '#b91c1c'] },
-  { jp: 'ほっかいどう', zh: '北海道站', role: 'skier', colors: ['#0284c7', '#e11d48', '#7c3aed', '#0d9488'] },
-  { jp: 'とうきょう', zh: '東京站', role: 'commuter', colors: ['#334155', '#1e293b', '#475569', '#3f3f46'] },
-  { jp: 'しょうなん', zh: '湘南海岸', role: 'beach', colors: ['#f59e0b', '#ec4899', '#06b6d4', '#84cc16'] },
-  { jp: 'きゅうしゅう', zh: '九州溫泉', role: 'onsen', colors: ['#9f1239', '#4338ca', '#b45309', '#115e59'] },
-  { jp: 'ぎんが', zh: '銀河站', role: 'star', colors: ['#6366f1', '#8b5cf6', '#0ea5e9', '#f43f5e'] }
+  { jp: 'ふじさん', zh: '富士山站', role: 'hiker', colors: ['#d97706', '#2563eb', '#15803d', '#b91c1c'], stampIcon: '🗻', stampTitle: '富士山驛紀念', reqTrains: 1 },
+  { jp: 'ほっかいどう', zh: '北海道站', role: 'skier', colors: ['#0284c7', '#e11d48', '#7c3aed', '#0d9488'], stampIcon: '❄️', stampTitle: '北海道雪國印', reqTrains: 3 },
+  { jp: 'とうきょう', zh: '東京站', role: 'commuter', colors: ['#334155', '#1e293b', '#475569', '#3f3f46'], stampIcon: '🗼', stampTitle: '東京中央驛印', reqTrains: 5 },
+  { jp: 'しょうなん', zh: '湘南海岸', role: 'beach', colors: ['#f59e0b', '#ec4899', '#06b6d4', '#84cc16'], stampIcon: '🌊', stampTitle: '湘南鎌倉之印', reqTrains: 8 },
+  { jp: 'きゅうしゅう', zh: '九州溫泉', role: 'onsen', colors: ['#9f1239', '#4338ca', '#b45309', '#115e59'], stampIcon: '♨️', stampTitle: '九州湯けむり印', reqTrains: 12 },
+  { jp: 'ぎんが', zh: '銀河站', role: 'star', colors: ['#6366f1', '#8b5cf6', '#0ea5e9', '#f43f5e'], stampIcon: '🌌', stampTitle: '銀河鐵道特印', reqTrains: 16 }
 ];
 
 // ===================== 車體比例與車門位置計算 =====================
@@ -862,7 +923,6 @@ function drawTrain(c, m, hx, y, ch, o) {
     }
   }
 
-  // 車頭燈光束（包含幼兒點擊車頭時的閃燈增強效果）
   if (!sil && (N > 0.15 || o.glow || o.flash)) {
     const ly = top + ch * 0.56;
     const beamLen = o.flash ? ch * 3.2 : ch * 2.2;
@@ -981,9 +1041,18 @@ function drawPerson(c, p, platY, ch, t) {
   }
 }
 
-// ===================== 狀態管理、設定載入與儲存 =====================
+// ===================== 狀態管理、每日小站長統計與紀念印章儲存 =====================
 let seen = ld('ak_s', {}), cd = ld('ak_c', {}), cfg = ld('ak_cfg_v3', {}), customPhotos = ld('ak_ph', {});
+let stamps = ld('ak_stamps', {});
+const todayKey = new Date().toISOString().slice(0, 10);
+let dailyStats = ld('ak_daily', { date: todayKey, quietSec: 0, trains: 0, maxStreak: 0 });
+if (dailyStats.date !== todayKey) {
+  dailyStats = { date: todayKey, quietSec: 0, trains: 0, maxStreak: 0 };
+  sv('ak_daily', dailyStats);
+}
+
 ['goal', 'rate', 'dwellT', 'sceneT'].forEach(i => { if (cfg[i] != null && $('#' + i).querySelector(`option[value="${cfg[i]}"],input`)) $('#' + i).value = cfg[i]; });
+if (cfg.voiceSnd != null) $('#voiceSnd').checked = cfg.voiceSnd;
 if (cfg.snd != null) $('#snd').checked = cfg.snd;
 if (cfg.railSnd != null) $('#railSnd').checked = cfg.railSnd;
 if (cfg.ambSnd != null) $('#ambSnd').checked = cfg.ambSnd;
@@ -991,10 +1060,16 @@ if (cfg.ecoMode != null) $('#ecoMode').checked = cfg.ecoMode;
 
 const st = {
   run: 0, mic: 0, lvl: 0, acc: 0, quiet: 0, loud: 0, loudT: 0, qs: 0, scT: 0,
-  tr: null, arm: 0, off: 0, sim: 0, sc: 0, first: 1, page: null, fade: null, pend: null, t: 0, cue: 0, ccTimer: 0,
+  tr: null,
+  bgTr: null, // 3. 後方軌道反向高速交會列車 (雙車同框彩蛋)
+  streak: 0,  // 連續安靜迎接列車次數
+  arm: 0, off: 0, sim: 0, sc: 0, first: 1, page: null, fade: null, pend: null, t: 0, cue: 0, ccTimer: 0,
   locked: false,
   forcedNextTrain: -1,
-  fx: [], // 幼兒點擊微互動特效陣列（星星/愛心/蒸汽白煙/音符）
+  pxX: 0, pxY: 0, // 4. OLED 螢幕防烙印微位移偏移量
+  speechGuardUntil: 0, // 語音廣播防迴授保護時間戳
+  lastNoiseWarnSpeech: 0,
+  fx: [],
   pax: [],
   staff: { x: 300, dir: -1, walking: false, waving: false, saluteT: 0, jumpY: 0, alpha: 1, role: 'staff', color: '#1e3a8a', seed: 7, scale: 1.04 }
 };
@@ -1057,6 +1132,7 @@ function saveCfg(opts) {
       if (typeof go2 === 'function') go2((st.sc + 1) % 6);
     }
     ['goal', 'rate', 'dwellT', 'sceneT'].forEach(i => { cfg[i] = $('#' + i).value; });
+    cfg.voiceSnd = $('#voiceSnd').checked;
     cfg.snd = $('#snd').checked;
     cfg.railSnd = $('#railSnd').checked;
     cfg.ambSnd = $('#ambSnd').checked;
@@ -1160,7 +1236,6 @@ $('#gear').onclick = () => {
     lockBtn.classList.toggle('locked', locked);
     lockIcon.textContent = locked ? '🔒' : '🔓';
     lockCircle.style.strokeDashoffset = '176';
-    // 上鎖時隱藏其他操作按鈕與設定選單，防止幼兒誤觸
     ['callBtn', 'alb', 'gear'].forEach(id => {
       const el = $('#' + id);
       if (el) el.hidden = locked;
@@ -1210,21 +1285,23 @@ $('#gear').onclick = () => {
   });
 })();
 
-// ===================== 📘 圖鑑進度備份、還原與一鍵全開 =====================
+// ===================== 📘 圖鑑與印章備份、還原與一鍵全開 =====================
 $('#unlockAllBtn').onclick = () => {
   for (let i = 0; i < M.length; i++) {
     if (!seen[i]) seen[i] = 1;
   }
   cd = { 0: 1, 1: 1, 2: 1 };
+  SCENES.forEach((_, idx) => { stamps[idx] = 1; });
   sv('ak_s', seen);
   sv('ak_c', cd);
+  sv('ak_stamps', stamps);
   $('#badge').hidden = false;
   chime([440, 554, 659, 880]);
-  $('#msg').textContent = '🎉 已為您解鎖全部 31 種列車圖鑑與所有車站風景！';
+  $('#msg').textContent = '🎉 已解鎖全部 31 種列車圖鑑與 6 枚車站紀念印章！';
 };
 
 $('#exportBtn').onclick = async () => {
-  const payload = btoa(encodeURIComponent(JSON.stringify({ s: seen, c: cd })));
+  const payload = btoa(encodeURIComponent(JSON.stringify({ s: seen, c: cd, st: stamps, d: dailyStats })));
   try {
     await navigator.clipboard.writeText(payload);
     $('#msg').textContent = '✅ 備份碼已複製到剪貼簿！可貼上至其他設備還原';
@@ -1252,11 +1329,15 @@ $('#importConfirmBtn').onclick = () => {
     if (data && typeof data.s === 'object') {
       seen = data.s;
       cd = data.c || {};
+      stamps = data.st || {};
+      if (data.d) dailyStats = data.d;
       sv('ak_s', seen);
       sv('ak_c', cd);
+      sv('ak_stamps', stamps);
+      sv('ak_daily', dailyStats);
       $('#importRow').hidden = true;
       chime([440, 554, 659]);
-      $('#msg').textContent = '✅ 圖鑑進度還原成功！';
+      $('#msg').textContent = '✅ 圖鑑與小站長印章進度還原成功！';
     }
   } catch (e) {
     $('#msg').textContent = '⚠️ 備份碼格式不正確，請確認後重試';
@@ -1304,11 +1385,52 @@ function updateDebugPanel() {
     'Analyser: <span class="' + (an ? 'ok' : 'bad') + '">' + anState + '</span>\n' +
     'Volume: ' + Math.round(st.lvlFast || st.lvl || 0) + '  rawOff: ' + (st.off || 0).toFixed(1) + '\n' +
     'Threshold: ' + goal + '\n' +
-    'Quiet qs: ' + (st.qs || 0).toFixed(1) + 's  loudT: ' + (st.loudT || 0).toFixed(1) + '\n' +
+    'Quiet qs: ' + (st.qs || 0).toFixed(1) + 's  Streak: ' + st.streak + '\n' +
     'State: ' + phase + (st.tr ? ' (x=' + Math.round(st.tr.x) + '/' + Math.round(getStopX(W, isPortrait)) + ')' : '') + '\n' +
-    'Trains: ' + trainCount + '  ChildLock: ' + (st.locked ? 'ON' : 'OFF') + '\n' +
-    'WakeLock: ' + (wakeLock ? 'held' : 'off') + '  EcoFPS: ' + ($('#ecoMode').checked && !st.tr && st.fx.length === 0 ? '24' : '60') + '\n' +
+    'Trains: ' + trainCount + '  PixelShift: (' + st.pxX.toFixed(1) + ',' + st.pxY.toFixed(1) + ')\n' +
+    'WakeLock: ' + (wakeLock ? 'held' : 'off') + '  EcoFPS: ' + ($('#ecoMode').checked && !st.tr && !st.bgTr && st.fx.length === 0 ? '24' : '60') + '\n' +
     'Errors: ' + micErrCount + '  last: ' + (lastMicErr || '-');
+}
+
+// ===================== 1. 🎙️ 溫柔雙語車站廣播（Web Speech API 語音合成） =====================
+function speakAnnouncement(zhText, jpText) {
+  if (!$('#snd').checked || !$('#voiceSnd').checked) return;
+  if (!('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    // 開啟麥克風防自激保護（避免設備放出來的廣播聲音被當成吵鬧）
+    st.speechGuardUntil = performance.now() + 7500;
+
+    const voices = window.speechSynthesis.getVoices() || [];
+    if (jpText) {
+      const uJp = new SpeechSynthesisUtterance(jpText);
+      uJp.lang = 'ja-JP';
+      uJp.rate = 0.88;
+      uJp.pitch = 1.08;
+      uJp.volume = 0.55;
+      const jpVoice = voices.find(v => v.lang && v.lang.toLowerCase().includes('ja'));
+      if (jpVoice) uJp.voice = jpVoice;
+      window.speechSynthesis.speak(uJp);
+    }
+    if (zhText) {
+      const uZh = new SpeechSynthesisUtterance(zhText);
+      uZh.lang = 'zh-TW';
+      uZh.rate = 0.88;
+      uZh.pitch = 1.08;
+      uZh.volume = 0.60;
+      const zhVoice = voices.find(v => v.lang && (v.lang.includes('zh-TW') || v.lang.includes('zh_TW') || v.lang.includes('zh-HK'))) ||
+                      voices.find(v => v.lang && v.lang.includes('zh'));
+      if (zhVoice) uZh.voice = zhVoice;
+      uZh.onend = () => { st.speechGuardUntil = performance.now() + 600; };
+      window.speechSynthesis.speak(uZh);
+    }
+  } catch (e) {}
+}
+
+// 預先載入瀏覽器語音列表
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 }
 
 // ===================== 音效系統：木琴鈴聲、輕柔鐵軌喀噠聲、環境白噪音 =====================
@@ -1339,7 +1461,6 @@ function chime(freqs) {
   }
 }
 
-// 幼兒點擊車頭時的溫柔雙音氣笛聲（或蒸汽火車鳴笛）
 function playTrainHorn(isSteam) {
   if (!$('#snd').checked) return;
   try {
@@ -1359,7 +1480,6 @@ function playTrainHorn(isSteam) {
   } catch (e) {}
 }
 
-// 列車進離站時的輕柔「ガタンゴトン (喀噠-喀噠)」鐵軌聲
 let nextRailClickTime = 0;
 function updateRailClackSound(dt, speedPxPerSec, isMaglev) {
   if (!$('#snd').checked || !$('#railSnd').checked || isMaglev) return;
@@ -1373,7 +1493,7 @@ function updateRailClackSound(dt, speedPxPerSec, isMaglev) {
       o.type = 'sine';
       o.frequency.setValueAtTime(pitch, a.currentTime + delay);
       o.frequency.exponentialRampToValueAtTime(48, a.currentTime + delay + 0.045);
-      v.gain.setValueAtTime(0.016, a.currentTime + delay);
+      v.gain.setValueAtTime(0.015, a.currentTime + delay);
       v.gain.exponentialRampToValueAtTime(0.0005, a.currentTime + delay + 0.05);
       o.connect(v); v.connect(a.destination);
       o.start(a.currentTime + delay);
@@ -1386,7 +1506,6 @@ function updateRailClackSound(dt, speedPxPerSec, isMaglev) {
   } catch (e) {}
 }
 
-// 安撫環境白噪音（粉紅噪音低通濾波：模擬遠方微風與海浪聲）
 let ambNode = null, ambGain = null;
 function updateAmbientNoiseState() {
   try {
@@ -1427,6 +1546,36 @@ function updateAmbientNoiseState() {
     }
   } catch (e) {}
 }
+
+// ===================== 3. 🚄 「雙向交會 / 雙車同框」超級安靜大獎 =====================
+function spawnPassingTrain() {
+  // 優先挑選夢幻高速車種（Doctor Yellow、ALFA-X、L0磁浮、500系、E5、台灣高鐵）作為交會驚喜
+  const specialPool = [10, 11, 12, 8, 2, 13, 0, 5];
+  let pickIdx = specialPool[Math.floor(Math.random() * specialPool.length)];
+  if (st.tr && st.tr.i === pickIdx) pickIdx = 10;
+  st.bgTr = {
+    i: pickIdx,
+    x: W + 80,
+    v: cl(W * 0.36, 200, 420)
+  };
+  chime([523, 659, 784, 1046]);
+  st.fx.push({
+    type: 'emoji',
+    txt: `🚄✨ 雙車交會！(${M[pickIdx].n.split(' ')[0]})`,
+    x: W * 0.5,
+    y: H * 0.34,
+    vx: 0,
+    vy: -14,
+    life: 2.6,
+    maxLife: 2.6,
+    size: Math.round(cl(W * 0.042, 16, 24))
+  });
+}
+
+$('#testCrossBtn').onclick = () => {
+  $('#set').hidden = true;
+  spawnPassingTrain();
+};
 
 // ===================== ✨ 3 歲幼兒點擊畫面微互動彩蛋 =====================
 let lastInteractTime = 0;
@@ -1473,7 +1622,6 @@ cv.addEventListener('pointerdown', e => {
           size: Math.round(ch * 0.30)
         });
       }
-      // 若是蒸汽火車，額外噴出大朵可愛白煙
       if (m.nose === 'SL') {
         for (let k = 0; k < 4; k++) {
           st.fx.push({
@@ -1492,7 +1640,7 @@ cv.addEventListener('pointerdown', e => {
     }
   }
 
-  // 3. 點擊天空或遠方富士山/地標：綻放柔和星光或櫻花瓣
+  // 3. 點擊天空或遠方富士山/地標
   if (y < railY - ch * 0.5) {
     const skyIcons = st.sc === 0 ? ['🌸', '✨', '☁️'] : (st.sc === 1 ? ['❄️', '⛄', '✨'] : ['🌟', '✨', '🎈']);
     for (let k = 0; k < 3; k++) {
@@ -1728,7 +1876,7 @@ function autoCalibrate(opts) {
       if (lr) lr.textContent = Math.round(st.lvl) + ' / 門檻 ' + ($('#goal').value || 30);
       setTimeout(() => {
         if (($('#msg').textContent || '').indexOf('已校準') === 0)
-          $('#msg').textContent = '提示：輕點停靠的火車或站務員會有溫柔小彩蛋喔！';
+          $('#msg').textContent = '提示：連續安靜迎接列車，會有雙車交會大驚喜喔！';
       }, 5000);
     }
   }, interval);
@@ -1841,7 +1989,7 @@ $('#callBtn').onclick = () => {
   }
 };
 
-// ===================== 抽車（支援家長指定下一班列車）、進站與上下車劇本生成 =====================
+// ===================== 抽車、進站、雙語廣播、紀念印章與雙車交會 =====================
 function pick() {
   if (st.forcedNextTrain >= 0 && st.forcedNextTrain < M.length) {
     const chosen = st.forcedNextTrain;
@@ -1876,6 +2024,7 @@ function spawnTrain() {
     door: 0,
     occ: 0.65,
     flashT: 0,
+    crossingTriggered: false,
     baseDwell: baseDwell,
     maxDwell: baseDwell,
     chimePlayed: false
@@ -1894,15 +2043,72 @@ function showCornerCard(m, isNew) {
   st.ccTimer = 7.5;
 }
 
+function updateComboBadge() {
+  const cb = $('#comboBadge');
+  if (!cb) return;
+  if (st.streak >= 1) {
+    cb.hidden = false;
+    cb.textContent = `🔥 連勝 ${st.streak}`;
+  } else {
+    cb.hidden = true;
+  }
+}
+
+function checkAndAwardEkiStamp() {
+  const scIdx = st.sc;
+  let newStampAwarded = false;
+  // 到訪該站且接待列車，或累積今日列車班次達標即可蓋上紀念印章
+  if (!stamps[scIdx]) {
+    stamps[scIdx] = 1;
+    newStampAwarded = true;
+  }
+  SCENES.forEach((sc, idx) => {
+    if (!stamps[idx] && dailyStats.trains >= sc.reqTrains) {
+      stamps[idx] = 1;
+      newStampAwarded = true;
+    }
+  });
+  if (newStampAwarded) {
+    sv('ak_stamps', stamps);
+    $('#badge').hidden = false;
+    const scObj = SCENES[scIdx] || SCENES[0];
+    st.fx.push({
+      type: 'emoji',
+      txt: `💮 獲得印章：${scObj.stampTitle}！`,
+      x: W * 0.5,
+      y: H * 0.26,
+      vx: 0,
+      vy: -16,
+      life: 2.8,
+      maxLife: 2.8,
+      size: Math.round(cl(W * 0.042, 16, 22))
+    });
+  }
+}
+
 function arrive() {
   const T = st.tr, i = T.i, m = M[i], isNew = !seen[i];
   seen[i] = (seen[i] || 0) + 1; sv('ak_s', seen);
+
+  // 更新今日小站長統計與連勝紀錄
+  st.streak++;
+  dailyStats.trains = (dailyStats.trains || 0) + 1;
+  if (st.streak > (dailyStats.maxStreak || 0)) dailyStats.maxStreak = st.streak;
+  sv('ak_daily', dailyStats);
+  updateComboBadge();
+  checkAndAwardEkiStamp();
+
   showCornerCard(m, isNew);
   if (isNew) { $('#badge').hidden = 0; chime([440, 554, 659]); } else { chime([440, 554]); }
 
+  // 1. 🎙️ 觸發溫柔雙語車站廣播
+  const scObj = SCENES[st.sc] || SCENES[0];
+  const jpPart = m.c === '日本' ? `まもなく、${scObj.jp}えきです。` : '';
+  const zhPart = `${scObj.zh}到了，${m.n} 進站停靠，小朋友好安靜喔！`;
+  setTimeout(() => speakAnnouncement(zhPart, jpPart), 650);
+
   const ch = CH(), sx = getStopX(W, isPortrait);
   const doors = getVisibleDoorXs(m, sx, ch);
-  const scObj = SCENES[st.sc] || SCENES[0];
 
   if (doors.length > 0) {
     st.pax.forEach((p, idx) => {
@@ -1959,9 +2165,20 @@ const go2 = i => { st.fade = { t: 0, n: i, sw: 0 }; };
 function go(i) { if (!st.fade) go2(i); }
 
 // ===================== 核心更新迴圈 =====================
+let lastStatSaveTime = 0;
 function update(dt) {
   st.t += dt; const ch = CH();
   if (st.ccTimer > 0) { st.ccTimer -= dt; if (st.ccTimer <= 0) $('#cornerCard').classList.remove('show'); }
+
+  // 4. 🛡️ OLED 螢幕防烙印保護：緩慢平滑呼吸微位移 (±3px)
+  if ($('#ecoMode').checked) {
+    st.pxX = Math.sin(st.t * 0.035) * 3.0;
+    st.pxY = Math.cos(st.t * 0.027) * 2.5;
+  } else {
+    st.pxX = 0; st.pxY = 0;
+  }
+  document.documentElement.style.setProperty('--px-x', st.pxX.toFixed(2) + 'px');
+  document.documentElement.style.setProperty('--px-y', st.pxY.toFixed(2) + 'px');
 
   // 更新微互動粒子特效
   for (let i = st.fx.length - 1; i >= 0; i--) {
@@ -1976,6 +2193,17 @@ function update(dt) {
     if (f.type === 'puff') f.r += ch * 0.12 * dt;
   }
 
+  // 3. 更新後方軌道反向交會列車
+  if (st.bgTr) {
+    const bgM = M[st.bgTr.i];
+    const bgLen = lenOf(bgM, ch * 0.66);
+    st.bgTr.x -= st.bgTr.v * dt;
+    updateRailClackSound(dt, st.bgTr.v * 0.8, bgM.trk === 'M');
+    if (st.bgTr.x + bgLen < -100) {
+      st.bgTr = null;
+    }
+  }
+
   if (st.run) {
     const goal = st.goal || +$('#goal').value || 30;
     if (st.mic) ensureAudioRunning();
@@ -1983,6 +2211,10 @@ function update(dt) {
     if (st.mic) {
       const instant = raw();
       tg = cl(instant - (st.off || 0), 0, 50);
+      // 廣播發聲期間，限制音量上限避免設備喇叭迴授誤判為吵鬧
+      if (performance.now() < st.speechGuardUntil && !st.sim) {
+        tg = Math.min(tg, goal * 0.65);
+      }
       const now = performance.now();
       const graphDead = silentFrames > 180;
       if ((graphDead || now - lastMicOk > 12000) && st.t > 10 && !micRecoverBusy && !calBusy && now - lastMicKick > 8000) {
@@ -2010,7 +2242,16 @@ function update(dt) {
       st.quiet += dt;
       st.acc = Math.max(0, st.acc - dt * 3.5);
     }
-    if (!st.loud && st.acc >= 4.8) { st.loud = 1; st.loudT = 0; }
+
+    if (!st.loud && st.acc >= 4.8) {
+      st.loud = 1;
+      st.loudT = 0;
+      // 太吵時播放溫柔語音提醒（每 18 秒最多提醒一次）
+      if (performance.now() - st.lastNoiseWarnSpeech > 18000) {
+        st.lastNoiseWarnSpeech = performance.now();
+        speakAnnouncement('噓，車長先生說太吵囉，我們小聲一點點喔。', '');
+      }
+    }
     if (st.loud && st.quiet >= 1.2) { st.loud = 0; st.acc = 0; }
 
     const isWarn = !st.loud && (st.lvl > goal * 0.75 || st.acc > 0.9);
@@ -2018,6 +2259,12 @@ function update(dt) {
     else {
       if (!st.tr) st.qs += dt * (isWarn ? 0.4 : 1.0);
       st.scT += dt;
+      // 累積今日安靜時數
+      dailyStats.quietSec = (dailyStats.quietSec || 0) + dt;
+      if (st.t - lastStatSaveTime > 15) {
+        lastStatSaveTime = st.t;
+        sv('ak_daily', dailyStats);
+      }
     }
 
     const lampEl = $('#lamp'), lampTxt = $('#lampTxt'), lampBar = $('#lampBar');
@@ -2070,6 +2317,8 @@ function update(dt) {
       if (T.flashT > 0) T.flashT = Math.max(0, T.flashT - dt);
 
       if (st.loud && st.loudT > 4.0) {
+        st.streak = 0;
+        updateComboBadge();
         if (T.ph === 'in') {
           T.ph = 'back'; $('#cornerCard').classList.remove('show');
         } else if (T.ph === 'stop' && T.t < T.maxDwell - 3.5) {
@@ -2094,6 +2343,12 @@ function update(dt) {
         T.t += dt;
         if (!st.loud && !isWarn && T.maxDwell < T.baseDwell + 22) {
           T.maxDwell += dt * 0.35;
+        }
+
+        // 3. 🚄 連續安靜滿 2 的倍數班次（第 2、4、6... 班），停靠滿 4.5 秒觸發「雙車交會同框大獎」！
+        if (!T.crossingTriggered && st.streak >= 2 && st.streak % 2 === 0 && T.t >= 4.5 && !st.loud && !st.bgTr) {
+          T.crossingTriggered = true;
+          spawnPassingTrain();
         }
 
         const closeStart = T.maxDwell - 3.5;
@@ -2217,7 +2472,7 @@ function update(dt) {
   $('#dotsTxt').textContent = b == null ? '👑 全圖鑑收集達成' : '📘 ' + SCENES[st.sc].zh + ' ' + [...Array(10).keys()].map(k => seen[b * 10 + k] ? '🟢' : '⚪').join('');
 }
 
-// ===================== 遠景富士山 + 真實高架鐵道 + 活著的月台小世界 =====================
+// ===================== 遠景富士山 + 真實高架鐵道 + 雙車交會繪製 =====================
 function mix(a, b, f) { const p = c => [1, 3, 5].map(i => parseInt(c.substr(i, 2), 16)), x = p(a), y = p(b); return 'rgb(' + x.map((v, i) => v + (y[i] - v) * f | 0) + ')'; }
 const SK = [['#f6c0a0', '#ffeab8', 0], ['#70c6f5', '#e4f4fe', 0], ['#7a68b0', '#ff9f70', 0.3], ['#10183c', '#27356a', 1]],
       GR = ['#76b068', '#dfe9f2', '#84a88c', '#d8cba0', '#8a7a5a', '#b0b4be'];
@@ -2431,7 +2686,9 @@ function draw(t) {
   g.save();
   try {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const { hz, railY } = sceneLayout(), ch = CH(), s = st.sc, p = st.t * 0.05 % 4, i = Math.floor(p), j = (i + 1) % 4, f = p - i, sm = f * f * (3 - 2 * f);
+    const { hz, railY: baseRailY } = sceneLayout(), ch = CH(), s = st.sc, p = st.t * 0.05 % 4, i = Math.floor(p), j = (i + 1) % 4, f = p - i, sm = f * f * (3 - 2 * f);
+    // 套用 OLED 垂直微位移保護固定邊線
+    const railY = baseRailY + st.pxY * 0.6;
     let top = mix(SK[i][0], SK[j][0], sm), bot = mix(SK[i][1], SK[j][1], sm);
     const night = SK[i][2] + (SK[j][2] - SK[i][2]) * sm;
     if (s === 3) { top = '#38bdf8'; bot = '#bae6fd'; }
@@ -2450,6 +2707,31 @@ function draw(t) {
 
     g.fillStyle = GR[s]; g.fillRect(0, hz, W, H - hz);
     if (night > 0.05 && s !== 3 && s !== 5) { g.fillStyle = 'rgba(10,20,55,' + night * 0.26 + ')'; g.fillRect(0, 0, W, H); }
+
+    // 3. 繪製後方軌道反向高速交會列車 (雙車同框彩蛋)
+    if (st.bgTr) {
+      const bgM = M[st.bgTr.i];
+      const bgCh = ch * 0.66;
+      const bgRailY = railY - ch * 0.32;
+      g.save();
+      try {
+        g.globalAlpha = 0.92;
+        // 水平鏡像翻轉繪製，使車頭朝左反方向行駛交會
+        g.translate(st.bgTr.x, 0);
+        g.scale(-1, 1);
+        drawTrain(g, bgM, 0, bgRailY, bgCh, {
+          night: s === 5 ? 0.8 : night,
+          t: st.t,
+          p: st.bgTr.x,
+          glow: true,
+          flash: true,
+          door: 0,
+          occ: 0.75
+        });
+      } finally {
+        g.restore();
+      }
+    }
 
     const T = st.tr, trkType = T ? M[T.i].trk : 'V';
     drawRailwayInfra(railY, ch, trkType, t);
@@ -2480,7 +2762,6 @@ function draw(t) {
 
     drawStationPlatformAndPeople(railY, ch, trkType, t);
 
-    // 繪製幼兒點擊互動特效（星星/愛心/蒸汽白煙圈）
     if (st.fx.length > 0) {
       g.save();
       for (const f of st.fx) {
@@ -2489,8 +2770,9 @@ function draw(t) {
           g.fillStyle = 'rgba(255,255,255,0.85)';
           g.beginPath(); g.arc(f.x, f.y, f.r, 0, Math.PI * 2); g.fill();
         } else {
-          g.font = (f.size || 24) + 'px serif';
+          g.font = 'bold ' + (f.size || 24) + 'px "PingFang TC","Noto Sans TC",sans-serif';
           g.textAlign = 'center';
+          g.fillStyle = '#ffffff';
           g.fillText(f.txt, f.x, f.y);
         }
       }
@@ -2515,7 +2797,39 @@ function draw(t) {
   }
 }
 
-// ===================== 鐵道探索收藏館 =====================
+// ===================== 5. 🏅 鐵道探索收藏館 + 今日小站長與紀念印章帳 =====================
+function renderStationMasterBox() {
+  const qMin = Math.floor((dailyStats.quietSec || 0) / 60);
+  const tCnt = dailyStats.trains || 0;
+  $('#statQuietMin').textContent = String(qMin);
+  $('#statTodayTrains').textContent = String(tCnt);
+  $('#statStreak').textContent = String(st.streak || 0);
+
+  const stampCnt = Object.keys(stamps).filter(k => stamps[k]).length;
+  const titleEl = $('#smTitleBadge');
+  if (titleEl) {
+    if (stampCnt >= 6) titleEl.textContent = '👑 傳說榮譽總站長';
+    else if (stampCnt >= 4) titleEl.textContent = '🌟 金牌特等站長';
+    else if (stampCnt >= 2) titleEl.textContent = '🚄 優秀模範站長';
+    else titleEl.textContent = '🌱 見習小站長';
+  }
+
+  const sg = $('#stampGrid');
+  if (sg) {
+    sg.innerHTML = SCENES.map((sc, idx) => {
+      const ok = !!stamps[idx];
+      return `<div class="eki-stamp ${ok ? 'stamped' : ''}">
+        <div class="st-circle">
+          <span>${sc.stampIcon}</span>
+          <span style="font-size:8px;font-weight:900">${ok ? '認證済' : '未蓋印'}</span>
+        </div>
+        <div class="st-name">${sc.stampTitle}</div>
+        <div class="st-cond">${ok ? '💮 已蓋章收錄' : `接待滿 ${sc.reqTrains} 班車`}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
 function showDetail(i) {
   const m = M[i], box = $('#detailBox'), isCollected = !!seen[i];
   box.hidden = false;
@@ -2542,6 +2856,7 @@ function showDetail(i) {
           <span style="background:#22c55e22;color:#16a34a;padding:3px 8px;border-radius:6px;font-weight:700">✅ 已收錄 (停靠 ${seen[i]} 次)</span>
           <span style="background:#8882;padding:3px 8px;border-radius:6px">${m.cars} 輛編組・${m.trk === 'V' ? '高架專用軌' : (m.trk === 'M' ? '磁浮軌道' : '在來線軌道')}</span>
           <button type="button" id="callThisTrainBtn" style="font-size:12px;padding:3px 9px;background:#fef3c7;color:#b45309;border:1px solid #f59e0b;font-weight:800">🔔 召喚此列車進站</button>
+          <button type="button" id="speakThisTrainBtn" style="font-size:12px;padding:3px 9px;background:#dcfce7;color:#15803d;border:1px solid #22c55e;font-weight:800">🎙️ 聽站長介紹</button>
           <label style="cursor:pointer;background:#3b82f622;color:#2563eb;padding:3px 8px;border-radius:6px;font-weight:700">
             📷 更換真車照片 <input type="file" id="upPhoto" accept="image/*" hidden>
           </label>
@@ -2555,6 +2870,10 @@ function showDetail(i) {
     if (!st.tr) spawnTrain();
     else $('#msg').textContent = `🎯 已排定下一班進站：${m.n}`;
   };
+  const speakThis = $('#speakThisTrainBtn');
+  if (speakThis) speakThis.onclick = () => {
+    speakAnnouncement(`${m.n}，行駛於 ${m.route.replace('→', '到').replace('↔', '往返')}。${m.desc}`, '');
+  };
   const up = $('#upPhoto');
   if (up) up.onchange = e => {
     const f = e.target.files[0]; if (!f) return;
@@ -2565,6 +2884,7 @@ function showDetail(i) {
 }
 
 function album(pg) {
+  renderStationMasterBox();
   const totalSeen = Object.keys(seen).length;
   $('#dexCount').textContent = `(已收集 ${totalSeen} / ${M.length} 種)`;
   const tabs = ['第一冊：日本新幹線', '第二冊：特快與台灣鐵道', '第三冊：世界高速鐵道'].map((n, k) =>
@@ -2619,15 +2939,13 @@ let lastDrawTime = 0;
   const dt = Math.min(0.1, (t - last) / 1000);
   last = t;
 
-  // 麥克風偵測與狀態邏輯永遠維持 60Hz 全速更新
   try {
     update(dt);
   } catch (e) {
     dbgErr('update', e);
   }
 
-  // 智慧省電：候車無火車、無轉場、無點擊特效時，畫面渲染降為 24 FPS 省電降溫；有火車或互動時 60 FPS
-  const isIdle = $('#ecoMode').checked && !st.tr && !st.fade && !st.page && st.fx.length === 0 && (t - lastInteractTime > 2000);
+  const isIdle = $('#ecoMode').checked && !st.tr && !st.bgTr && !st.fade && !st.page && st.fx.length === 0 && (t - lastInteractTime > 2000);
   const minDrawInterval = isIdle ? 40 : 0;
 
   if (t - lastDrawTime >= minDrawInterval) {
