@@ -971,19 +971,27 @@ function saveCfg(opts){
 }
 
 // 拖曳門檻：只即時預覽，不寫 localStorage（避免 iOS 拖曳時卡死／壞掉）
+// 每次操作都 kickAudio，避免 iOS 在 UI gesture 後掛起麥克風輸入
 const goalEl = $('#goal');
 if(goalEl){
   goalEl.addEventListener('input', ()=>{
     st.goal = cl(+$('#goal').value || 30, 8, 50);
     st.acc = 0; st.loud = 0;
     refreshGoalButtons();
+    kickAudio();
   }, {passive:true});
-  goalEl.addEventListener('change', ()=> saveCfg({toast:false}), {passive:true});
+  goalEl.addEventListener('change', ()=>{
+    saveCfg({toast:false});
+    kickAudio();
+  }, {passive:true});
 }
 
 // 其他下拉／勾選：變更即存（不含 goal 連續 input）
 document.querySelectorAll('#set select, #set input[type=checkbox]').forEach(e=>{
-  e.addEventListener('change', ()=> saveCfg({toast:false}));
+  e.addEventListener('change', ()=>{
+    saveCfg({toast:false});
+    kickAudio();
+  });
 });
 
 // 嚴格／適中／寬鬆
@@ -997,6 +1005,7 @@ document.querySelectorAll('[data-g]').forEach(b=>{
     st.acc = 0; st.loud = 0; st.quiet = 1;
     refreshGoalButtons();
     saveCfg({toast:true});
+    kickAudio();
   });
 });
 
@@ -1004,6 +1013,7 @@ const saveBtn = $('#saveCfgBtn');
 if(saveBtn) saveBtn.addEventListener('click', ev=>{
   ev.preventDefault();
   saveCfg({toast:true});
+  kickAudio();
 });
 
 // 初始套用（不觸發風景切換的 go2 風險：sceneT 若為 0 先改回）
@@ -1015,6 +1025,7 @@ refreshGoalButtons();
 $('#gear').onclick = ()=>{
   $('#set').hidden = !$('#set').hidden;
   if(!$('#set').hidden) refreshGoalButtons();
+  kickAudio();
 };
 
 // 柔和木琴風車站音樂鈴 (低刺激、溫柔)
@@ -1033,7 +1044,10 @@ function chime(freqs){
 }
 
 // ===================== 麥克風與自動環境音校準（iOS 強化穩定版） =====================
-let an = null, micStream = null, freqBuf = null;
+// 重要：必須把 MediaStreamSource 接到「增益=0 的 destination」，
+// 否則 iOS Safari 在拖曳滑桿／點按鈕後常會把僅接 Analyser 的輸入路徑掛起，
+// 造成 rawInstant 一直回傳接近底噪 → 畫面卡在校準值（約 6）。
+let an = null, micStream = null, micSource = null, keepAliveGain = null, freqBuf = null;
 const timeBuf = new Float32Array(2048);
 const byteBuf = new Uint8Array(2048);
 const lvlHist = [];
@@ -1041,12 +1055,68 @@ const LVL_HIST_N = 7;
 let calBusy = false;
 let adaptQuietT = 0;
 let lastMicOk = 0;
+let lastMicKick = 0;
+let micRecoverBusy = false;
 
 function ensureAudioRunning(){
   const a = st.ac;
-  if(!a) return;
-  if(a.state === 'suspended'){
-    a.resume().catch(()=>{});
+  if(!a) return Promise.resolve();
+  if(a.state === 'suspended' || a.state === 'interrupted'){
+    return a.resume().catch(()=>{});
+  }
+  return Promise.resolve();
+}
+
+/** 在 user gesture（滑桿／按鈕）當下強制喚醒，並檢查軌道是否仍活著 */
+function kickAudio(){
+  lastMicKick = performance.now();
+  ensureAudioRunning();
+  if(!micStream) return;
+  try{
+    const tracks = micStream.getAudioTracks();
+    let needReconnect = false;
+    tracks.forEach(t=>{
+      if(t.readyState === 'ended') needReconnect = true;
+      else {
+        t.enabled = true;
+        if(typeof t.muted === 'boolean' && t.muted) needReconnect = true;
+      }
+    });
+    if(needReconnect || !an){
+      softReconnectMic();
+    }
+  }catch(e){}
+}
+
+/** 不重新要權限：用現有 stream 重建 Analyser + keepalive 路徑 */
+function softReconnectMic(){
+  if(!micStream || !st.ac || micRecoverBusy) return false;
+  const tracks = micStream.getAudioTracks();
+  if(!tracks.length || tracks.every(t=>t.readyState==='ended')) return false;
+  micRecoverBusy = true;
+  try{
+    if(micSource){ try{ micSource.disconnect(); }catch(e){} }
+    if(keepAliveGain){ try{ keepAliveGain.disconnect(); }catch(e){} }
+    an = st.ac.createAnalyser();
+    an.fftSize = 2048;
+    an.smoothingTimeConstant = 0.25;
+    an.minDecibels = -90;
+    an.maxDecibels = -10;
+    micSource = st.ac.createMediaStreamSource(micStream);
+    micSource.connect(an);
+    // keepalive：增益 0 接到喇叭，讓 iOS 維持輸入處理
+    keepAliveGain = st.ac.createGain();
+    keepAliveGain.gain.value = 0;
+    micSource.connect(keepAliveGain);
+    keepAliveGain.connect(st.ac.destination);
+    st.mic = 1;
+    lastMicOk = performance.now();
+    micRecoverBusy = false;
+    return true;
+  }catch(e){
+    micRecoverBusy = false;
+    console.warn('softReconnectMic', e);
+    return false;
   }
 }
 
@@ -1163,6 +1233,16 @@ async function startMic(){
     {audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:true}},
     {audio:true}
   ];
+  // 先關掉舊軌道，避免多路 stream 佔用
+  try{
+    if(micStream){
+      micStream.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} });
+    }
+    if(micSource){ try{ micSource.disconnect(); }catch(e){} }
+    if(keepAliveGain){ try{ keepAliveGain.disconnect(); }catch(e){} }
+  }catch(e){}
+  micStream = null; micSource = null; keepAliveGain = null; an = null;
+
   let stream = null, lastErr = null;
   for(const c of tries){
     try{
@@ -1175,20 +1255,25 @@ async function startMic(){
   const AC = window.AudioContext || window.webkitAudioContext;
   const a = st.ac = st.ac || new AC();
   await a.resume();
-  // 重建分析器
+  // 重建分析器 + keepalive（關鍵：讓 iOS 維持輸入處理）
   an = a.createAnalyser();
   an.fftSize = 2048;
   an.smoothingTimeConstant = 0.25;
   an.minDecibels = -90;
   an.maxDecibels = -10;
-  const src = a.createMediaStreamSource(stream);
-  src.connect(an);
-  // 不 connect destination，避免回授；僅分析
+  micSource = a.createMediaStreamSource(stream);
+  micSource.connect(an);
+  keepAliveGain = a.createGain();
+  keepAliveGain.gain.value = 0; // 靜音，不產生回授，但維持 graph 活躍
+  micSource.connect(keepAliveGain);
+  keepAliveGain.connect(a.destination);
   st.mic = 1;
+  lastMicOk = performance.now();
   // 確認軌道活著
   stream.getAudioTracks().forEach(t=>{
     t.enabled = true;
     try{ t.applyConstraints && t.applyConstraints({autoGainControl:false}); }catch(e){}
+    t.onended = ()=>{ console.warn('mic track ended'); };
   });
   return true;
 }
@@ -1208,8 +1293,8 @@ $('#go').onclick = async ()=>{
     console.warn('mic error', e);
   }
   st.run = 1; st.first = 1; st.qs = 2.0;
-  // iOS：每次觸控都嘗試 resume
-  const resume = ()=>ensureAudioRunning();
+  // iOS：每次觸控都嘗試 resume + kick（含設定面板操作）
+  const resume = ()=>kickAudio();
   document.addEventListener('touchstart', resume, {passive:true});
   document.addEventListener('click', resume, {passive:true});
 };
@@ -1221,7 +1306,7 @@ $('#cal').onclick = ()=>{
       .catch(()=>{$('#msg').textContent='請先允許麥克風權限後再校準';});
     return;
   }
-  ensureAudioRunning();
+  kickAudio();
   autoCalibrate({samples:50, interval:40});
 };
 const nz=$('#noise');
@@ -1355,9 +1440,15 @@ function update(dt){
     if(st.mic){
       const instant = raw();
       tg = cl(instant - (st.off||0), 0, 50);
-      // 若長時間幾乎無訊號，提示可能被系統靜音
-      if(performance.now() - lastMicOk > 8000 && st.t > 10){
-        // 不強制改 msg，避免洗版；讀數仍更新
+      // 看門狗：若超過約 4 秒沒有有效訊號，嘗試 soft reconnect（不重新要權限）
+      // 這是「改門檻後卡在 6」的主要自癒路徑
+      const now = performance.now();
+      if(now - lastMicOk > 4000 && st.t > 8 && !micRecoverBusy && !calBusy && now - lastMicKick > 2000){
+        lastMicKick = now;
+        if(!softReconnectMic()){
+          // stream 可能已 ended：嘗試完整重啟（需使用者曾授權）
+          startMic().then(()=>{ lastMicOk = performance.now(); }).catch(()=>{});
+        }
       }
     }else{
       tg = st.sim ? 46 : 4 + Math.random() * 1.2;
