@@ -196,11 +196,25 @@ button:hover{transform:scale(1.02)}
   #lamp{font-size:24px;height:52px}
   #dwellHint{display:none} /* 極窄時隱藏提示，避免擠壓 */
 }
+
+/* Debug panel */
+#dbg{
+  position:fixed;left:8px;bottom:8px;z-index:50;
+  max-width:min(320px,90vw);max-height:45vh;overflow:auto;
+  font:11px/1.35 ui-monospace,Menlo,monospace;
+  background:rgba(15,23,42,.88);color:#e2e8f0;
+  border-radius:12px;padding:8px 10px;
+  display:none;backdrop-filter:blur(6px);
+  white-space:pre-wrap;word-break:break-all;
+}
+#dbg.on{display:block}
+#dbg .ok{color:#4ade80}#dbg .bad{color:#f87171}#dbg .warn{color:#fbbf24}
 </style></head><body>
 <canvas id="c"></canvas>
 
 <!-- 左上：3歲幼兒直覺燈號 + 底部進度條 -->
 <div id="lamp" class="card" hidden><span id="lampTxt">🟢🙂</span><div id="lampBar"></div></div>
+<div id="dbg"></div>
 <div id="volWrap" class="card" hidden>
   <div id="volBar"><div id="volFill"></div><div id="volGoal"></div></div>
   <span id="volNum">0</span>
@@ -1027,13 +1041,67 @@ $('#gear').onclick = ()=>{
   if(!$('#set').hidden) refreshGoalButtons();
   kickAudio();
 };
+// 長按齒輪 0.8 秒開啟 Debug 面板
+(function(){
+  let t0=0, timer=null;
+  const g=$('#gear');
+  if(!g) return;
+  const start=()=>{ t0=performance.now(); timer=setTimeout(()=>{
+    const d=$('#dbg'); if(d){ d.classList.toggle('on'); updateDebugPanel(); }
+  }, 800); };
+  const cancel=()=>{ clearTimeout(timer); };
+  g.addEventListener('touchstart', start, {passive:true});
+  g.addEventListener('touchend', cancel);
+  g.addEventListener('touchcancel', cancel);
+  g.addEventListener('mousedown', start);
+  g.addEventListener('mouseup', cancel);
+  g.addEventListener('mouseleave', cancel);
+})();
 
-// 柔和木琴風車站音樂鈴 (低刺激、溫柔)
-// 注意：iOS 播放音效後可能暫時中斷麥克風輸入，播完必須 softReconnect
+function updateDebugPanel(){
+  const d=$('#dbg'); if(!d || !d.classList.contains('on')) return;
+  const ac = st.ac;
+  const sfx = st.sfx;
+  const tracks = micStream ? micStream.getAudioTracks() : [];
+  const live = tracks.filter(t=>t.readyState==='live').length;
+  const acState = ac ? ac.state : 'none';
+  const micState = !st.mic ? 'off' : (live ? 'Connected' : 'Disconnected');
+  const anState = an ? 'Running' : 'Stopped';
+  let phase = 'Listening';
+  if(st.loud) phase = 'Noise';
+  else if(!st.tr) phase = st.qs>0 ? 'WaitingTrain' : 'Listening';
+  else if(st.tr.ph==='in') phase = 'TrainIn';
+  else if(st.tr.ph==='stop') phase = 'StationStop';
+  else if(st.tr.ph==='out') phase = 'TrainOut';
+  else if(st.tr.ph==='back') phase = 'TrainBack';
+  const goal = st.goal||+$('#goal').value||30;
+  d.innerHTML =
+    'AudioContext: <span class="'+(acState==='running'?'ok':(acState==='suspended'?'warn':'bad'))+'">'+acState+'</span>\n'+
+    'SFX Context: '+(sfx?sfx.state:'none')+'\n'+
+    'Microphone: <span class="'+(live?'ok':'bad')+'">'+micState+'</span> ('+live+' live)\n'+
+    'Analyser: <span class="'+(an?'ok':'bad')+'">'+anState+'</span>\n'+
+    'Volume: '+Math.round(st.lvlFast||st.lvl||0)+'  rawOff: '+(st.off||0).toFixed?.(1)+'\n'+
+    'Threshold: '+goal+'\n'+
+    'Quiet qs: '+(st.qs||0).toFixed(1)+'s  loudT: '+(st.loudT||0).toFixed(1)+'\n'+
+    'State: '+phase+'\n'+
+    'Trains: '+trainCount+'  silentFrames: '+silentFrames+'\n'+
+    'WakeLock: '+(wakeLock?'held':'off')+'\n'+
+    'Errors: '+micErrCount+'  last: '+(lastMicErr||'-');
+}
+
+
+// 柔和木琴風車站音樂鈴
+// 【根本修復】音效必須使用「獨立」AudioContext，絕不可與麥克風共用同一個。
+// iOS Safari 在同一個 context 上播 Oscillator 後，MediaStream 輸入路徑常永久失效，
+// 表現為：第一班車 chime 後分貝條卡住、不再進站。
 function chime(freqs){
   if(!$('#snd').checked)return;
   try{
-    const a=st.ac||(st.ac=new(window.AudioContext||webkitAudioContext)());
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!st.sfx || st.sfx.state === 'closed'){
+      st.sfx = new AC();
+    }
+    const a = st.sfx;
     a.resume().catch(()=>{});
     (Array.isArray(freqs)?freqs:[freqs]).forEach((f,idx)=>{
       const o=a.createOscillator(),v=a.createGain();
@@ -1042,20 +1110,19 @@ function chime(freqs){
       v.gain.setValueAtTime(.05,t0);v.gain.exponentialRampToValueAtTime(.0008,t0+.95);
       o.start(t0);o.stop(t0+.95);
     });
-    // 音效結束後強制重建麥克風分析路徑（核心修復）
-    clearTimeout(chime._re);
-    chime._re = setTimeout(()=>{ softReconnectMic(); }, 1200);
-  }catch(e){}
+  }catch(e){
+    dbgErr('chime', e);
+  }
 }
 
-// ===================== 麥克風與自動環境音校準（iOS 強化穩定版） =====================
-// 根因：
-// 1) MediaStreamSource 若只接 Analyser、不接 destination，iOS 在 UI／音效後常掛起輸入
-// 2) 自動 startMic() 若先 stop() 舊軌道再 getUserMedia，無 gesture 時會永久失去麥克風
-// 3) 發車提示音 (chime) 結束後輸入路徑常失效 → 第一班車後偵測死亡
+// ===================== 麥克風系統（長時間穩定版） =====================
+// 設計原則：
+// - 麥克風 AudioContext (st.ac) 與音效 context (st.sfx) 完全分離
+// - 絕不在沒有新 stream 時 stop 舊 track
+// - 不頻繁 disconnect/reconnect
+// - update 迴圈全程 try/catch，任何錯誤不得中斷 rAF
 let an = null, micStream = null, micSource = null, keepAliveGain = null, freqBuf = null;
-let silentOsc = null, silentGain = null; // 額外 keepalive：極低音量持續振盪
-let micCloneStream = null; // softReconnect 用的 clone，避免洩漏
+let silentOsc = null, silentGain = null;
 const timeBuf = new Float32Array(2048);
 const byteBuf = new Uint8Array(2048);
 const lvlHist = [];
@@ -1065,55 +1132,58 @@ let adaptQuietT = 0;
 let lastMicOk = 0;
 let lastMicKick = 0;
 let micRecoverBusy = false;
-let silentFrames = 0; // 連續「全靜音 buffer」幀數 → 判定 graph 已死
+let silentFrames = 0;
+let micErrCount = 0;
+let lastMicErr = '';
+let trainCount = 0;
+let wakeLock = null;
+
+function dbgErr(tag, e){
+  micErrCount++;
+  lastMicErr = tag + ': ' + (e && e.message ? e.message : String(e));
+  console.warn('[mic]', lastMicErr);
+}
 
 function ensureAudioRunning(){
   const a = st.ac;
   if(!a) return Promise.resolve();
   if(a.state === 'suspended' || a.state === 'interrupted'){
-    return a.resume().catch(()=>{});
+    return a.resume().catch(e=>dbgErr('resume', e));
   }
   return Promise.resolve();
 }
 
-/** 確保有一條極靜音的持續輸出，讓 iOS 維持 play-and-record 工作階段 */
 function ensureSilentKeepalive(){
   const a = st.ac;
-  if(!a) return;
+  if(!a || silentOsc) return;
   try{
-    if(silentOsc) return;
     silentOsc = a.createOscillator();
     silentGain = a.createGain();
-    silentGain.gain.value = 0.00001; // 幾乎聽不到，但維持 session
+    silentGain.gain.value = 0.00001;
     silentOsc.frequency.value = 20;
     silentOsc.connect(silentGain);
     silentGain.connect(a.destination);
     silentOsc.start();
   }catch(e){
     silentOsc = null; silentGain = null;
+    dbgErr('keepalive', e);
   }
 }
 
-/** 在 user gesture 或列車事件後強制喚醒 */
 function kickAudio(){
   lastMicKick = performance.now();
-  ensureAudioRunning();
-  ensureSilentKeepalive();
-  if(!micStream) return;
   try{
-    const tracks = micStream.getAudioTracks();
-    let dead = !tracks.length;
-    tracks.forEach(t=>{
-      if(t.readyState === 'ended') dead = true;
-      else t.enabled = true;
-    });
-    if(dead || !an){
-      softReconnectMic();
+    ensureAudioRunning();
+    ensureSilentKeepalive();
+    if(micStream){
+      micStream.getAudioTracks().forEach(t=>{
+        if(t.readyState === 'live') t.enabled = true;
+      });
     }
-  }catch(e){}
+  }catch(e){ dbgErr('kick', e); }
 }
 
-/** 不重新要權限、不 stop 軌道：重建 Analyser + keepalive */
+/** 僅在 graph 真正失效時重建；不 clone、不 stop 原始 track */
 function softReconnectMic(){
   if(!micStream || !st.ac || micRecoverBusy) return false;
   const tracks = micStream.getAudioTracks().filter(t=>t.readyState==='live');
@@ -1127,18 +1197,7 @@ function softReconnectMic(){
     an.smoothingTimeConstant = 0.25;
     an.minDecibels = -90;
     an.maxDecibels = -10;
-    // 優先用 clone track，避免 iOS 對同一 track 多次 createMediaStreamSource 的怪問題
-    if(micCloneStream){
-      try{ micCloneStream.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} }); }catch(e){}
-      micCloneStream = null;
-    }
-    let srcStream = micStream;
-    try{
-      const cloned = tracks[0].clone();
-      micCloneStream = new MediaStream([cloned]);
-      srcStream = micCloneStream;
-    }catch(e){}
-    micSource = st.ac.createMediaStreamSource(srcStream);
+    micSource = st.ac.createMediaStreamSource(micStream);
     micSource.connect(an);
     keepAliveGain = st.ac.createGain();
     keepAliveGain.gain.value = 0;
@@ -1152,72 +1211,96 @@ function softReconnectMic(){
     return true;
   }catch(e){
     micRecoverBusy = false;
-    console.warn('softReconnectMic', e);
+    dbgErr('softReconnect', e);
     return false;
   }
 }
 
+/** 螢幕常亮（家長長時間掛機） */
+async function requestWakeLock(){
+  try{
+    if(!('wakeLock' in navigator)) return false;
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', ()=>{ wakeLock = null; });
+    return true;
+  }catch(e){
+    dbgErr('wakeLock', e);
+    return false;
+  }
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible'){
+    ensureAudioRunning();
+    kickAudio();
+    if(st.run) requestWakeLock();
+  }
+});
+
 // 回傳 0~50 的原始音量（尚未扣底噪）
 function rawInstant(){
   if(!an) return 0;
-  ensureAudioRunning();
-  // 方法 A：時間域 RMS
-  an.getFloatTimeDomainData(timeBuf);
-  let sum = 0, peak = 0;
-  for(let i = 0; i < timeBuf.length; i++){
-    const v = timeBuf[i];
-    sum += v * v;
-    const av = v < 0 ? -v : v;
-    if(av > peak) peak = av;
-  }
-  const rms = Math.sqrt(sum / timeBuf.length) || 1e-8;
-
-  // 方法 B：位元組時間域（部分 iOS 上 float 幾乎靜音，byte 仍有反應）
-  an.getByteTimeDomainData(byteBuf);
-  let bSum = 0, bPeak = 0;
-  let allSame = true;
-  const b0 = byteBuf[0];
-  for(let i = 0; i < byteBuf.length; i++){
-    const d = (byteBuf[i] - 128) / 128;
-    bSum += d * d;
-    const ad = d < 0 ? -d : d;
-    if(ad > bPeak) bPeak = ad;
-    if(byteBuf[i] !== b0) allSame = false;
-  }
-  const bRms = Math.sqrt(bSum / byteBuf.length) || 1e-8;
-
-  // graph 已死：連續多幀 buffer 完全定值（通常全 128）
-  if(allSame && b0 === 128){
-    silentFrames++;
-  }else{
-    silentFrames = 0;
-    lastMicOk = performance.now();
-  }
-
-  // 方法 C：頻譜能量（人聲約 200~4000Hz）
-  if(!freqBuf || freqBuf.length !== an.frequencyBinCount){
-    freqBuf = new Uint8Array(an.frequencyBinCount);
-  }
-  an.getByteFrequencyData(freqBuf);
-  const binHz = (st.ac && st.ac.sampleRate ? st.ac.sampleRate : 44100) / an.fftSize;
-  let fSum = 0, fN = 0;
-  for(let i = 0; i < freqBuf.length; i++){
-    const hz = i * binHz;
-    if(hz >= 150 && hz <= 4500){
-      fSum += freqBuf[i];
-      fN++;
+  try{
+    ensureAudioRunning();
+    // 方法 A：時間域 RMS
+    an.getFloatTimeDomainData(timeBuf);
+    let sum = 0, peak = 0;
+    for(let i = 0; i < timeBuf.length; i++){
+      const v = timeBuf[i];
+      sum += v * v;
+      const av = v < 0 ? -v : v;
+      if(av > peak) peak = av;
     }
+    const rms = Math.sqrt(sum / timeBuf.length) || 1e-8;
+
+    // 方法 B：位元組時間域
+    an.getByteTimeDomainData(byteBuf);
+    let bSum = 0, bPeak = 0;
+    let allSame = true;
+    const b0 = byteBuf[0];
+    for(let i = 0; i < byteBuf.length; i++){
+      const d = (byteBuf[i] - 128) / 128;
+      bSum += d * d;
+      const ad = d < 0 ? -d : d;
+      if(ad > bPeak) bPeak = ad;
+      if(byteBuf[i] !== b0) allSame = false;
+    }
+    const bRms = Math.sqrt(bSum / byteBuf.length) || 1e-8;
+
+    if(allSame && b0 === 128){
+      silentFrames++;
+    }else{
+      silentFrames = 0;
+      lastMicOk = performance.now();
+    }
+
+    // 方法 C：頻譜能量
+    if(!freqBuf || freqBuf.length !== an.frequencyBinCount){
+      freqBuf = new Uint8Array(an.frequencyBinCount);
+    }
+    an.getByteFrequencyData(freqBuf);
+    const binHz = (st.ac && st.ac.sampleRate ? st.ac.sampleRate : 44100) / an.fftSize;
+    let fSum = 0, fN = 0;
+    for(let i = 0; i < freqBuf.length; i++){
+      const hz = i * binHz;
+      if(hz >= 150 && hz <= 4500){
+        fSum += freqBuf[i];
+        fN++;
+      }
+    }
+    const fAvg = fN ? fSum / fN : 0;
+
+    const lvlRms = cl((20 * Math.log10(Math.max(rms, bRms, 1e-8)) + 90) * 50 / 60, 0, 50);
+    const lvlPeak = cl((20 * Math.log10(Math.max(peak, bPeak, 1e-8)) + 80) * 50 / 55, 0, 50);
+    const lvlFreq = cl(fAvg * 50 / 180, 0, 50);
+
+    const merged = Math.max(lvlRms, lvlPeak * 0.85, lvlFreq);
+    if(merged > 0.5) lastMicOk = performance.now();
+    return merged;
+  }catch(e){
+    dbgErr('rawInstant', e);
+    silentFrames += 5;
+    return 0;
   }
-  const fAvg = fN ? fSum / fN : 0; // 0~255
-
-  // 取三種量測的「最大反應」，避免單一 API 在某裝置失效
-  const lvlRms = cl((20 * Math.log10(Math.max(rms, bRms, 1e-8)) + 90) * 50 / 60, 0, 50);
-  const lvlPeak = cl((20 * Math.log10(Math.max(peak, bPeak, 1e-8)) + 80) * 50 / 55, 0, 50);
-  const lvlFreq = cl(fAvg * 50 / 180, 0, 50); // 人聲中等響約 80~120 → 約 22~33
-
-  const merged = Math.max(lvlRms, lvlPeak * 0.85, lvlFreq);
-  if(merged > 0.5) lastMicOk = performance.now();
-  return merged;
 }
 
 function median(arr){
@@ -1348,10 +1431,18 @@ $('#go').onclick = async ()=>{
     console.warn('mic error', e);
   }
   st.run = 1; st.first = 1; st.qs = 2.0;
-  // iOS：每次觸控都嘗試 resume + kick（含設定面板操作）
+  // iOS：每次觸控都嘗試 resume + kick
   const resume = ()=>kickAudio();
   document.addEventListener('touchstart', resume, {passive:true});
   document.addEventListener('click', resume, {passive:true});
+  // 螢幕常亮（長時間掛機）
+  requestWakeLock().then(ok=>{
+    if(!ok && $('#msg')){
+      const prev = $('#msg').textContent;
+      $('#msg').textContent = '提示：若螢幕會自動鎖定，請到系統設定改為「永不」';
+      setTimeout(()=>{ if($('#msg')) $('#msg').textContent = prev; }, 6000);
+    }
+  });
 };
 
 $('#cal').onclick = ()=>{
@@ -1398,6 +1489,7 @@ function pick(){
 function spawnTrain(){
   const idx = pick();
   const baseDwell = +$('#dwellT').value || 35;
+  trainCount++;
   st.tr={
     i: idx,
     x: -30,
@@ -1470,17 +1562,22 @@ function arrive(){
 }
 
 function endTrain(){
-  st.tr=null;st.qs=0;st.first=0;
+  st.tr=null;
+  st.qs=0;
+  st.first=0;
+  // 關鍵：離站必須清掉吵鬧累積，否則 st.loud 卡住會永遠不進第二班車
+  st.loud=0;
+  st.loudT=0;
+  st.acc=0;
+  st.quiet=1;
   $('#dwellHint').hidden=true;
-  // 留下的下車旅客轉為下一班車的候車旅客 (維持 2 人，避免畫面混亂)
   st.pax = st.pax.filter(p=>p.alpha>0.5).slice(0,2);
   st.pax.forEach((p,idx)=>{
     p.waving=false;p.walking=false;p.state='wait_board';p.delay=2.5+idx*2;
   });
   st.staff.waving=false;
-  // 列車離站（含發車 chime 後）強制重建麥克風路徑
+  // 只 resume / keepalive，不強制 disconnect（避免把活著的 mic 弄死）
   kickAudio();
-  softReconnectMic();
   if(st.pend!=null){go(st.pend);st.pend=null}
 }
 const go2=i=>{st.fade={t:0,n:i,sw:0}};function go(i){if(!st.fade)go2(i)}
@@ -1498,10 +1595,10 @@ function update(dt){
     if(st.mic){
       const instant = raw();
       tg = cl(instant - (st.off||0), 0, 50);
-      // 看門狗：只 softReconnect，絕不自動 startMic（避免無 gesture 時 stop 掉軌道）
+      // 看門狗：僅在連續全靜音或長時間無訊號時 softReconnect；絕不自動 startMic
       const now = performance.now();
-      const graphDead = silentFrames > 45; // 約 0.75 秒連續全靜音 buffer
-      if((graphDead || now - lastMicOk > 3000) && st.t > 5 && !micRecoverBusy && !calBusy && now - lastMicKick > 1500){
+      const graphDead = silentFrames > 90; // ~1.5 秒連續全 128 buffer
+      if((graphDead || now - lastMicOk > 8000) && st.t > 8 && !micRecoverBusy && !calBusy && now - lastMicKick > 5000){
         lastMicKick = now;
         softReconnectMic();
       }
@@ -1579,6 +1676,7 @@ function update(dt){
       const tag = st.loud ? '紅' : (isWarn ? '黃' : '綠');
       lr.textContent = showLv + ' / 門檻 ' + goal + '（' + tag + '）';
     }
+    if(st.t*10%1<0.15) try{ updateDebugPanel(); }catch(e){}
 
     st.cue=!st.tr&&st.qs>=INT-4.0;
     if(!st.tr&&!st.loud&&st.qs>=INT){
@@ -2090,5 +2188,18 @@ $('#dx').onclick=()=>$('#dex').hidden=1;
 
 initWaitingPassengers();
 let last=performance.now();
-(function loop(t){update(Math.min(.1,(t-last)/1000));last=t;draw(t);requestAnimationFrame(loop)})(last);
+(function loop(t){
+  try{
+    update(Math.min(.1,(t-last)/1000));
+  }catch(e){
+    dbgErr('update', e);
+  }
+  try{
+    draw(t);
+  }catch(e){
+    dbgErr('draw', e);
+  }
+  last=t;
+  requestAnimationFrame(loop);
+})(last);
 </script></body></html>
