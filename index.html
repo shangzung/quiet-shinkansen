@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="zh-Hant"><head>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
@@ -6,225 +8,542 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>安靜新幹線 - 慢活鐵道小世界</title>
 <style>
-:root{
-  --card:rgba(255,252,245,.94);--fg:#1e293b;color-scheme:light dark;
-  --safe-t:env(safe-area-inset-top,0px);
-  --safe-b:env(safe-area-inset-bottom,0px);
-  --safe-l:env(safe-area-inset-left,0px);
-  --safe-r:env(safe-area-inset-right,0px);
-  --ui-gap:10px;
-  --ic:56px;
+:root {
+  --card: rgba(255, 252, 245, 0.94);
+  --fg: #1e293b;
+  color-scheme: light dark;
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --ic: 50px;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--card:rgba(24,32,46,.95);--fg:#f1f5f9}}
-html,body{
-  margin:0;width:100%;height:100%;
-  height:100dvh; /* 手機瀏覽器位址列伸縮仍滿版 */
-  overflow:hidden;background:#8ab4d8;color:var(--fg);
-  font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
-  user-select:none;-webkit-user-select:none;
-  touch-action:none;-webkit-touch-callout:none;
-  overscroll-behavior:none;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --card: rgba(24, 32, 46, 0.95);
+    --fg: #f1f5f9;
+  }
 }
-html.orient-fix, body.orient-fix { overflow:hidden; width:100%; height:100%; }
-canvas#c.orient-fix { width:100% !important; height:100% !important; }
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: #8ab4d8;
+  color: var(--fg);
+  font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
+}
+canvas#c {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  z-index: 1;
+}
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+button, select {
+  font: inherit;
+  border: 1px solid rgba(136, 136, 136, 0.35);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--fg);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: transform 0.15s, background-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+button:active {
+  transform: scale(0.96);
+}
+.ic {
+  width: var(--ic);
+  height: var(--ic);
+  font-size: calc(var(--ic) * 0.45);
+  padding: 0;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 
-canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
-.card{background:var(--card);border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-button,select{font:inherit;border:1px solid #8885;border-radius:14px;background:var(--card);color:var(--fg);padding:8px 14px;cursor:pointer;transition:.2s;-webkit-tap-highlight-color:transparent}
-button:hover{transform:scale(1.02)}
-.ic{width:var(--ic);height:var(--ic);font-size:calc(var(--ic)*0.46);padding:0;position:relative;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
-
-/* 左上燈號 */
-#lamp{
-  position:fixed;
-  left:calc(12px + var(--safe-l));
-  top:calc(10px + var(--safe-t));
-  height:70px;min-width:72px;padding:0 14px;font-size:36px;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  border:4px solid #4ade80;transition:border-color .4s;overflow:hidden;z-index:12;
-  box-sizing:border-box;
+/* 頂部響應式 HUD 容器（確保橫豎屏絕不重疊、不裁切） */
+#hudTop {
+  position: fixed;
+  top: calc(8px + var(--safe-t));
+  left: calc(8px + var(--safe-l));
+  right: calc(8px + var(--safe-r));
+  z-index: 12;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
 }
-#lampBar{position:absolute;left:0;bottom:0;height:6px;background:#22c55e;width:0%;transition:width .25s linear}
-
-/* 中央進度／圖鑑進度（可換行，避免直式裁切） */
-#dots{
-  position:fixed;left:50%;transform:translateX(-50%);
-  top:calc(12px + var(--safe-t));
-  max-width:min(420px, calc(100vw - 160px - var(--safe-l) - var(--safe-r)));
-  padding:6px 12px;font-size:clamp(11px,2.4vw,14px);
-  font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px 10px;
-  flex-wrap:wrap;text-align:center;z-index:11;box-sizing:border-box;
-  line-height:1.35;
+#hudTop > * {
+  pointer-events: auto;
 }
-#dwellHint{font-size:clamp(11px,2.2vw,13px);color:#15803d;background:#dcfce7;padding:2px 8px;border-radius:99px;font-weight:700;white-space:nowrap}
+#hudLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: calc(100% - 220px);
+}
+
+/* 左上燈號與倒數條 */
+#lamp {
+  position: relative;
+  height: 58px;
+  min-width: 110px;
+  padding: 0 12px;
+  font-size: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 3px solid #4ade80;
+  transition: border-color 0.3s;
+  overflow: hidden;
+}
+#lampCountdown {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--fg);
+  white-space: nowrap;
+}
+#lampBar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 6px;
+  background: #22c55e;
+  width: 0%;
+  transition: width 0.15s linear;
+}
+
+/* 常駐分貝條與數值 */
+#volWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  min-width: 165px;
+}
+#volBar {
+  position: relative;
+  width: clamp(95px, 22vw, 150px);
+  height: 12px;
+  background: #e2e8f0;
+  border-radius: 99px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  flex-shrink: 0;
+}
+#volFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #22c55e 0%, #eab308 65%, #ef4444 100%);
+  border-radius: 99px;
+  transition: width 0.06s linear;
+}
+#volGoal {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2.5px;
+  background: #0f172a;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 2;
+}
+#volNum {
+  font-size: 13px;
+  font-weight: 800;
+  min-width: 4.2em;
+  text-align: right;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 中央進度／圖鑑進度與校正狀態 */
+#dots {
+  padding: 6px 12px;
+  font-size: clamp(12px, 2.2vw, 14px);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  flex-wrap: wrap;
+  text-align: center;
+  line-height: 1.35;
+  max-width: 100%;
+  align-self: center;
+}
+#dwellHint {
+  font-size: 12px;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+#wakeBanner {
+  font-size: 11px;
+  color: #b45309;
+  background: #fef3c7;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-weight: 700;
+}
 
 /* 右上按鈕列 */
-#top{
-  position:fixed;
-  right:calc(10px + var(--safe-r));
-  top:calc(10px + var(--safe-t));
-  display:flex;gap:6px;z-index:12;
+#top {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
 }
-#badge{position:absolute;right:-6px;top:-6px;font-size:18px}
+#badge {
+  position: absolute;
+  right: -5px;
+  top: -5px;
+  font-size: 16px;
+}
 
-/* 設定面板：可捲動，避免橫式高度不足被切掉 */
-#set{
-  position:fixed;
-  right:calc(10px + var(--safe-r));
-  top:calc(10px + var(--safe-t) + var(--ic) + 12px);
-  width:min(320px, calc(100vw - 20px - var(--safe-l) - var(--safe-r)));
-  max-height:calc(100dvh - var(--safe-t) - var(--safe-b) - var(--ic) - 28px);
-  overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding:12px 14px;box-sizing:border-box;font-size:14px;z-index:20;
+/* 設定面板：可捲動，適配橫直向 */
+#set {
+  position: fixed;
+  right: calc(8px + var(--safe-r));
+  top: calc(14px + var(--safe-t) + var(--ic));
+  width: min(340px, calc(100vw - 16px - var(--safe-l) - var(--safe-r)));
+  max-height: calc(100dvh - var(--safe-t) - var(--safe-b) - var(--ic) - 24px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  z-index: 25;
+  touch-action: pan-y;
 }
-#set label,#set .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap}
-#set input[type=range]{width:100%;touch-action:pan-y}
+#set label, #set .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+#set input[type=range] {
+  width: 100%;
+  touch-action: pan-y;
+}
 
-/* Modal：直式／橫式都留安全邊距 */
-.modal{
-  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:min(760px, calc(100vw - 16px - var(--safe-l) - var(--safe-r)));
-  max-height:calc(100dvh - 16px - var(--safe-t) - var(--safe-b));
-  overflow:auto;-webkit-overflow-scrolling:touch;
-  padding:18px;box-sizing:border-box;text-align:center;z-index:30;
-  margin:0;
+/* Modal 彈窗：直式／橫式皆自動縮放不裁切 */
+.modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(760px, calc(100vw - 16px - var(--safe-l) - var(--safe-r)));
+  max-height: calc(100dvh - 16px - var(--safe-t) - var(--safe-b));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 18px;
+  text-align: center;
+  z-index: 30;
+  margin: 0;
+  touch-action: pan-y;
 }
-.go{font-size:clamp(22px,5vw,30px);padding:12px 40px;background:#2e7d32;color:#fff;border:0;border-radius:99px;box-shadow:0 4px 14px rgba(46,125,50,.35);width:auto;max-width:100%}
+.go {
+  font-size: clamp(20px, 4.5vw, 28px);
+  padding: 12px 36px;
+  background: #2e7d32;
+  color: #fff;
+  border: 0;
+  border-radius: 99px;
+  box-shadow: 0 4px 14px rgba(46, 125, 50, 0.35);
+  font-weight: 800;
+}
 
 /* 右下收錄卡 */
-#cornerCard{
-  position:fixed;
-  right:calc(12px + var(--safe-r));
-  bottom:calc(12px + var(--safe-b));
-  width:min(300px, calc(100vw - 24px - var(--safe-l) - var(--safe-r)));
-  padding:10px 14px;text-align:left;z-index:15;
-  transform:translateY(140%);opacity:0;
-  transition:transform .7s cubic-bezier(.22,1,.36,1),opacity .6s;
-  border-left:6px solid #2563eb;box-sizing:border-box;
+#cornerCard {
+  position: fixed;
+  right: calc(10px + var(--safe-r));
+  bottom: calc(10px + var(--safe-b));
+  width: min(290px, calc(100vw - 20px - var(--safe-l) - var(--safe-r)));
+  padding: 10px 14px;
+  text-align: left;
+  z-index: 15;
+  transform: translateY(150%);
+  opacity: 0;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s;
+  border-left: 6px solid #2563eb;
+  pointer-events: none;
 }
-#cornerCard.show{transform:translateY(0);opacity:1}
-#cornerCard .cc-top{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:#b45309}
-#cornerCard .cc-name{font-size:clamp(16px,4.5vw,20px);font-weight:900;margin:4px 0 2px;display:flex;align-items:center;gap:6px}
-#cornerCard .cc-stars{color:#f59e0b;font-size:14px;letter-spacing:2px;margin-bottom:4px}
-#cornerCard .cc-route{font-size:12px;font-weight:700;background:#8882;padding:3px 9px;border-radius:8px;display:inline-block;max-width:100%;word-break:break-all}
+#cornerCard.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+#cornerCard .cc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #b45309;
+}
+#cornerCard .cc-name {
+  font-size: clamp(15px, 4vw, 19px);
+  font-weight: 900;
+  margin: 4px 0 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#cornerCard .cc-stars {
+  color: #f59e0b;
+  font-size: 13px;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+#cornerCard .cc-route {
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(136, 136, 136, 0.15);
+  padding: 3px 9px;
+  border-radius: 8px;
+  display: inline-block;
+  max-width: 100%;
+  word-break: break-word;
+}
 
-/* 圖鑑 */
-#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(210px,100%),1fr));gap:12px;margin-top:12px}
-.dex-item{background:#8882;border-radius:16px;padding:10px;font-size:13px;text-align:left;cursor:pointer;transition:.2s;border:2px solid transparent}
-.dex-item:hover{border-color:#3b82f6}
-.dex-item canvas{width:100%;height:auto;border-radius:10px;background:linear-gradient(180deg,#dbeafe,#f1f5f9)}
-.dex-item .di-title{font-weight:800;font-size:15px;margin-top:6px;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
-.dex-item .di-route{font-size:12px;opacity:.8;margin-top:2px}
-#detailBox{background:#8881;border-radius:16px;padding:14px;margin-bottom:14px;text-align:left;border:1px solid #8884}
-#detailBox .db-head{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
-#detailBox .db-photo{width:min(220px,100%);height:130px;border-radius:12px;object-fit:cover;background:#0002;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;flex-shrink:0}
-#detailBox .db-photo img{width:100%;height:100%;object-fit:cover}
+/* 圖鑑網格 */
+#grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.dex-item {
+  background: rgba(136, 136, 136, 0.13);
+  border-radius: 14px;
+  padding: 10px;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.2s;
+  border: 2px solid transparent;
+}
+.dex-item:hover {
+  border-color: #3b82f6;
+}
+.dex-item canvas {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #dbeafe, #f1f5f9);
+}
+.dex-item .di-title {
+  font-weight: 800;
+  font-size: 14px;
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.dex-item .di-route {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+#detailBox {
+  background: rgba(136, 136, 136, 0.1);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
+  text-align: left;
+  border: 1px solid rgba(136, 136, 136, 0.25);
+}
+#detailBox .db-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+#detailBox .db-photo {
+  width: min(210px, 100%);
+  height: 125px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+#detailBox .db-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
-/* 常駐音量計（語音／環境音即時反應） */
-#volWrap{
-  position:fixed;
-  left:calc(10px + var(--safe-l, 0px));
-  top:calc(10px + var(--safe-t, 0px) + 74px);
-  z-index:13;
-  display:flex;align-items:center;gap:8px;
-  padding:6px 10px;min-width:120px;
-  pointer-events:none;
+/* 開發者 Debug 面板 */
+#dbg {
+  position: fixed;
+  left: calc(8px + var(--safe-l));
+  bottom: calc(8px + var(--safe-b));
+  z-index: 50;
+  width: min(310px, calc(100vw - 16px - var(--safe-l) - var(--safe-r)));
+  max-height: 48dvh;
+  overflow-y: auto;
+  font: 11.5px/1.42 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: rgba(15, 23, 42, 0.92);
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  white-space: pre-wrap;
+  word-break: break-word;
+  touch-action: pan-y;
 }
-#volWrap .card{pointer-events:none}
-#volBar{
-  position:relative;width:min(140px,28vw);height:12px;
-  background:#e2e8f0;border-radius:99px;overflow:hidden;
-  border:1px solid #94a3b866;
+#dbg.on {
+  display: block;
 }
-#volFill{
-  position:absolute;left:0;top:0;bottom:0;width:0%;
-  background:linear-gradient(90deg,#22c55e,#eab308,#ef4444);
-  border-radius:99px;transition:width .08s linear;
+#dbg .ok { color: #4ade80; font-weight: 700; }
+#dbg .bad { color: #f87171; font-weight: 700; }
+#dbg .warn { color: #fbbf24; font-weight: 700; }
+#dbg .err-banner {
+  background: #dc2626;
+  color: #fff;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-weight: 800;
+  display: block;
+  margin-bottom: 6px;
 }
-#volGoal{
-  position:absolute;top:0;bottom:0;width:2px;background:#1e293b;
-  transform:translateX(-50%);pointer-events:none;
-}
-#volNum{font-size:12px;font-weight:800;min-width:2.5em;color:var(--fg)}
-@media (max-width:640px),(orientation:portrait){
-  #volWrap{top:calc(8px + var(--safe-t, 0px) + 58px); left:calc(8px + var(--safe-l, 0px));}
-  #volBar{width:min(110px,32vw);height:10px}
-}
-@media (orientation:landscape) and (max-height:500px){
-  #volWrap{top:calc(8px + var(--safe-t, 0px) + 50px); padding:4px 8px}
-  #volBar{width:100px;height:9px}
-}
-[hidden]{display:none!important}
 
+[hidden] {
+  display: none !important;
+}
 
-/* —— 直式（窄螢幕）：縮小頂欄，避免燈號／進度／按鈕互撞 —— */
-@media (max-width:640px),(orientation:portrait){
-  :root{--ic:48px}
-  #lamp{height:58px;font-size:28px;padding:0 10px;border-width:3px;left:calc(8px + var(--safe-l));top:calc(8px + var(--safe-t))}
-  #dots{
-    top:calc(8px + var(--safe-t) + 88px);
-    left:calc(8px + var(--safe-l)); right:calc(8px + var(--safe-r));
-    transform:none;width:auto;max-width:none;
-    justify-content:flex-start;
+/* 直向手機與窄螢幕適配 */
+@media (max-width: 640px), (orientation: portrait) {
+  :root { --ic: 44px; }
+  #hudLeft {
+    max-width: calc(100% - 196px);
   }
-  #top{right:calc(8px + var(--safe-r));top:calc(8px + var(--safe-t));gap:5px}
-  #set{
-    left:calc(8px + var(--safe-l)); right:calc(8px + var(--safe-r));
-    width:auto;top:calc(8px + var(--safe-t) + var(--ic) + 10px);
-    max-height:calc(100dvh - var(--safe-t) - var(--safe-b) - var(--ic) - 24px);
+  #lamp {
+    height: 48px;
+    font-size: 22px;
+    padding: 0 10px;
   }
-  #cornerCard{left:calc(10px + var(--safe-l));right:calc(10px + var(--safe-r));width:auto}
-  .modal{padding:14px;width:calc(100vw - 12px - var(--safe-l) - var(--safe-r))}
-  #start h2{font-size:clamp(18px,5.2vw,24px);margin:6px 0}
-  #start p{font-size:clamp(13px,3.6vw,16px)}
+  #dots {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+  }
+  #set {
+    left: calc(8px + var(--safe-l));
+    right: calc(8px + var(--safe-r));
+    width: auto;
+  }
 }
 
-/* —— 橫式矮螢幕：壓低頂欄、設定可捲 —— */
-@media (orientation:landscape) and (max-height:500px){
-  :root{--ic:42px}
-  #lamp{height:48px;font-size:24px;padding:0 8px;border-width:3px}
-  #dots{top:calc(8px + var(--safe-t));font-size:11px;max-width:min(360px,calc(100vw - 200px))}
-  #set{max-height:calc(100dvh - var(--safe-t) - var(--safe-b) - 56px);font-size:13px;padding:8px 10px}
-  #cornerCard{padding:8px 12px}
-  #cornerCard .cc-name{font-size:15px}
-  .modal{max-height:calc(100dvh - 10px - var(--safe-t) - var(--safe-b));padding:12px}
+/* 橫向矮螢幕適配 */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root { --ic: 40px; }
+  #hudTop {
+    gap: 6px;
+  }
+  #hudLeft {
+    flex-direction: row;
+    align-items: center;
+    max-width: none;
+  }
+  #lamp {
+    height: 40px;
+    font-size: 20px;
+    padding: 0 8px;
+  }
+  #volWrap {
+    padding: 4px 8px;
+    height: 40px;
+  }
+  #dots {
+    padding: 4px 10px;
+    font-size: 11.5px;
+  }
+  .modal {
+    padding: 12px;
+  }
 }
-
-/* 極窄寬度 */
-@media (max-width:380px){
-  :root{--ic:44px}
-  #lamp{font-size:24px;height:52px}
-  #dwellHint{display:none} /* 極窄時隱藏提示，避免擠壓 */
-}
-
-/* Debug panel */
-#dbg{
-  position:fixed;left:8px;bottom:8px;z-index:50;
-  max-width:min(320px,90vw);max-height:45vh;overflow:auto;
-  font:11px/1.35 ui-monospace,Menlo,monospace;
-  background:rgba(15,23,42,.88);color:#e2e8f0;
-  border-radius:12px;padding:8px 10px;
-  display:none;backdrop-filter:blur(6px);
-  white-space:pre-wrap;word-break:break-all;
-}
-#dbg.on{display:block}
-#dbg .ok{color:#4ade80}#dbg .bad{color:#f87171}#dbg .warn{color:#fbbf24}
-</style></head><body>
+</style>
+</head>
+<body>
 <canvas id="c"></canvas>
 
-<!-- 左上：3歲幼兒直覺燈號 + 底部進度條 -->
-<div id="lamp" class="card" hidden><span id="lampTxt">🟢🙂</span><div id="lampBar"></div></div>
+<!-- 頂部整合導覽列（自動適配直向與橫向） -->
+<div id="hudTop" hidden>
+  <div id="hudLeft">
+    <div id="lamp" class="card">
+      <span id="lampTxt">🟢🙂</span>
+      <span id="lampCountdown"></span>
+      <div id="lampBar"></div>
+    </div>
+    <div id="volWrap" class="card">
+      <div id="volBar">
+        <div id="volFill"></div>
+        <div id="volGoal"></div>
+      </div>
+      <span id="volNum">0 dB</span>
+    </div>
+  </div>
+
+  <div id="dots" class="card">
+    <span id="dotsTxt"></span>
+    <span id="dwellHint" hidden>🤫 安靜觀察中・列車停留延長</span>
+    <span id="wakeBanner" hidden>💡 請將自動鎖定設定為永不</span>
+  </div>
+
+  <div id="top">
+    <button id="callBtn" class="card ic" title="召喚列車 / 提前發車">🔔</button>
+    <button id="alb" class="card ic" title="鐵道探索收藏館">🚆<span id="badge" hidden>🎁</span></button>
+    <button id="dbgBtn" class="card ic" title="切換開發者 Debug 面板">🐞</button>
+    <button id="gear" class="card ic" title="設定">⚙</button>
+  </div>
+</div>
+
+<!-- 開發者 Debug 面板 -->
 <div id="dbg"></div>
-<div id="volWrap" class="card" hidden>
-  <div id="volBar"><div id="volFill"></div><div id="volGoal"></div></div>
-  <span id="volNum">0</span>
-</div>
-<div id="dots" class="card" hidden><span id="dotsTxt"></span><span id="dwellHint" hidden>🤫 安靜觀察中・列車停留延長</span></div>
-<div id="top" hidden>
-  <button id="callBtn" class="card ic" title="召喚列車 / 切換發車">🔔</button>
-  <button id="alb" class="card ic" title="鐵道探索收藏館">🚆<span id="badge" hidden>🎁</span></button>
-  <button id="gear" class="card ic" title="設定">⚙</button>
-</div>
 
 <!-- 右下：新車進站自動收錄卡片 -->
 <div id="cornerCard" class="card">
@@ -236,30 +555,39 @@ button:hover{transform:scale(1.02)}
 
 <!-- 設定選單 -->
 <div id="set" class="card" hidden>
-  <div class="row">音量容忍度 <span>
-    <button type="button" data-g="18">嚴格</button>
-    <button type="button" data-g="30">適中</button>
-    <button type="button" data-g="42">寬鬆</button>
+  <div class="row">靈敏度微調（環境音 + 裕度）<span>
+    <button type="button" data-g="10">嚴格</button>
+    <button type="button" data-g="18">適中</button>
+    <button type="button" data-g="28">寬鬆</button>
   </span></div>
-  <input id="goal" type="range" min="8" max="50" value="30" step="1">
-  <div class="row" style="font-size:12px;opacity:.9"><span>門檻預覽</span><span id="goalLive">30</span></div>
-  <div class="row" style="font-size:12px;opacity:.9"><span>目前音量</span><span id="lvlReadout">— / 門檻 30</span></div>
-  <div class="row"><button type="button" id="cal">🎚 重新校準環境音</button><button type="button" id="noise" hidden>按住=測試吵鬧</button></div>
-  <div class="row" style="margin-top:12px">
-    <button type="button" id="saveCfgBtn" style="width:100%;background:#2563eb;color:#fff;border:0;padding:10px 14px;font-weight:800">💾 儲存設定</button>
+  <input id="goal" type="range" min="12" max="85" value="35" step="1">
+  <div class="row" style="font-size:12px;opacity:.9">
+    <span>環境音 / 安靜門檻</span>
+    <span id="goalLive">環境 20 / 門檻 35</span>
+  </div>
+  <div class="row" style="font-size:12px;opacity:.9">
+    <span>目前即時音量</span>
+    <span id="lvlReadout">0 / 門檻 35</span>
+  </div>
+  <div class="row">
+    <button type="button" id="cal">🎚 重新5秒環境音校正</button>
+    <button type="button" id="noise">🔊 按住測試吵鬧</button>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <button type="button" id="saveCfgBtn" style="width:100%;background:#2563eb;color:#fff;border:0;padding:9px 14px;font-weight:800">💾 儲存設定</button>
   </div>
   <div id="saveHint" style="font-size:12px;color:#16a34a;min-height:1.2em"></div>
-  <label>候車間隔
+  <label>候車安靜倒數
     <select id="rate">
-      <option value="10">短 (10秒)</option>
-      <option value="18" selected>適中 (18秒)</option>
-      <option value="30">長 (30秒)</option>
+      <option value="8">短 (8秒)</option>
+      <option value="15" selected>適中 (15秒)</option>
+      <option value="25">長 (25秒)</option>
     </select>
   </label>
   <label>月台停靠時間
     <select id="dwellT">
-      <option value="25">25 秒 (安靜可延至40秒)</option>
-      <option value="35" selected>35 秒 (安靜可延至55秒)</option>
+      <option value="20">20 秒 (安靜可延至35秒)</option>
+      <option value="30" selected>30 秒 (安靜可延至50秒)</option>
       <option value="45">45 秒 (安靜可延至65秒)</option>
     </select>
   </label>
@@ -271,16 +599,16 @@ button:hover{transform:scale(1.02)}
     </select>
   </label>
   <label>溫和音效<input type="checkbox" id="snd" checked></label>
-  <div id="msg" style="font-size:12px;opacity:.85;color:#2563eb">提示：列車停靠時越安靜，停留時間越長喔！</div>
+  <div id="msg" style="font-size:12px;opacity:.9;color:#2563eb;margin-top:4px">提示：列車停靠時越安靜，停留時間越長喔！</div>
 </div>
 
 <!-- 啟動畫面 -->
 <div id="start" class="modal card">
-  <div style="font-size:64px">🚄 🟢🙂</div>
+  <div style="font-size:clamp(44px, 10vw, 64px)">🚄 🟢🙂</div>
   <h2 style="margin:6px 0">安靜新幹線：慢活車站小世界</h2>
-  <p style="font-size:16px;line-height:1.6;opacity:.9">
+  <p style="font-size:clamp(13.5px, 3.5vw, 15.5px);line-height:1.6;opacity:.92">
     🟢🙂 保持安靜，列車會緩緩進站、打開車門，停下來陪伴大家。<br>
-    👀 仔細觀察看看：今天是登山客、滑雪客還是通勤族上下車呢？<br>
+    🎚 進入車站前 5 秒會自動量測環境音，設定最適合您的安靜門檻。<br>
     🔴🙉 太吵雜時，車門會關上並提前離站喔。
   </p>
   <button id="go" class="go">▶ 走進車站</button>
@@ -288,7 +616,7 @@ button:hover{transform:scale(1.02)}
 
 <!-- 鐵道探索收藏館（圖鑑 Modal） -->
 <div id="dex" class="modal card" hidden>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
     <h3 style="margin:0">📘 鐵道探索收藏館 <span id="dexCount" style="font-size:14px;font-weight:normal"></span></h3>
     <button id="dx">✖ 關閉</button>
   </div>
@@ -298,68 +626,76 @@ button:hover{transform:scale(1.02)}
 </div>
 
 <script>
-// ===================== 基本畫布與儲存工具 =====================
-const $=s=>document.querySelector(s),cv=$('#c'),g=cv.getContext('2d');let W,H,isPortrait=true;
-function rs(){
-  // 以 window 尺寸為主（旋轉最穩）；visualViewport 僅作參考下限
-  const vv = window.visualViewport;
-  const d = Math.min(devicePixelRatio || 1, 3);
-  let w = window.innerWidth || document.documentElement.clientWidth || 1;
-  let h = window.innerHeight || document.documentElement.clientHeight || 1;
-  // iOS 旋轉當下有時 inner 尚未更新，取較大合理值避免畫布過矮只剩天空
-  if(vv && vv.width > 0 && vv.height > 0){
-    w = Math.max(w, Math.round(vv.width));
-    h = Math.max(h, Math.round(vv.height));
+"use strict";
+
+// ===================== 基本工具與響應式畫布管理 (BUG-008) =====================
+const $ = s => document.querySelector(s);
+const cv = $('#c');
+const g = cv.getContext('2d');
+let W = 1, H = 1, isPortrait = true, dpr = 1;
+
+const clamp = (v, a, b) => {
+  if (!Number.isFinite(v)) return a;
+  return Math.max(a, Math.min(b, v));
+};
+const ld = (k, d) => {
+  try {
+    const val = JSON.parse(localStorage.getItem(k));
+    return val != null ? val : d;
+  } catch (e) {
+    return d;
   }
-  W = Math.max(1, Math.round(w));
-  H = Math.max(1, Math.round(h));
+};
+const sv = (k, v) => {
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+};
+
+function resizeViewport() {
+  dpr = clamp(window.devicePixelRatio || 1, 1, 2.5);
+  // 精確讀取當前視口尺寸（不使用 Math.max(w, vv.width) 避免旋轉後殘留舊橫向寬度造成畫面被裁切）
+  const docW = document.documentElement.clientWidth || window.innerWidth || 360;
+  const docH = document.documentElement.clientHeight || window.innerHeight || 640;
+  const winW = window.innerWidth || docW;
+  const winH = window.innerHeight || docH;
+
+  W = Math.max(240, Math.round(Math.min(docW, winW) || winW));
+  H = Math.max(240, Math.round(Math.min(docH, winH) || winH));
+
   const wasPortrait = isPortrait;
-  isPortrait = H >= W * 0.95; // 接近正方形也當直式，較不易誤判
-  cv.width = Math.max(1, Math.floor(W * d));
-  cv.height = Math.max(1, Math.floor(H * d));
-  // CSS 尺寸與邏輯像素對齊，避免被拉伸裁切
+  isPortrait = H >= W;
+
+  cv.width = Math.floor(W * dpr);
+  cv.height = Math.floor(H * dpr);
   cv.style.width = W + 'px';
   cv.style.height = H + 'px';
-  g.setTransform(d, 0, 0, d, 0, 0);
-  if(wasPortrait !== isPortrait && typeof st !== 'undefined' && st.run && typeof initWaitingPassengers === 'function'){
-    try{ initWaitingPassengers(); }catch(e){}
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  if (wasPortrait !== isPortrait && typeof st !== 'undefined' && st.run) {
+    repositionPlatformEntities();
   }
 }
-function rsDebounced(){
-  rs();
-  // 旋轉後瀏覽器會分階段改尺寸，連續補算避免半套版面
-  clearTimeout(rs._t1); clearTimeout(rs._t2); clearTimeout(rs._t3);
-  rs._t1 = setTimeout(rs, 60);
-  rs._t2 = setTimeout(rs, 200);
-  rs._t3 = setTimeout(rs, 500);
+
+function handleResizeEvent() {
+  resizeViewport();
+  clearTimeout(handleResizeEvent._t1);
+  clearTimeout(handleResizeEvent._t2);
+  handleResizeEvent._t1 = setTimeout(resizeViewport, 80);
+  handleResizeEvent._t2 = setTimeout(resizeViewport, 280);
 }
-addEventListener('resize', rsDebounced);
-addEventListener('orientationchange', ()=>{
-  document.documentElement.classList.add('orient-fix');
-  document.body.classList.add('orient-fix');
-  rsDebounced();
-  setTimeout(()=>{
-    document.documentElement.classList.remove('orient-fix');
-    document.body.classList.remove('orient-fix');
-    rs();
-  }, 600);
-});
-addEventListener('touchmove', e=>{
-  if(!(e.target.closest && e.target.closest('#set,#dex,#start'))) e.preventDefault();
-}, {passive:false});
-if(window.visualViewport){
-  visualViewport.addEventListener('resize', rsDebounced);
-  visualViewport.addEventListener('scroll', ()=>{
-    window.scrollTo(0,0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-  });
+
+window.addEventListener('resize', handleResizeEvent, { passive: true });
+window.addEventListener('orientationchange', handleResizeEvent, { passive: true });
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', handleResizeEvent, { passive: true });
 }
-rs();
-const ld=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}},sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+window.addEventListener('touchmove', e => {
+  if (!(e.target.closest && e.target.closest('#set, #dex, #start, #dbg'))) {
+    e.preventDefault();
+  }
+}, { passive: false });
 
 // ===================== 列車資料庫 =====================
-const RAW=`E7 北陸新幹線|日本|3|#1b4370|#f4f2ed|#b87333|#1b4370|E7|12|V|東京 → 金澤・敦賀|車頂採用日本傳統「空色(深藍)」，搭配象牙白車身與銅色、空色雙飾帶，流線型鼻頭專為穿越北陸山岳隧道與陡坡設計。|Shinkansen-E7.jpg
+const RAW = `E7 北陸新幹線|日本|3|#1b4370|#f4f2ed|#b87333|#1b4370|E7|12|V|東京 → 金澤・敦賀|車頂採用日本傳統「空色(深藍)」，搭配象牙白車身與銅色、空色雙飾帶，流線型鼻頭專為穿越北陸山岳隧道與陡坡設計。|Shinkansen-E7.jpg
 W7 北陸新幹線|日本|3|#1b4370|#f4f2ed|#b87333|#1b4370|E7|12|V|金澤・敦賀 → 東京|JR西日本所屬的北陸新幹線主力，外型與E7系雙胞胎，結合傳統工藝色彩與「Aero Double-Wing」圓潤流線車頭。|JRW_W7_Series_W2_20150110.jpg
 E5 隼號 Hayabusa|日本|3|#1f8a5b|#f5f5f7|#e84a90|#1f8a5b|E5|10|V|東京 → 新青森・新函館北斗|常盤綠搭配飛雲白與津輕粉紅飾帶，擁有長達15公尺的超長流線鼻頭，最高時速達 320 km/h。|JR-East-E5-Hayabusa.jpg
 H5 北海道新幹線|日本|3|#1f8a5b|#f5f5f7|#8a5ac8|#1f8a5b|E5|10|V|新青森 → 新函館北斗|E5系的姊妹車，中腰飾帶改為代表北海道薰衣草的「彩香紫」，能穿越青函海底隧道。|Shinkansen_H5.jpg
@@ -391,1815 +727,1905 @@ SL 蒸汽機關車 D51|日本|3|#1c1d21|#1c1d21|#c83228|#d4af37|SL|4|G|高崎 �
 義大利紅箭 Frecciarossa|義大利|3|#c42026|#c42026|#e2e6ec|#22252a|E7|8|V|米蘭 → 羅馬・拿坡里|義大利高鐵「紅箭1000」，法拉利般的流線火紅車身。|Frecciarossa_1000.jpg
 黃金新幹線 (傳說隱藏)|傳說|4|#ffd700|#fff2a6|#f59e0b|#ffffff|E7|12|V|全圖鑑達成・夢幻特別運行|收集齊全所有列車後才會現身的傳說級黃金塗裝E7新幹線！|Shinkansen-E7.jpg`;
 
-const M=RAW.split('\n').map((s,idx)=>{const a=s.split('|');return{id:idx,n:a[0],c:a[1],r:+a[2],roof:a[3],body:a[4],st1:a[5],st2:a[6],nose:a[7],cars:+a[8],trk:a[9],route:a[10],desc:a[11],img:a[12]}});
+const M = RAW.split('\n').map((s, idx) => {
+  const a = s.split('|');
+  return {
+    id: idx, n: a[0], c: a[1], r: +a[2],
+    roof: a[3], body: a[4], st1: a[5], st2: a[6],
+    nose: a[7], cars: +a[8], trk: a[9], route: a[10], desc: a[11], img: a[12]
+  };
+});
 
-// 6 大場景的車站名與特色旅客設定
-const SCENES=[
-  {jp:'ふじさん', zh:'富士山站', role:'hiker', colors:['#d97706','#2563eb','#15803d','#b91c1c']},
-  {jp:'ほっかいどう', zh:'北海道站', role:'skier', colors:['#0284c7','#e11d48','#7c3aed','#0d9488']},
-  {jp:'とうきょう', zh:'東京站', role:'commuter', colors:['#334155','#1e293b','#475569','#3f3f46']},
-  {jp:'しょうなん', zh:'湘南海岸', role:'beach', colors:['#f59e0b','#ec4899','#06b6d4','#84cc16']},
-  {jp:'きゅうしゅう', zh:'九州溫泉', role:'onsen', colors:['#9f1239','#4338ca','#b45309','#115e59']},
-  {jp:'ぎんが', zh:'銀河站', role:'star', colors:['#6366f1','#8b5cf6','#0ea5e9','#f43f5e']}
+const SCENES = [
+  { jp: 'ふじさん', zh: '富士山站', role: 'hiker', colors: ['#d97706', '#2563eb', '#15803d', '#b91c1c'] },
+  { jp: 'ほっかいどう', zh: '北海道站', role: 'skier', colors: ['#0284c7', '#e11d48', '#7c3aed', '#0d9488'] },
+  { jp: 'とうきょう', zh: '東京站', role: 'commuter', colors: ['#334155', '#1e293b', '#475569', '#3f3f46'] },
+  { jp: 'しょうなん', zh: '湘南海岸', role: 'beach', colors: ['#f59e0b', '#ec4899', '#06b6d4', '#84cc16'] },
+  { jp: 'きゅうしゅう', zh: '九州溫泉', role: 'onsen', colors: ['#9f1239', '#4338ca', '#b45309', '#115e59'] },
+  { jp: 'ぎんが', zh: '銀河站', role: 'star', colors: ['#6366f1', '#8b5cf6', '#0ea5e9', '#f43f5e'] }
 ];
 
-// ===================== 車體比例與車門位置計算 =====================
-// 車高：直式與橫式都保持可辨識，且不讓車身超過畫面寬度比例
-const CH=()=>{
-  // 直式：以寬度為主限制；橫式：以高度為主
-  const byH = H * (isPortrait ? 0.16 : 0.26);
-  const byW = W * (isPortrait ? 0.18 : 0.12);
-  return cl(Math.min(byH, byW), isPortrait ? 48 : 56, isPortrait ? 110 : 140);
+// ===================== 遊戲與狀態機主結構 (BUG-001) =====================
+let seen = ld('ak_s', {});
+let cd = ld('ak_c', {});
+let cfg = ld('ak_cfg_v4', {});
+let customPhotos = ld('ak_ph', {});
+
+const st = {
+  run: false,
+  // 需求明確要求的狀態旗標 (BUG-001)
+  trainActive: false,
+  isTrainRunning: false,
+  rewardRunning: false,
+  stationPlaying: false,
+  silenceTimer: 0,
+
+  // 環境音與門檻自動校正 (BUG-006)
+  environmentNoise: 20,
+  silenceThreshold: 35,
+  thresholdMargin: 15,
+  calibrating: false,
+  calibStartTime: 0,
+  calibSamples: [],
+
+  // 即時音量與吵鬧判定
+  mic: false,
+  currentVolume: 0,
+  lvl: 0,
+  lvlFast: 0,
+  acc: 0,
+  quiet: 0,
+  loud: false,
+  loudT: 0,
+  sim: false,
+
+  // 列車、場景與動畫計時
+  tr: null,
+  arm: 0,
+  sc: 0,
+  scT: 0,
+  first: true,
+  page: null,
+  fade: null,
+  pend: null,
+  t: 0,
+  cue: false,
+  ccTimer: 0,
+  trainCount: 0,
+
+  // 月台旅客與站務員
+  pax: [],
+  staff: { x: 300, dir: -1, walking: false, waving: false, alpha: 1, role: 'staff', color: '#1e3a8a', seed: 7, scale: 1.04 }
 };
-// 地平線與軌道高度：確保月台與列車完整落在可視區
-const sceneLayout=()=>{
-  // 保證地平線與軌道都在可視區內，旋轉後也不會整片只剩天空
-  if(isPortrait){
-    const railY = cl(H * 0.70, H * 0.58, H * 0.78);
-    const hz = cl(railY - H * 0.28, H * 0.32, H * 0.50);
+
+// ===================== 車體比例與車門位置計算 =====================
+const CH = () => {
+  const byH = H * (isPortrait ? 0.14 : 0.23);
+  const byW = W * (isPortrait ? 0.16 : 0.11);
+  return clamp(Math.min(byH, byW), isPortrait ? 44 : 52, isPortrait ? 96 : 130);
+};
+
+const sceneLayout = () => {
+  if (isPortrait) {
+    const railY = clamp(H * 0.72, 220, H - 70);
+    const hz = clamp(railY - H * 0.25, 120, railY - 60);
     return { hz, railY };
   }
-  // 橫式：軌道約在 70% 高度，上方留天空、下方留月台與安全區
-  const railY = cl(H * 0.70, 120, H * 0.82);
-  const hz = cl(railY - Math.min(H * 0.32, 160), H * 0.28, railY - 40);
+  const railY = clamp(H * 0.72, 140, H - 55);
+  const hz = clamp(railY - Math.min(H * 0.30, 150), 90, railY - 45);
   return { hz, railY };
 };
 
-function noseRatio(tp){return {E7:3.6, E5:4.8, E6:4.5, N700:3.8, D:3.4, P500:5.0, ALFA:5.8, MAG:5.0, F800:2.6, F:1.8, B:0.45, SL:3.6}[tp]||3.2}
-function carWidthRatio(tp){return tp=='B'?3.4:4.2}
-const lenOf=(m,ch)=>m.nose=='SL'?ch*9.5:(noseRatio(m.nose)+Math.min(m.cars,6)*carWidthRatio(m.nose))*ch;
+function noseRatio(tp) {
+  return { E7: 3.6, E5: 4.8, E6: 4.5, N700: 3.8, D: 3.4, P500: 5.0, ALFA: 5.8, MAG: 5.0, F800: 2.6, F: 1.8, B: 0.45, SL: 3.6 }[tp] || 3.2;
+}
+function carWidthRatio(tp) {
+  return tp === 'B' ? 3.4 : 4.2;
+}
+const lenOf = (m, ch) => m.nose === 'SL' ? ch * 9.5 : (noseRatio(m.nose) + Math.min(m.cars, 6) * carWidthRatio(m.nose)) * ch;
 
-// 取得列車停妥時，畫面可見的車門中心 X 座標陣列 (供乘客上下車對齊)
-function getVisibleDoorXs(m,hx,ch){
-  if(m.nose=='SL'){
-    const L=ch*3.5,l=hx-L;
-    return [l-ch*.2-ch*3.5+ch*3.1, l-ch*.2-ch*7.0+ch*3.1].filter(x=>x>W*.10 && x<(isPortrait?W*.90:W*.80));
+function getVisibleDoorXs(m, hx, ch) {
+  if (m.nose === 'SL') {
+    const L = ch * 3.5, l = hx - L;
+    return [l - ch * 0.2 - ch * 3.5 + ch * 3.1, l - ch * 0.2 - ch * 7.0 + ch * 3.1].filter(x => x > W * 0.08 && x < (isPortrait ? W * 0.90 : W * 0.82));
   }
-  const NL=noseRatio(m.nose)*ch, cw=carWidthRatio(m.nose)*ch, gp=ch*.07, nc=Math.min(m.cars,6);
-  const doors=[];
-  for(let i=0;i<nc;i++){
-    const r=hx-NL-i*(cw+gp), l=r-cw;
-    if(m.nose=='B'){
-      for(let d=0;d<3;d++) doors.push(l+cw*(.10+d*.32)+ch*.17);
-    }else{
-      doors.push(l+cw*.035+ch*.12);
-      if(i>0) doors.push(r-cw*.035-ch*.12);
+  const NL = noseRatio(m.nose) * ch, cw = carWidthRatio(m.nose) * ch, gp = ch * 0.07, nc = Math.min(m.cars, 6);
+  const doors = [];
+  for (let i = 0; i < nc; i++) {
+    const r = hx - NL - i * (cw + gp), l = r - cw;
+    if (m.nose === 'B') {
+      for (let d = 0; d < 3; d++) doors.push(l + cw * (0.10 + d * 0.32) + ch * 0.17);
+    } else {
+      doors.push(l + cw * 0.035 + ch * 0.12);
+      if (i > 0) doors.push(r - cw * 0.035 - ch * 0.12);
     }
   }
-  return doors.filter(x=>x>W*.10 && x<(isPortrait?W*.90:W*.80));
+  return doors.filter(x => x > W * 0.08 && x < (isPortrait ? W * 0.90 : W * 0.82));
 }
 
-// ===================== 繪製車頭輪廓與車廂（支援車門開闔與窗內乘客剪影） =====================
-function traceHeadPath(c,tp,l,r,NL,top,ch){
-  const yBot=top+ch, hx=r+NL;
-  c.beginPath();c.moveTo(l,top);c.lineTo(r,top);
-  if(tp=='E7'){
-    c.bezierCurveTo(r+NL*.22, top, r+NL*.42, top+ch*.16, r+NL*.58, top+ch*.32);
-    c.bezierCurveTo(r+NL*.82, top+ch*.52, r+NL*.98, top+ch*.68, hx, top+ch*.79);
-    c.bezierCurveTo(hx, top+ch*.91, r+NL*.86, yBot, r+NL*.65, yBot);
-  }else if(tp=='E5'||tp=='E6'){
-    c.bezierCurveTo(r+NL*.16, top, r+NL*.26, top+ch*.30, r+NL*.40, top+ch*.44);
-    c.bezierCurveTo(r+NL*.70, top+ch*.52, r+NL*.96, top+ch*.65, hx, top+ch*.77);
-    c.bezierCurveTo(hx, top+ch*.90, r+NL*.85, yBot, r+NL*.60, yBot);
-  }else if(tp=='N700'||tp=='D'){
-    c.bezierCurveTo(r+NL*.20, top, r+NL*.36, top+ch*.28, r+NL*.52, top+ch*.44);
-    c.bezierCurveTo(r+NL*.78, top+ch*.55, r+NL*.97, top+ch*.68, hx, top+ch*.80);
-    c.bezierCurveTo(hx, top+ch*.92, r+NL*.85, yBot, r+NL*.60, yBot);
-  }else if(tp=='P500'){
-    c.bezierCurveTo(r+NL*.32, top+ch*.04, r+NL*.72, top+ch*.35, hx, top+ch*.68);
-    c.bezierCurveTo(r+NL*.85, top+ch*.92, r+NL*.55, yBot, r+NL*.30, yBot);
-  }else if(tp=='ALFA'||tp=='MAG'){
-    c.bezierCurveTo(r+NL*.14, top, r+NL*.22, top+ch*.36, r+NL*.35, top+ch*.48);
-    c.bezierCurveTo(r+NL*.68, top+ch*.54, r+NL*.96, top+ch*.68, hx, top+ch*.80);
-    c.bezierCurveTo(hx, top+ch*.92, r+NL*.85, yBot, r+NL*.55, yBot);
-  }else if(tp=='F800'||tp=='F'){
-    c.bezierCurveTo(r+NL*.45, top, r+NL*.88, top+ch*.35, hx, top+ch*.82);
-    c.bezierCurveTo(hx, top+ch*.94, r+NL*.85, yBot, r+NL*.50, yBot);
-  }else{
-    c.lineTo(r+NL*.4, top);c.quadraticCurveTo(hx, top+ch*.08, hx, top+ch*.88);c.lineTo(hx-NL*.2, yBot);
+// ===================== 繪製列車、車門與乘客剪影 (已修正 ch 未定義之致命錯誤) =====================
+function traceHeadPath(c, tp, l, r, NL, top, ch) {
+  const yBot = top + ch, hx = r + NL;
+  c.beginPath(); c.moveTo(l, top); c.lineTo(r, top);
+  if (tp === 'E7') {
+    c.bezierCurveTo(r + NL * 0.22, top, r + NL * 0.42, top + ch * 0.16, r + NL * 0.58, top + ch * 0.32);
+    c.bezierCurveTo(r + NL * 0.82, top + ch * 0.52, r + NL * 0.98, top + ch * 0.68, hx, top + ch * 0.79);
+    c.bezierCurveTo(hx, top + ch * 0.91, r + NL * 0.86, yBot, r + NL * 0.65, yBot);
+  } else if (tp === 'E5' || tp === 'E6') {
+    c.bezierCurveTo(r + NL * 0.16, top, r + NL * 0.26, top + ch * 0.30, r + NL * 0.40, top + ch * 0.44);
+    c.bezierCurveTo(r + NL * 0.70, top + ch * 0.52, r + NL * 0.96, top + ch * 0.65, hx, top + ch * 0.77);
+    c.bezierCurveTo(hx, top + ch * 0.90, r + NL * 0.85, yBot, r + NL * 0.60, yBot);
+  } else if (tp === 'N700' || tp === 'D') {
+    c.bezierCurveTo(r + NL * 0.20, top, r + NL * 0.36, top + ch * 0.28, r + NL * 0.52, top + ch * 0.44);
+    c.bezierCurveTo(r + NL * 0.78, top + ch * 0.55, r + NL * 0.97, top + ch * 0.68, hx, top + ch * 0.80);
+    c.bezierCurveTo(hx, top + ch * 0.92, r + NL * 0.85, yBot, r + NL * 0.60, yBot);
+  } else if (tp === 'P500') {
+    c.bezierCurveTo(r + NL * 0.32, top + ch * 0.04, r + NL * 0.72, top + ch * 0.35, hx, top + ch * 0.68);
+    c.bezierCurveTo(r + NL * 0.85, top + ch * 0.92, r + NL * 0.55, yBot, r + NL * 0.30, yBot);
+  } else if (tp === 'ALFA' || tp === 'MAG') {
+    c.bezierCurveTo(r + NL * 0.14, top, r + NL * 0.22, top + ch * 0.36, r + NL * 0.35, top + ch * 0.48);
+    c.bezierCurveTo(r + NL * 0.68, top + ch * 0.54, r + NL * 0.96, top + ch * 0.68, hx, top + ch * 0.80);
+    c.bezierCurveTo(hx, top + ch * 0.92, r + NL * 0.85, yBot, r + NL * 0.55, yBot);
+  } else if (tp === 'F800' || tp === 'F') {
+    c.bezierCurveTo(r + NL * 0.45, top, r + NL * 0.88, top + ch * 0.35, hx, top + ch * 0.82);
+    c.bezierCurveTo(hx, top + ch * 0.94, r + NL * 0.85, yBot, r + NL * 0.50, yBot);
+  } else {
+    c.lineTo(r + NL * 0.4, top); c.quadraticCurveTo(hx, top + ch * 0.08, hx, top + ch * 0.88); c.lineTo(hx - NL * 0.2, yBot);
   }
-  c.lineTo(l,yBot);c.closePath();
+  c.lineTo(l, yBot); c.closePath();
 }
 
-// 繪製車窗內的乘客剪影 (安靜的小世界)
-function drawWindowSilhouette(c,wx,wy,ww,wh,seed,t,occRatio){
-  // 依據座位編號與當前車廂擁擠度決定是否有乘客
-  const hash = (seed*9301+49297)%233280 / 233280;
-  if(hash > occRatio) return;
-  const sway = Math.sin(t*0.9 + seed*1.7)*1.1; // 極緩慢自然的呼吸/微動
-  const cx = wx + ww*0.52 + sway*0.4;
-  const headY = wy + wh*0.42;
-  const r = Math.min(ww,wh)*0.22;
+function drawWindowSilhouette(c, wx, wy, ww, wh, seed, t, occRatio) {
+  const hash = ((seed * 9301 + 49297) % 233280) / 233280;
+  if (hash > occRatio) return;
+  const sway = Math.sin(t * 0.9 + seed * 1.7) * 1.1;
+  const cx = wx + ww * 0.52 + sway * 0.4;
+  const headY = wy + wh * 0.42;
+  const r = Math.min(ww, wh) * 0.22;
 
   c.save();
-  c.beginPath();c.roundRect(wx,wy,ww,wh,2);c.clip();
-  c.fillStyle='rgba(22, 32, 46, 0.72)';
-  // 肩膀與身體
-  c.beginPath();
-  c.arc(cx, wy+wh*1.05, r*1.75, Math.PI, 0);
-  c.fill();
-  // 頭部
-  c.beginPath();
-  c.arc(cx, headY, r, 0, Math.PI*2);
-  c.fill();
-  // 偶爾幾位戴著帽子或靠窗看風景的細節
-  if(seed%4===0){
-    c.fillRect(cx-r*1.2, headY-r*0.85, r*2.4, r*0.35);
+  c.beginPath(); c.roundRect(wx, wy, ww, wh, 2); c.clip();
+  c.fillStyle = 'rgba(22, 32, 46, 0.72)';
+  c.beginPath(); c.arc(cx, wy + wh * 1.05, r * 1.75, Math.PI, 0); c.fill();
+  c.beginPath(); c.arc(cx, headY, r, 0, Math.PI * 2); c.fill();
+  if (seed % 4 === 0) {
+    c.fillRect(cx - r * 1.2, headY - r * 0.85, r * 2.4, r * 0.35);
   }
   c.restore();
 }
 
-// 繪製可開闔的車門 (openRatio: 0=全關, 1=全開)
-function drawAnimatedDoor(c,dx,doorY,doorW,doorH,winCol,openRatio,bodyCol){
-  // 1. 車門背後的車廂內部空間 (門打開時露出溫暖燈光與扶手)
-  if(openRatio>0.02){
-    c.fillStyle='#fef3c7';
-    c.fillRect(dx,doorY,doorW,doorH);
-    // 車門內部陰影與階梯踏板
-    c.fillStyle='rgba(180,130,70,.28)';
-    c.fillRect(dx,doorY,doorW,ch*.06);
-    c.fillStyle='#64748b';
-    c.fillRect(dx,doorY+doorH-3,doorW,3);
-    // 車廂內站在門邊準備下車的淡淡剪影
-    if(openRatio>0.4 && openRatio<0.95){
-      c.fillStyle='rgba(30,41,59,.35)';
-      c.beginPath();c.arc(dx+doorW*.5,doorY+doorH*.38,doorW*.18,0,7);c.fill();
-      c.fillRect(dx+doorW*.32,doorY+doorH*.55,doorW*.36,doorH*.42);
+// 【修正 BUG-001 根因】使用 doorH * 0.10 取代未定義的 ch * .06
+function drawAnimatedDoor(c, dx, doorY, doorW, doorH, winCol, openRatio, bodyCol) {
+  if (openRatio > 0.02) {
+    c.fillStyle = '#fef3c7';
+    c.fillRect(dx, doorY, doorW, doorH);
+    c.fillStyle = 'rgba(180, 130, 70, 0.28)';
+    c.fillRect(dx, doorY, doorW, doorH * 0.10);
+    c.fillStyle = '#64748b';
+    c.fillRect(dx, doorY + doorH - 3, doorW, 3);
+    if (openRatio > 0.4 && openRatio < 0.95) {
+      c.fillStyle = 'rgba(30, 41, 59, 0.35)';
+      c.beginPath(); c.arc(dx + doorW * 0.5, doorY + doorH * 0.38, doorW * 0.18, 0, Math.PI * 2); c.fill();
+      c.fillRect(dx + doorW * 0.32, doorY + doorH * 0.55, doorW * 0.36, doorH * 0.42);
     }
   }
 
-  // 2. 左右兩扇滑門葉片 (隨 openRatio 向兩側滑開)
   c.save();
-  c.beginPath();c.roundRect(dx-1,doorY,doorW+2,doorH,2);c.clip();
-  const leafW = doorW/2;
+  c.beginPath(); c.roundRect(dx - 1, doorY, doorW + 2, doorH, 2); c.clip();
+  const leafW = doorW / 2;
   const slide = openRatio * (leafW * 0.86);
 
-  // 左門扇
   const lx = dx - slide;
-  c.fillStyle=bodyCol;c.fillRect(lx,doorY,leafW,doorH);
-  c.strokeStyle='rgba(30,40,55,.45)';c.lineWidth=1.1;c.strokeRect(lx,doorY,leafW,doorH);
-  c.fillStyle=winCol;c.beginPath();c.roundRect(lx+leafW*.22,doorY+doorH*.11,leafW*.56,doorH*.24,1.5);c.fill();
+  c.fillStyle = bodyCol; c.fillRect(lx, doorY, leafW, doorH);
+  c.strokeStyle = 'rgba(30, 40, 55, 0.45)'; c.lineWidth = 1.1; c.strokeRect(lx, doorY, leafW, doorH);
+  c.fillStyle = winCol; c.beginPath(); c.roundRect(lx + leafW * 0.22, doorY + doorH * 0.11, leafW * 0.56, doorH * 0.24, 1.5); c.fill();
 
-  // 右門扇
   const rx = dx + leafW + slide;
-  c.fillStyle=bodyCol;c.fillRect(rx,doorY,leafW,doorH);
-  c.strokeStyle='rgba(30,40,55,.45)';c.lineWidth=1.1;c.strokeRect(rx,doorY,leafW,doorH);
-  c.fillStyle=winCol;c.beginPath();c.roundRect(rx+leafW*.22,doorY+doorH*.11,leafW*.56,doorH*.24,1.5);c.fill();
+  c.fillStyle = bodyCol; c.fillRect(rx, doorY, leafW, doorH);
+  c.strokeStyle = 'rgba(30, 40, 55, 0.45)'; c.lineWidth = 1.1; c.strokeRect(rx, doorY, leafW, doorH);
+  c.fillStyle = winCol; c.beginPath(); c.roundRect(rx + leafW * 0.22, doorY + doorH * 0.11, leafW * 0.56, doorH * 0.24, 1.5); c.fill();
   c.restore();
 
-  // 門框外緣
-  c.strokeStyle='rgba(20,30,45,.5)';c.lineWidth=1.2;
-  c.beginPath();c.roundRect(dx,doorY,doorW,doorH,2);c.stroke();
+  c.strokeStyle = 'rgba(20, 30, 45, 0.5)'; c.lineWidth = 1.2;
+  c.beginPath(); c.roundRect(dx, doorY, doorW, doorH, 2); c.stroke();
 }
 
-function drawSteam(c,m,hx,y,ch,o){
-  const s=o.sil,F=a=>s?'#15181c':a,L=ch*3.5,l=hx-L,t=o.t||0,openR=o.door||0,occ=o.occ||0.65;
-  for(let k=0;k<2;k++){
-    const x=l-ch*.2-(k+1)*ch*3.5;
-    c.fillStyle=F('#5a2d1c');c.fillRect(x,y-ch*1.02,ch*3.35,ch*.84);
-    c.fillStyle=F('#382015');c.fillRect(x,y-ch*1.08,ch*3.35,ch*.09);
-    if(!s){
-      c.fillStyle='#c83228';c.fillRect(x,y-ch*.44,ch*3.35,ch*.06);
-      const winCol='#ffe9a0';
-      drawAnimatedDoor(c,x+ch*.1,y-ch*.88,ch*.28,ch*.64,winCol,openR,'#5a2d1c');
-      drawAnimatedDoor(c,x+ch*2.95,y-ch*.88,ch*.28,ch*.64,winCol,openR,'#5a2d1c');
-      for(let w=0;w<6;w++){
-        const wx=x+ch*(.52+w*.38),wy=y-ch*.82,ww=ch*.26,wh=ch*.28;
-        c.fillStyle=winCol;c.beginPath();c.roundRect(wx,wy,ww,wh,3);c.fill();
-        drawWindowSilhouette(c,wx,wy,ww,wh,k*10+w+1,t,occ);
+function drawSteam(c, m, hx, y, ch, o) {
+  const s = o.sil, F = a => s ? '#15181c' : a, L = ch * 3.5, l = hx - L, t = o.t || 0, openR = o.door || 0, occ = o.occ || 0.65;
+  for (let k = 0; k < 2; k++) {
+    const x = l - ch * 0.2 - (k + 1) * ch * 3.5;
+    c.fillStyle = F('#5a2d1c'); c.fillRect(x, y - ch * 1.02, ch * 3.35, ch * 0.84);
+    c.fillStyle = F('#382015'); c.fillRect(x, y - ch * 1.08, ch * 3.35, ch * 0.09);
+    if (!s) {
+      c.fillStyle = '#c83228'; c.fillRect(x, y - ch * 0.44, ch * 3.35, ch * 0.06);
+      const winCol = '#ffe9a0';
+      drawAnimatedDoor(c, x + ch * 0.1, y - ch * 0.88, ch * 0.28, ch * 0.64, winCol, openR, '#5a2d1c');
+      drawAnimatedDoor(c, x + ch * 2.95, y - ch * 0.88, ch * 0.28, ch * 0.64, winCol, openR, '#5a2d1c');
+      for (let w = 0; w < 6; w++) {
+        const wx = x + ch * (0.52 + w * 0.38), wy = y - ch * 0.82, ww = ch * 0.26, wh = ch * 0.28;
+        c.fillStyle = winCol; c.beginPath(); c.roundRect(wx, wy, ww, wh, 3); c.fill();
+        drawWindowSilhouette(c, wx, wy, ww, wh, k * 10 + w + 1, t, occ);
       }
     }
-    c.fillStyle=F('#222');
-    for(const wx of [.4,.8,2.55,2.95]){c.beginPath();c.arc(x+ch*wx,y-ch*.1,ch*.1,0,7);c.fill()}
-  }
-  c.fillStyle=F('#1c1d22');
-  c.fillRect(l+ch*.9,y-ch*.98,L-ch*1.05,ch*.72);
-  c.fillRect(l,y-ch*1.18,ch*1.0,ch*.94);
-  c.fillRect(hx-ch*.65,y-ch*1.32,ch*.26,ch*.38);
-  c.fillRect(hx-ch*1.4,y-ch*1.16,ch*.45,ch*.2);
-  if(!s){
-    c.fillStyle='#c83228';c.fillRect(l,y-ch*.32,L,ch*.09);
-    c.fillStyle='#d4af37';c.fillRect(l+ch*1.3,y-ch*.98,ch*.04,ch*.66);c.fillRect(l+ch*2.2,y-ch*.98,ch*.04,ch*.66);
-    c.fillStyle='#ffe9a0';c.fillRect(l+ch*.2,y-ch*1.02,ch*.55,ch*.34);
-    drawWindowSilhouette(c,l+ch*.2,y-ch*1.02,ch*.55,ch*.34,99,t,1);
-    c.fillStyle='#d4af37';c.fillRect(hx-ch*.3,y-ch*.72,ch*.22,ch*.12);
-  }
-  for(const x of[.55,1.25,1.95,2.65]){
-    c.fillStyle=F('#22242a');c.beginPath();c.arc(l+ch*x,y-ch*.18,ch*.22,0,7);c.fill();
-    if(!s){
-      c.strokeStyle='#d4d8de';c.lineWidth=ch*.04;
-      const a=(o.p||0)/(ch*.24);
-      c.beginPath();c.moveTo(l+ch*x,y-ch*.18);c.lineTo(l+ch*x+Math.cos(a)*ch*.18,y-ch*.18+Math.sin(a)*ch*.18);c.stroke();
+    c.fillStyle = F('#222');
+    for (const wx of [0.4, 0.8, 2.55, 2.95]) {
+      c.beginPath(); c.arc(x + ch * wx, y - ch * 0.1, ch * 0.1, 0, Math.PI * 2); c.fill();
     }
   }
-  if(!s){
-    c.strokeStyle='#c0c6ce';c.lineWidth=ch*.05;
-    c.beginPath();c.moveTo(l+ch*.55,y-ch*.18);c.lineTo(l+ch*2.65,y-ch*.18);c.stroke();
-    for(let j=0;j<5;j++){
-      c.fillStyle='rgba(245,247,250,'+(.55-j*.09)+')';
-      c.beginPath();c.arc(hx-ch*.52-j*ch*.42-(t*ch*.18%(ch*.42)),y-ch*1.48-j*ch*.26,ch*(.15+j*.07),0,7);c.fill();
+  c.fillStyle = F('#1c1d22');
+  c.fillRect(l + ch * 0.9, y - ch * 0.98, L - ch * 1.05, ch * 0.72);
+  c.fillRect(l, y - ch * 1.18, ch * 1.0, ch * 0.94);
+  c.fillRect(hx - ch * 0.65, y - ch * 1.32, ch * 0.26, ch * 0.38);
+  c.fillRect(hx - ch * 1.4, y - ch * 1.16, ch * 0.45, ch * 0.2);
+  if (!s) {
+    c.fillStyle = '#c83228'; c.fillRect(l, y - ch * 0.32, L, ch * 0.09);
+    c.fillStyle = '#d4af37'; c.fillRect(l + ch * 1.3, y - ch * 0.98, ch * 0.04, ch * 0.66); c.fillRect(l + ch * 2.2, y - ch * 0.98, ch * 0.04, ch * 0.66);
+    c.fillStyle = '#ffe9a0'; c.fillRect(l + ch * 0.2, y - ch * 1.02, ch * 0.55, ch * 0.34);
+    drawWindowSilhouette(c, l + ch * 0.2, y - ch * 1.02, ch * 0.55, ch * 0.34, 99, t, 1);
+    c.fillStyle = '#d4af37'; c.fillRect(hx - ch * 0.3, y - ch * 0.72, ch * 0.22, ch * 0.12);
+  }
+  for (const x of [0.55, 1.25, 1.95, 2.65]) {
+    c.fillStyle = F('#22242a'); c.beginPath(); c.arc(l + ch * x, y - ch * 0.18, ch * 0.22, 0, Math.PI * 2); c.fill();
+    if (!s) {
+      c.strokeStyle = '#d4d8de'; c.lineWidth = ch * 0.04;
+      const a = (o.p || 0) / (ch * 0.24);
+      c.beginPath(); c.moveTo(l + ch * x, y - ch * 0.18); c.lineTo(l + ch * x + Math.cos(a) * ch * 0.18, y - ch * 0.18 + Math.sin(a) * ch * 0.18); c.stroke();
+    }
+  }
+  if (!s) {
+    c.strokeStyle = '#c0c6ce'; c.lineWidth = ch * 0.05;
+    c.beginPath(); c.moveTo(l + ch * 0.55, y - ch * 0.18); c.lineTo(l + ch * 2.65, y - ch * 0.18); c.stroke();
+    for (let j = 0; j < 5; j++) {
+      c.fillStyle = 'rgba(245, 247, 250, ' + (0.55 - j * 0.09) + ')';
+      c.beginPath(); c.arc(hx - ch * 0.52 - j * ch * 0.42 - (t * ch * 0.18 % (ch * 0.42)), y - ch * 1.48 - j * ch * 0.26, ch * (0.15 + j * 0.07), 0, Math.PI * 2); c.fill();
     }
   }
 }
 
-function drawTrain(c,m,hx,y,ch,o){
-  const sil=o.sil,N=o.night||0,F=a=>sil?'#181c22':a,t=o.t||0,openR=o.door||0,occ=o.occ??0.68;
-  if(m.nose=='SL'){drawSteam(c,m,hx,y,ch,o);return}
-  const nl=noseRatio(m.nose),NL=nl*ch,cw=carWidthRatio(m.nose)*ch,gp=ch*.07,top=y-ch*1.06,nc=Math.min(m.cars,6);
+function drawTrain(c, m, hx, y, ch, o) {
+  const sil = o.sil, N = o.night || 0, F = a => sil ? '#181c22' : a, t = o.t || 0, openR = o.door || 0, occ = o.occ ?? 0.68;
+  if (m.nose === 'SL') { drawSteam(c, m, hx, y, ch, o); return; }
+  const nl = noseRatio(m.nose), NL = nl * ch, cw = carWidthRatio(m.nose) * ch, gp = ch * 0.07, top = y - ch * 1.06, nc = Math.min(m.cars, 6);
 
-  for(let i=nc-1;i>=0;i--){
-    const r=hx-NL-i*(cw+gp),l=r-cw;
-    if(i<nc-1){
-      const gx=r,gw=gp+2;
-      c.fillStyle=F('#2c323d');c.fillRect(gx-1,top+ch*.03,gw,ch*.92);
-      if(!sil){
-        c.fillStyle='#181c24';c.fillRect(gx+gw*.25,top+ch*.05,gw*.5,ch*.88);
-        c.strokeStyle='#495262';c.lineWidth=1;c.strokeRect(gx+1,top+ch*.04,gw-2,ch*.90);
+  for (let i = nc - 1; i >= 0; i--) {
+    const r = hx - NL - i * (cw + gp), l = r - cw;
+    // 畫面外剔除優化，提升長時間運作效能
+    if (r + (i === 0 ? NL : 0) < -50 || l > W + 50) continue;
+
+    if (i < nc - 1) {
+      const gx = r, gw = gp + 2;
+      c.fillStyle = F('#2c323d'); c.fillRect(gx - 1, top + ch * 0.03, gw, ch * 0.92);
+      if (!sil) {
+        c.fillStyle = '#181c24'; c.fillRect(gx + gw * 0.25, top + ch * 0.05, gw * 0.5, ch * 0.88);
+        c.strokeStyle = '#495262'; c.lineWidth = 1; c.strokeRect(gx + 1, top + ch * 0.04, gw - 2, ch * 0.90);
       }
     }
-    c.fillStyle=F('#1a1e24');
-    for(const bx of [l+cw*.16, (i==0?r+NL*.15:r-cw*.26)]){
-      c.fillRect(bx-ch*.32,top+ch*.88,ch*.64,ch*.16);
-      c.fillStyle=F('#2e3440');
-      c.beginPath();c.arc(bx-ch*.18,y-ch*.04,ch*.075,0,7);c.arc(bx+ch*.18,y-ch*.04,ch*.075,0,7);c.fill();
-      c.fillStyle=F('#1a1e24');
+    c.fillStyle = F('#1a1e24');
+    for (const bx of [l + cw * 0.16, (i === 0 ? r + NL * 0.15 : r - cw * 0.26)]) {
+      c.fillRect(bx - ch * 0.32, top + ch * 0.88, ch * 0.64, ch * 0.16);
+      c.fillStyle = F('#2e3440');
+      c.beginPath(); c.arc(bx - ch * 0.18, y - ch * 0.04, ch * 0.075, 0, Math.PI * 2); c.arc(bx + ch * 0.18, y - ch * 0.04, ch * 0.075, 0, Math.PI * 2); c.fill();
+      c.fillStyle = F('#1a1e24');
     }
 
     c.save();
-    if(i==0)traceHeadPath(c,m.nose,l,r,NL,top,ch);
-    else{c.beginPath();c.roundRect(l,top,cw,ch,[ch*.05,ch*.05,0,0])}
+    if (i === 0) traceHeadPath(c, m.nose, l, r, NL, top, ch);
+    else { c.beginPath(); c.roundRect(l, top, cw, ch, [ch * 0.05, ch * 0.05, 0, 0]); }
     c.clip();
 
-    const totalW=cw+(i==0?NL+4:2);
-    c.fillStyle=F(m.body);c.fillRect(l,top,totalW,ch);
-    const roofH = (m.nose=='E5'||m.nose=='E6') ? ch*.38 : ch*.21;
-    c.fillStyle=F(m.roof);c.fillRect(l,top,totalW,roofH);
+    const totalW = cw + (i === 0 ? NL + 4 : 2);
+    c.fillStyle = F(m.body); c.fillRect(l, top, totalW, ch);
+    const roofH = (m.nose === 'E5' || m.nose === 'E6') ? ch * 0.38 : ch * 0.21;
+    c.fillStyle = F(m.roof); c.fillRect(l, top, totalW, roofH);
 
-    if(!sil){
-      const hg=c.createLinearGradient(0,top,0,top+ch*.35);
-      hg.addColorStop(0,'rgba(255,255,255,.28)');hg.addColorStop(.5,'rgba(255,255,255,.08)');hg.addColorStop(1,'rgba(255,255,255,0)');
-      c.fillStyle=hg;c.fillRect(l,top,totalW,ch*.35);
+    if (!sil) {
+      const hg = c.createLinearGradient(0, top, 0, top + ch * 0.35);
+      hg.addColorStop(0, 'rgba(255, 255, 255, 0.28)'); hg.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)'); hg.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      c.fillStyle = hg; c.fillRect(l, top, totalW, ch * 0.35);
     }
 
-    if(m.nose=='E7'){
-      c.fillStyle=F(m.st1);c.fillRect(l,top+ch*.21,totalW,ch*.055);
-      c.fillStyle=F(m.st2);c.fillRect(l,top+ch*.56,totalW,ch*.035);
-      c.fillStyle=F(m.st1);c.fillRect(l,top+ch*.60,totalW,ch*.03);
-    }else if(m.nose=='E5'||m.nose=='E6'||m.nose=='ALFA'){
-      c.fillStyle=F(m.st1);c.fillRect(l,top+ch*.38,totalW,ch*.065);
-    }else if(m.nose=='N700'||m.nose=='D'){
-      c.fillStyle=F(m.st1);c.fillRect(l,top+ch*.53,totalW,ch*.055);c.fillRect(l,top+ch*.605,totalW,ch*.025);
-      if(i==0 && m.nose=='N700'){
-        c.beginPath();c.moveTo(r,top+ch*.53);c.lineTo(r+NL*.72,top+ch*.72);c.lineTo(r+NL*.65,top+ch*.78);c.lineTo(r,top+ch*.62);c.fill();
+    if (m.nose === 'E7') {
+      c.fillStyle = F(m.st1); c.fillRect(l, top + ch * 0.21, totalW, ch * 0.055);
+      c.fillStyle = F(m.st2); c.fillRect(l, top + ch * 0.56, totalW, ch * 0.035);
+      c.fillStyle = F(m.st1); c.fillRect(l, top + ch * 0.60, totalW, ch * 0.03);
+    } else if (m.nose === 'E5' || m.nose === 'E6' || m.nose === 'ALFA') {
+      c.fillStyle = F(m.st1); c.fillRect(l, top + ch * 0.38, totalW, ch * 0.065);
+    } else if (m.nose === 'N700' || m.nose === 'D') {
+      c.fillStyle = F(m.st1); c.fillRect(l, top + ch * 0.53, totalW, ch * 0.055); c.fillRect(l, top + ch * 0.605, totalW, ch * 0.025);
+      if (i === 0 && m.nose === 'N700') {
+        c.beginPath(); c.moveTo(r, top + ch * 0.53); c.lineTo(r + NL * 0.72, top + ch * 0.72); c.lineTo(r + NL * 0.65, top + ch * 0.78); c.lineTo(r, top + ch * 0.62); c.fill();
       }
-    }else if(m.nose=='P500'){
-      c.fillStyle=F(m.st1);c.fillRect(l,top+ch*.26,totalW,ch*.22);
-    }else{
-      c.fillStyle=F(m.st1);c.fillRect(l,top+ch*.52,totalW,ch*.08);
-      if(m.st2&&m.st2!=m.st1){c.fillStyle=F(m.st2);c.fillRect(l,top+ch*.61,totalW,ch*.035)}
+    } else if (m.nose === 'P500') {
+      c.fillStyle = F(m.st1); c.fillRect(l, top + ch * 0.26, totalW, ch * 0.22);
+    } else {
+      c.fillStyle = F(m.st1); c.fillRect(l, top + ch * 0.52, totalW, ch * 0.08);
+      if (m.st2 && m.st2 !== m.st1) { c.fillStyle = F(m.st2); c.fillRect(l, top + ch * 0.61, totalW, ch * 0.035); }
     }
 
-    c.fillStyle=F('#d0d5dd');c.fillRect(l,top+ch*.78,totalW,ch*.14);
-    c.fillStyle=F('#2b313b');c.fillRect(l,top+ch*.90,totalW,ch*.10);
-    if(!sil){
-      c.strokeStyle='rgba(0,0,0,.22)';c.lineWidth=1.2;
-      c.strokeRect(l+cw*.08,top+ch*.79,cw*.20,ch*.11);
-      if(i>0)c.strokeRect(r-cw*.28,top+ch*.79,cw*.20,ch*.11);
+    c.fillStyle = F('#d0d5dd'); c.fillRect(l, top + ch * 0.78, totalW, ch * 0.14);
+    c.fillStyle = F('#2b313b'); c.fillRect(l, top + ch * 0.90, totalW, ch * 0.10);
+    if (!sil) {
+      c.strokeStyle = 'rgba(0, 0, 0, 0.22)'; c.lineWidth = 1.2;
+      c.strokeRect(l + cw * 0.08, top + ch * 0.79, cw * 0.20, ch * 0.11);
+      if (i > 0) c.strokeRect(r - cw * 0.28, top + ch * 0.79, cw * 0.20, ch * 0.11);
     }
 
-    if(!sil){
-      // 車廂內溫暖燈光底色 (讓車窗內的剪影清晰可見)
-      const winCol = N>.25 ? '#ffe58f' : '#d8e8f8';
-      const doorW = ch*.24, doorH = ch*.62, doorY = top+ch*.24;
+    if (!sil) {
+      const winCol = N > 0.25 ? '#ffe58f' : '#d8e8f8';
+      const doorW = ch * 0.24, doorH = ch * 0.62, doorY = top + ch * 0.24;
 
-      if(m.nose=='B'){
-        for(let d=0;d<3;d++){
-          const dx=l+cw*(.10+d*.32);
-          const dCol=m.n.includes('山手')?m.st1:'#bfc6d0';
-          drawAnimatedDoor(c,dx,top+ch*.20,ch*.34,ch*.68,winCol,openR,dCol);
-          if(d<2){
-            const wx=dx+ch*.40,wy=top+ch*.24,ww=ch*.52,wh=ch*.25;
-            c.fillStyle=winCol;c.beginPath();c.roundRect(wx,wy,ww,wh,3);c.fill();
-            drawWindowSilhouette(c,wx,wy,ww*.48,wh,i*20+d*2+1,t,occ);
-            drawWindowSilhouette(c,wx+ww*.5,wy,ww*.48,wh,i*20+d*2+2,t,occ);
+      if (m.nose === 'B') {
+        for (let d = 0; d < 3; d++) {
+          const dx = l + cw * (0.10 + d * 0.32);
+          const dCol = m.n.includes('山手') ? m.st1 : '#bfc6d0';
+          drawAnimatedDoor(c, dx, top + ch * 0.20, ch * 0.34, ch * 0.68, winCol, openR, dCol);
+          if (d < 2) {
+            const wx = dx + ch * 0.40, wy = top + ch * 0.24, ww = ch * 0.52, wh = ch * 0.25;
+            c.fillStyle = winCol; c.beginPath(); c.roundRect(wx, wy, ww, wh, 3); c.fill();
+            drawWindowSilhouette(c, wx, wy, ww * 0.48, wh, i * 20 + d * 2 + 1, t, occ);
+            drawWindowSilhouette(c, wx + ww * 0.5, wy, ww * 0.48, wh, i * 20 + d * 2 + 2, t, occ);
           }
         }
-      }else{
-        // 新幹線 / 特急：兩端滑門 + 行先顯示板
-        drawAnimatedDoor(c,l+cw*.035,doorY,doorW,doorH,winCol,openR,m.body);
-        c.fillStyle='#111';c.fillRect(l+cw*.035+doorW+ch*.03,doorY+ch*.08,ch*.17,ch*.06);
-        c.fillStyle='#ff9900';c.fillRect(l+cw*.035+doorW+ch*.04,doorY+ch*.095,ch*.13,ch*.03);
-        if(i>0){
-          drawAnimatedDoor(c,r-cw*.035-doorW,doorY,doorW,doorH,winCol,openR,m.body);
+      } else {
+        drawAnimatedDoor(c, l + cw * 0.035, doorY, doorW, doorH, winCol, openR, m.body);
+        c.fillStyle = '#111'; c.fillRect(l + cw * 0.035 + doorW + ch * 0.03, doorY + ch * 0.08, ch * 0.17, ch * 0.06);
+        c.fillStyle = '#ff9900'; c.fillRect(l + cw * 0.035 + doorW + ch * 0.04, doorY + ch * 0.095, ch * 0.13, ch * 0.03);
+        if (i > 0) {
+          drawAnimatedDoor(c, r - cw * 0.035 - doorW, doorY, doorW, doorH, winCol, openR, m.body);
         }
 
-        // 等間距小車窗 + 窗內乘客剪影
-        const wStart = l+cw*.14, wEnd = i==0 ? r-cw*.08 : r-cw*.14;
-        const wStep = ch*.34, wW = ch*.21, wH = ch*.15, wY = top+ch*.31;
-        let wIdx=0;
-        for(let wx=wStart; wx+wW<=wEnd; wx+=wStep, wIdx++){
-          c.fillStyle='#0f1824';c.beginPath();c.roundRect(wx-1,wY-1,wW+2,wH+2,ch*.028);c.fill();
-          c.fillStyle=winCol;c.beginPath();c.roundRect(wx,wY,wW,wH,ch*.025);c.fill();
-          drawWindowSilhouette(c,wx,wY,wW,wH,i*15+wIdx+3,t,occ);
-          // 窗戶玻璃淡淡反光
-          c.fillStyle='rgba(255,255,255,.22)';
-          c.beginPath();c.moveTo(wx+2,wY+2);c.lineTo(wx+wW*.55,wY+2);c.lineTo(wx+wW*.25,wY+wH-2);c.lineTo(wx+2,wY+wH-2);c.fill();
+        const wStart = l + cw * 0.14, wEnd = i === 0 ? r - cw * 0.08 : r - cw * 0.14;
+        const wStep = ch * 0.34, wW = ch * 0.21, wH = ch * 0.15, wY = top + ch * 0.31;
+        let wIdx = 0;
+        for (let wx = wStart; wx + wW <= wEnd; wx += wStep, wIdx++) {
+          c.fillStyle = '#0f1824'; c.beginPath(); c.roundRect(wx - 1, wY - 1, wW + 2, wH + 2, ch * 0.028); c.fill();
+          c.fillStyle = winCol; c.beginPath(); c.roundRect(wx, wY, wW, wH, ch * 0.025); c.fill();
+          drawWindowSilhouette(c, wx, wY, wW, wH, i * 15 + wIdx + 3, t, occ);
+          c.fillStyle = 'rgba(255, 255, 255, 0.22)';
+          c.beginPath(); c.moveTo(wx + 2, wY + 2); c.lineTo(wx + wW * 0.55, wY + 2); c.lineTo(wx + wW * 0.25, wY + wH - 2); c.lineTo(wx + 2, wY + wH - 2); c.fill();
         }
       }
 
-      if(i==0){
-        if(m.nose=='B'){
-          c.fillStyle='#141c24';c.fillRect(r-ch*.15,top+ch*.12,NL*.95,ch*.38);
-          c.fillStyle=winCol;c.fillRect(r-ch*.08,top+ch*.16,NL*.7,ch*.28);
-        }else{
-          const cdx=r-ch*.18;
-          c.strokeStyle='rgba(30,40,55,.5)';c.lineWidth=1.2;c.strokeRect(cdx,top+ch*.26,ch*.15,ch*.56);
-          c.fillStyle=winCol;c.fillRect(cdx+ch*.03,top+ch*.30,ch*.09,ch*.14);
+      if (i === 0) {
+        if (m.nose === 'B') {
+          c.fillStyle = '#141c24'; c.fillRect(r - ch * 0.15, top + ch * 0.12, NL * 0.95, ch * 0.38);
+          c.fillStyle = winCol; c.fillRect(r - ch * 0.08, top + ch * 0.16, NL * 0.7, ch * 0.28);
+        } else {
+          const cdx = r - ch * 0.18;
+          c.strokeStyle = 'rgba(30, 40, 55, 0.5)'; c.lineWidth = 1.2; c.strokeRect(cdx, top + ch * 0.26, ch * 0.15, ch * 0.56);
+          c.fillStyle = winCol; c.fillRect(cdx + ch * 0.03, top + ch * 0.30, ch * 0.09, ch * 0.14);
 
-          c.fillStyle='#121c28';c.beginPath();
-          if(m.nose=='E7'||m.nose=='P500'){
-            c.moveTo(r+NL*.05,top+ch*.10);c.quadraticCurveTo(r+NL*.28,top+ch*.08,r+NL*.48,top+ch*.26);
-            c.lineTo(r+NL*.42,top+ch*.34);c.quadraticCurveTo(r+NL*.22,top+ch*.22,r+NL*.05,top+ch*.24);
-          }else if(m.nose=='E5'||m.nose=='E6'||m.nose=='ALFA'||m.nose=='MAG'){
-            c.moveTo(r+NL*.02,top+ch*.08);c.quadraticCurveTo(r+NL*.18,top+ch*.08,r+NL*.34,top+ch*.36);
-            c.lineTo(r+NL*.26,top+ch*.41);c.quadraticCurveTo(r+NL*.14,top+ch*.24,r+NL*.02,top+ch*.23);
-          }else{
-            c.moveTo(r+NL*.06,top+ch*.12);c.quadraticCurveTo(r+NL*.24,top+ch*.14,r+NL*.44,top+ch*.36);
-            c.lineTo(r+NL*.36,top+ch*.42);c.quadraticCurveTo(r+NL*.18,top+ch*.28,r+NL*.06,top+ch*.26);
+          c.fillStyle = '#121c28'; c.beginPath();
+          if (m.nose === 'E7' || m.nose === 'P500') {
+            c.moveTo(r + NL * 0.05, top + ch * 0.10); c.quadraticCurveTo(r + NL * 0.28, top + ch * 0.08, r + NL * 0.48, top + ch * 0.26);
+            c.lineTo(r + NL * 0.42, top + ch * 0.34); c.quadraticCurveTo(r + NL * 0.22, top + ch * 0.22, r + NL * 0.05, top + ch * 0.24);
+          } else if (m.nose === 'E5' || m.nose === 'E6' || m.nose === 'ALFA' || m.nose === 'MAG') {
+            c.moveTo(r + NL * 0.02, top + ch * 0.08); c.quadraticCurveTo(r + NL * 0.18, top + ch * 0.08, r + NL * 0.34, top + ch * 0.36);
+            c.lineTo(r + NL * 0.26, top + ch * 0.41); c.quadraticCurveTo(r + NL * 0.14, top + ch * 0.24, r + NL * 0.02, top + ch * 0.23);
+          } else {
+            c.moveTo(r + NL * 0.06, top + ch * 0.12); c.quadraticCurveTo(r + NL * 0.24, top + ch * 0.14, r + NL * 0.44, top + ch * 0.36);
+            c.lineTo(r + NL * 0.36, top + ch * 0.42); c.quadraticCurveTo(r + NL * 0.18, top + ch * 0.28, r + NL * 0.06, top + ch * 0.26);
           }
-          c.closePath();c.fill();
-          c.strokeStyle='rgba(190,225,255,.55)';c.lineWidth=2;c.stroke();
-
-          c.fillStyle=m.st1;c.beginPath();c.roundRect(r-ch*.55,top+ch*.33,ch*.26,ch*.12,2);c.fill();
+          c.closePath(); c.fill();
+          c.strokeStyle = 'rgba(190, 225, 255, 0.55)'; c.lineWidth = 2; c.stroke();
+          c.fillStyle = m.st1; c.beginPath(); c.roundRect(r - ch * 0.55, top + ch * 0.33, ch * 0.26, ch * 0.12, 2); c.fill();
         }
-        const lx = m.nose=='B' ? hx-ch*.06 : r+NL*.66;
-        const ly = m.nose=='E7' ? top+ch*.46 : top+ch*.58;
-        c.fillStyle='#222';c.beginPath();c.ellipse(lx,ly,ch*.11,ch*.055,.25,0,7);c.fill();
-        c.fillStyle='#fffbe0';c.beginPath();c.ellipse(lx+ch*.02,ly,ch*.07,ch*.038,.25,0,7);c.fill();
+        const lx = m.nose === 'B' ? hx - ch * 0.06 : r + NL * 0.66;
+        const ly = m.nose === 'E7' ? top + ch * 0.46 : top + ch * 0.58;
+        c.fillStyle = '#222'; c.beginPath(); c.ellipse(lx, ly, ch * 0.11, ch * 0.055, 0.25, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#fffbe0'; c.beginPath(); c.ellipse(lx + ch * 0.02, ly, ch * 0.07, ch * 0.038, 0.25, 0, Math.PI * 2); c.fill();
 
-        c.strokeStyle='rgba(0,0,0,.28)';c.lineWidth=1.2;
-        c.beginPath();c.moveTo(hx-ch*.35,top+ch*.68);c.lineTo(hx-ch*.32,top+ch*.95);c.stroke();
+        c.strokeStyle = 'rgba(0, 0, 0, 0.28)'; c.lineWidth = 1.2;
+        c.beginPath(); c.moveTo(hx - ch * 0.35, top + ch * 0.68); c.lineTo(hx - ch * 0.32, top + ch * 0.95); c.stroke();
       }
     }
     c.restore();
 
     c.save();
-    if(i==0)traceHeadPath(c,m.nose,l,r,NL,top,ch);
-    else{c.beginPath();c.roundRect(l,top,cw,ch,[ch*.05,ch*.05,0,0])}
-    c.strokeStyle=sil?'#000':'rgba(20,30,45,.32)';c.lineWidth=1.4;c.stroke();
+    if (i === 0) traceHeadPath(c, m.nose, l, r, NL, top, ch);
+    else { c.beginPath(); c.roundRect(l, top, cw, ch, [ch * 0.05, ch * 0.05, 0, 0]); }
+    c.strokeStyle = sil ? '#000' : 'rgba(20, 30, 45, 0.32)'; c.lineWidth = 1.4; c.stroke();
     c.restore();
 
-    if(!sil&&m.trk!='M'&&(i==1||i==3)){
-      const px=l+cw*.5;
-      c.fillStyle=m.roof;c.fillRect(px-ch*.26,top-ch*.06,ch*.52,ch*.07);
-      c.strokeStyle='#3a424e';c.lineWidth=ch*.026;c.lineCap='round';c.lineJoin='round';
-      c.beginPath();c.moveTo(px-ch*.12,top-ch*.04);c.lineTo(px+ch*.16,top-ch*.18);c.lineTo(px-ch*.04,top-ch*.31);c.stroke();
-      c.strokeStyle='#b87333';c.lineWidth=ch*.032;
-      c.beginPath();c.moveTo(px-ch*.18,top-ch*.31);c.lineTo(px+ch*.10,top-ch*.31);c.stroke();
+    if (!sil && m.trk !== 'M' && (i === 1 || i === 3)) {
+      const px = l + cw * 0.5;
+      c.fillStyle = m.roof; c.fillRect(px - ch * 0.26, top - ch * 0.06, ch * 0.52, ch * 0.07);
+      c.strokeStyle = '#3a424e'; c.lineWidth = ch * 0.026; c.lineCap = 'round'; c.lineJoin = 'round';
+      c.beginPath(); c.moveTo(px - ch * 0.12, top - ch * 0.04); c.lineTo(px + ch * 0.16, top - ch * 0.18); c.lineTo(px - ch * 0.04, top - ch * 0.31); c.stroke();
+      c.strokeStyle = '#b87333'; c.lineWidth = ch * 0.032;
+      c.beginPath(); c.moveTo(px - ch * 0.18, top - ch * 0.31); c.lineTo(px + ch * 0.10, top - ch * 0.31); c.stroke();
     }
   }
 
-  if(!sil&&(N>.15||o.glow)){
-    const ly=top+ch*.56;
-    const q=c.createRadialGradient(hx,ly,0,hx+ch*1.2,ly,ch*2.2);
-    q.addColorStop(0,'rgba(255,248,195,.75)');q.addColorStop(1,'rgba(255,248,195,0)');
-    c.fillStyle=q;c.fillRect(hx-ch*.8,ly-ch*1.6,ch*3.6,ch*3.2);
+  if (!sil && (N > 0.15 || o.glow)) {
+    const ly = top + ch * 0.56;
+    const q = c.createRadialGradient(hx, ly, 0, hx + ch * 1.2, ly, ch * 2.2);
+    q.addColorStop(0, 'rgba(255, 248, 195, 0.75)'); q.addColorStop(1, 'rgba(255, 248, 195, 0)');
+    c.fillStyle = q; c.fillRect(hx - ch * 0.8, ly - ch * 1.6, ch * 3.6, ch * 3.2);
   }
 }
 
-// ===================== 車站小世界：特色旅客與站務員繪製 =====================
-// 繪製單一精緻小人物 (無臉孔極簡繪本風，附帶場景特色配件與緩慢步行/揮手動作)
-function drawPerson(c,p,platY,ch,t){
-  if(p.alpha<=0.02)return;
+// ===================== 車站小世界：特色旅客與站務員 =====================
+function drawPerson(c, p, platY, ch, t) {
+  if (p.alpha <= 0.02) return;
   c.save();
-  c.globalAlpha = cl(p.alpha,0,1);
-  const h = ch * 0.44 * (p.scale||1);
+  c.globalAlpha = clamp(p.alpha, 0, 1);
+  const h = ch * 0.44 * (p.scale || 1);
   const x = p.x, y = platY;
   const dir = p.dir || 1;
-  // 緩慢自然的步行擺動 (不奔跑、不跳躍)
-  const walkPhase = p.walking ? Math.sin(t*3.6 + p.seed)*0.22 : 0;
-  const bob = p.walking ? Math.abs(Math.sin(t*3.6 + p.seed))*1.2 : 0;
+  const walkPhase = p.walking ? Math.sin(t * 3.6 + p.seed) * 0.22 : 0;
+  const bob = p.walking ? Math.abs(Math.sin(t * 3.6 + p.seed)) * 1.2 : 0;
 
-  // 腳步與雙腿
-  c.strokeStyle='#1e293b';c.lineWidth=Math.max(2, h*0.11);c.lineCap='round';
+  c.strokeStyle = '#1e293b'; c.lineWidth = Math.max(2, h * 0.11); c.lineCap = 'round';
   c.beginPath();
-  c.moveTo(x-h*.07, y-h*.38);
-  c.lineTo(x-h*.07 - Math.sin(walkPhase)*h*.18, y);
-  c.moveTo(x+h*.07, y-h*.38);
-  c.lineTo(x+h*.07 + Math.sin(walkPhase)*h*.18, y);
+  c.moveTo(x - h * 0.07, y - h * 0.38); c.lineTo(x - h * 0.07 - Math.sin(walkPhase) * h * 0.18, y);
+  c.moveTo(x + h * 0.07, y - h * 0.38); c.lineTo(x + h * 0.07 + Math.sin(walkPhase) * h * 0.18, y);
   c.stroke();
 
-  // 場景特色背後配件 (登山大背包 / 滑雪板)
-  if(p.role=='hiker'){
-    // 登山大背包
-    c.fillStyle='#92400e';
-    c.beginPath();c.roundRect(x - dir*h*.28, y-h*.82-bob, h*.24, h*.42, 4);c.fill();
-    c.fillStyle='#f59e0b';
-    c.beginPath();c.roundRect(x - dir*h*.28, y-h*.86-bob, h*.24, h*.10, 3);c.fill();
-  }else if(p.role=='skier'){
-    // 斜背雙板滑雪板
-    c.save();
-    c.translate(x - dir*h*.12, y-h*.58-bob);
-    c.rotate(-dir*0.28);
-    c.fillStyle='#38bdf8';c.fillRect(-2, -h*.55, 4.5, h*1.05);
-    c.fillStyle='#0284c7';c.fillRect(-2, -h*.55, 4.5, h*.18);
+  if (p.role === 'hiker') {
+    c.fillStyle = '#92400e'; c.beginPath(); c.roundRect(x - dir * h * 0.28, y - h * 0.82 - bob, h * 0.24, h * 0.42, 4); c.fill();
+    c.fillStyle = '#f59e0b'; c.beginPath(); c.roundRect(x - dir * h * 0.28, y - h * 0.86 - bob, h * 0.24, h * 0.10, 3); c.fill();
+  } else if (p.role === 'skier') {
+    c.save(); c.translate(x - dir * h * 0.12, y - h * 0.58 - bob); c.rotate(-dir * 0.28);
+    c.fillStyle = '#38bdf8'; c.fillRect(-2, -h * 0.55, 4.5, h * 1.05);
+    c.fillStyle = '#0284c7'; c.fillRect(-2, -h * 0.55, 4.5, h * 0.18);
     c.restore();
   }
 
-  // 身體大衣/服裝
   c.fillStyle = p.color;
-  c.beginPath();
-  c.roundRect(x-h*.17, y-h*.78-bob, h*.34, h*.44, [h*.12,h*.12,3,3]);
-  c.fill();
+  c.beginPath(); c.roundRect(x - h * 0.17, y - h * 0.78 - bob, h * 0.34, h * 0.44, [h * 0.12, h * 0.12, 3, 3]); c.fill();
 
-  // 站務員專屬制服金釦與紅領帶細節
-  if(p.role=='staff'){
-    c.fillStyle='#fbbf24';
-    c.fillRect(x-h*.17, y-h*.56-bob, h*.34, 2);
+  if (p.role === 'staff') {
+    c.fillStyle = '#fbbf24'; c.fillRect(x - h * 0.17, y - h * 0.56 - bob, h * 0.34, 2);
   }
 
-  // 頭部與膚色
-  c.fillStyle='#fde68a';
-  c.beginPath();c.arc(x, y-h*.91-bob, h*.13, 0, Math.PI*2);c.fill();
+  c.fillStyle = '#fde68a'; c.beginPath(); c.arc(x, y - h * 0.91 - bob, h * 0.13, 0, Math.PI * 2); c.fill();
 
-  // 帽子與頭部配件
-  if(p.role=='staff'){
-    // 日本站務員深藍制帽 + 金色帽徽 + 白線
-    c.fillStyle='#1e3a8a';
-    c.fillRect(x-h*.14, y-h*1.08-bob, h*.28, h*.10);
-    c.fillStyle='#ffffff';
-    c.fillRect(x-h*.14, y-h*1.01-bob, h*.28, h*.025);
-    c.fillStyle='#172554';
-    c.fillRect(x-h*.16, y-h*.99-bob, h*.34, h*.03);
-  }else if(p.role=='hiker'){
-    // 登山遮陽圓盤帽
-    c.fillStyle='#78716c';
-    c.beginPath();c.ellipse(x, y-h*1.0-bob, h*.21, h*.045, 0, 0, 7);c.fill();
-    c.beginPath();c.arc(x, y-h*1.0-bob, h*.12, Math.PI, 0);c.fill();
-  }else if(p.role=='skier'){
-    // 北海道毛線球球帽 + 雪鏡
-    c.fillStyle='#e11d48';
-    c.beginPath();c.arc(x, y-h*.96-bob, h*.135, Math.PI, 0);c.fill();
-    c.fillStyle='#fff';c.beginPath();c.arc(x, y-h*1.12-bob, h*.05, 0, 7);c.fill();
-  }else if(p.role=='beach'){
-    // 海邊草帽
-    c.fillStyle='#fcd34d';
-    c.beginPath();c.ellipse(x, y-h*1.0-bob, h*.22, h*.045, 0, 0, 7);c.fill();
-    c.beginPath();c.arc(x, y-h*1.0-bob, h*.12, Math.PI, 0);c.fill();
-    c.fillStyle='#ef4444';c.fillRect(x-h*.11, y-h*1.02-bob, h*.22, h*.025);
-  }else{
-    // 柔和髮型
-    c.fillStyle='#334155';
-    c.beginPath();c.arc(x, y-h*.94-bob, h*.135, Math.PI*.9, Math.PI*2.1);c.fill();
+  if (p.role === 'staff') {
+    c.fillStyle = '#1e3a8a'; c.fillRect(x - h * 0.14, y - h * 1.08 - bob, h * 0.28, h * 0.10);
+    c.fillStyle = '#ffffff'; c.fillRect(x - h * 0.14, y - h * 1.01 - bob, h * 0.28, h * 0.025);
+    c.fillStyle = '#172554'; c.fillRect(x - h * 0.16, y - h * 0.99 - bob, h * 0.34, h * 0.03);
+  } else if (p.role === 'hiker') {
+    c.fillStyle = '#78716c'; c.beginPath(); c.ellipse(x, y - h * 1.0 - bob, h * 0.21, h * 0.045, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(x, y - h * 1.0 - bob, h * 0.12, Math.PI, 0); c.fill();
+  } else if (p.role === 'skier') {
+    c.fillStyle = '#e11d48'; c.beginPath(); c.arc(x, y - h * 0.96 - bob, h * 0.135, Math.PI, 0); c.fill();
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(x, y - h * 1.12 - bob, h * 0.05, 0, Math.PI * 2); c.fill();
+  } else if (p.role === 'beach') {
+    c.fillStyle = '#fcd34d'; c.beginPath(); c.ellipse(x, y - h * 1.0 - bob, h * 0.22, h * 0.045, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(x, y - h * 1.0 - bob, h * 0.12, Math.PI, 0); c.fill();
+    c.fillStyle = '#ef4444'; c.fillRect(x - h * 0.11, y - h * 1.02 - bob, h * 0.22, h * 0.025);
+  } else {
+    c.fillStyle = '#334155'; c.beginPath(); c.arc(x, y - h * 0.94 - bob, h * 0.135, Math.PI * 0.9, Math.PI * 2.1); c.fill();
   }
 
-  // 手臂與手持特色物品 / 緩慢揮手動畫
-  if(p.waving){
-    // 列車離站時：緩慢、溫柔地舉手揮別
-    const waveAng = -2.2 + Math.sin(t*3.2 + p.seed)*0.25;
-    const ax = x + dir*h*.12, ay = y-h*.72-bob;
-    const hx2 = ax + Math.cos(waveAng)*h*.26, hy2 = ay + Math.sin(waveAng)*h*.26;
-    c.strokeStyle = p.color; c.lineWidth = Math.max(2.2, h*.09);
-    c.beginPath();c.moveTo(ax,ay);c.lineTo(hx2,hy2);c.stroke();
-    // 站務員白手套 / 旅客手掌
-    c.fillStyle = p.role=='staff' ? '#ffffff' : '#fde68a';
-    c.beginPath();c.arc(hx2,hy2,h*.045,0,7);c.fill();
-  }else{
-    // 自然垂手與隨身物品
-    const handX = x + dir*h*.14 + Math.sin(walkPhase)*h*.08;
-    const handY = y - h*.48 - bob;
-    c.strokeStyle = p.color; c.lineWidth = Math.max(2, h*.09);
-    c.beginPath();c.moveTo(x+dir*h*.08, y-h*.70-bob);c.lineTo(handX, handY);c.stroke();
+  if (p.waving) {
+    const waveAng = -2.2 + Math.sin(t * 3.2 + p.seed) * 0.25;
+    const ax = x + dir * h * 0.12, ay = y - h * 0.72 - bob;
+    const hx2 = ax + Math.cos(waveAng) * h * 0.26, hy2 = ay + Math.sin(waveAng) * h * 0.26;
+    c.strokeStyle = p.color; c.lineWidth = Math.max(2.2, h * 0.09);
+    c.beginPath(); c.moveTo(ax, ay); c.lineTo(hx2, hy2); c.stroke();
+    c.fillStyle = p.role === 'staff' ? '#ffffff' : '#fde68a';
+    c.beginPath(); c.arc(hx2, hy2, h * 0.045, 0, Math.PI * 2); c.fill();
+  } else {
+    const handX = x + dir * h * 0.14 + Math.sin(walkPhase) * h * 0.08;
+    const handY = y - h * 0.48 - bob;
+    c.strokeStyle = p.color; c.lineWidth = Math.max(2, h * 0.09);
+    c.beginPath(); c.moveTo(x + dir * h * 0.08, y - h * 0.70 - bob); c.lineTo(handX, handY); c.stroke();
 
-    if(p.role=='hiker'){
-      // 登山杖
-      c.strokeStyle='#57534e';c.lineWidth=1.8;
-      c.beginPath();c.moveTo(handX+dir*h*.06, y-h*.68-bob);c.lineTo(handX+dir*h*.10, y);c.stroke();
-    }else if(p.role=='commuter'){
-      // 東京通勤公事包
-      c.fillStyle='#451a03';
-      c.beginPath();c.roundRect(handX-h*.11, handY, h*.22, h*.16, 2);c.fill();
-    }else if(p.role=='beach'){
-      // 海邊相機 / 小提袋
-      c.fillStyle='#0ea5e9';
-      c.beginPath();c.roundRect(handX-h*.08, handY, h*.16, h*.15, 3);c.fill();
-    }else if(p.role=='onsen'){
-      // 溫泉小竹籃
-      c.fillStyle='#d97706';
-      c.beginPath();c.roundRect(handX-h*.09, handY, h*.18, h*.14, 4);c.fill();
-    }else if(p.role=='star'){
-      // 銀河溫暖小提燈
-      c.fillStyle='#fef08a';
-      c.beginPath();c.arc(handX+dir*h*.06, handY+h*.06, h*.06, 0, 7);c.fill();
+    if (p.role === 'hiker') {
+      c.strokeStyle = '#57534e'; c.lineWidth = 1.8;
+      c.beginPath(); c.moveTo(handX + dir * h * 0.06, y - h * 0.68 - bob); c.lineTo(handX + dir * h * 0.10, y); c.stroke();
+    } else if (p.role === 'commuter') {
+      c.fillStyle = '#451a03'; c.beginPath(); c.roundRect(handX - h * 0.11, handY, h * 0.22, h * 0.16, 2); c.fill();
+    } else if (p.role === 'beach') {
+      c.fillStyle = '#0ea5e9'; c.beginPath(); c.roundRect(handX - h * 0.08, handY, h * 0.16, h * 0.15, 3); c.fill();
+    } else if (p.role === 'onsen') {
+      c.fillStyle = '#d97706'; c.beginPath(); c.roundRect(handX - h * 0.09, handY, h * 0.18, h * 0.14, 4); c.fill();
+    } else if (p.role === 'star') {
+      c.fillStyle = '#fef08a'; c.beginPath(); c.arc(handX + dir * h * 0.06, handY + h * 0.06, h * 0.06, 0, Math.PI * 2); c.fill();
     }
   }
   c.restore();
 }
 
-// ===================== 狀態管理與音效 =====================
-let seen=ld('ak_s',{}),cd=ld('ak_c',{}),cfg=ld('ak_cfg_v3',{}),customPhotos=ld('ak_ph',{});
-['goal','rate','dwellT','sceneT'].forEach(i=>{if(cfg[i]!=null && $('#'+i).querySelector(`option[value="${cfg[i]}"],input`))$('#'+i).value=cfg[i]});
-if(cfg.snd!=null)$('#snd').checked=cfg.snd;
-
-const st={
-  run:0,mic:0,lvl:0,acc:0,quiet:0,loud:0,loudT:0,qs:0,scT:0,
-  tr:null,arm:0,off:0,sim:0,sc:0,first:1,page:null,fade:null,pend:null,t:0,cue:0,ccTimer:0,
-  pax:[], // 月台上的少量旅客陣列
-  staff:{x:300, dir:-1, walking:false, waving:false, alpha:1, role:'staff', color:'#1e3a8a', seed:7, scale:1.04}
-};
-const bd=b=>[...Array(10).keys()].every(k=>seen[b*10+k]),nd=()=>[0,1,2].filter(bd).length,unl=()=>Math.min(6,1+2*nd());
-
-// 初始化月台上候車的 2 位安靜旅客
-function initWaitingPassengers(){
+function initWaitingPassengers() {
   const scObj = SCENES[st.sc] || SCENES[0];
-  st.pax = [0,1].map(k=>({
-    x: W*(0.28 + k*0.24),
-    targetX: W*(0.28 + k*0.24),
+  st.pax = [0, 1].map(k => ({
+    x: W * (0.28 + k * 0.24),
+    targetX: W * (0.28 + k * 0.24),
     dir: 1,
     walking: false,
     waving: false,
     alpha: 1,
-    state: 'wait_board', // 等待上車
-    delay: 1.8 + k*2.4,
+    state: 'wait_board',
+    delay: 1.8 + k * 2.4,
     role: scObj.role,
     color: scObj.colors[k % scObj.colors.length],
-    seed: k*13 + 1
+    seed: k * 13 + 1
   }));
-  st.staff.x = W*0.79;
+  st.staff.x = W * 0.78;
   st.staff.dir = -1;
+  st.staff.waving = false;
+  st.staff.walking = false;
 }
 
-// 執行中門檻（與 UI 同步，但不因拖曳寫盤而卡死）
-st.goal = +($('#goal').value || 30);
-
-function refreshGoalButtons(){
-  const g = String(Math.round(st.goal));
-  document.querySelectorAll('[data-g]').forEach(b=>{
-    const on = b.getAttribute('data-g') === g;
-    b.style.background = on ? '#2e7d32' : '';
-    b.style.color = on ? '#fff' : '';
+function repositionPlatformEntities() {
+  st.pax.forEach((p, idx) => {
+    p.x = clamp(p.x, W * 0.15, W * 0.80);
+    p.targetX = clamp(p.targetX, W * 0.15, W * 0.80);
   });
-  const gl = $('#goalLive');
-  if(gl) gl.textContent = g;
-  // 音量計門檻線
-  const volGoal = $('#volGoal');
-  if(volGoal) volGoal.style.left = Math.max(0, Math.min(100, (st.goal/50)*100)) + '%';
-}
-
-function applyGoalFromUI(){
-  const v = +$('#goal').value;
-  if(!isFinite(v)) return;
-  st.goal = cl(v, 8, 50);
-  // 調門檻時清掉累積，避免突然紅燈或卡住
-  st.acc = 0;
-  st.loud = 0;
-  st.quiet = 1;
-  refreshGoalButtons();
-}
-
-function saveCfg(opts){
-  opts = opts || {};
-  try{
-    applyGoalFromUI();
-    // 風景「立刻切換」只在使用者主動儲存／變更時處理
-    if($('#sceneT').value === '0'){
-      $('#sceneT').value = '180';
-      if(typeof go2 === 'function') go2((st.sc+1)%6);
-    }
-    ['goal','rate','dwellT','sceneT'].forEach(i=>{ cfg[i] = $('#'+i).value; });
-    cfg.snd = $('#snd').checked;
-    cfg.goal = String(Math.round(st.goal));
-    sv('ak_cfg_v3', cfg);
-    refreshGoalButtons();
-    if(opts.toast){
-      const h = $('#saveHint');
-      if(h){ h.textContent = '✅ 設定已儲存'; setTimeout(()=>{ if(h.textContent.indexOf('已儲存')>=0) h.textContent=''; }, 2500); }
-      const m = $('#msg');
-      if(m) m.textContent = '✅ 設定已儲存（門檻 ' + Math.round(st.goal) + '）';
-    }
-  }catch(e){
-    console.warn('saveCfg', e);
-    const h = $('#saveHint');
-    if(h) h.textContent = '⚠️ 儲存失敗，請再試一次';
+  st.staff.x = clamp(st.staff.x, W * 0.70, W * 0.84);
+  if (st.tr && st.tr.ph === 'stop') {
+    st.tr.x = isPortrait ? W * 0.92 : W * 0.86;
   }
 }
 
-// 拖曳門檻：只即時預覽，不寫 localStorage（避免 iOS 拖曳時卡死／壞掉）
-// 每次操作都 kickAudio，避免 iOS 在 UI gesture 後掛起麥克風輸入
-const goalEl = $('#goal');
-if(goalEl){
-  goalEl.addEventListener('input', ()=>{
-    st.goal = cl(+$('#goal').value || 30, 8, 50);
-    st.acc = 0; st.loud = 0;
-    refreshGoalButtons();
-    kickAudio();
-  }, {passive:true});
-  goalEl.addEventListener('change', ()=>{
-    saveCfg({toast:false});
-    kickAudio();
-  }, {passive:true});
+// ===================== 音訊架構、環境音校正與 10 秒自動恢復 (BUG-002 ~ BUG-006) =====================
+let audioCtx = null;
+let analyserNode = null;
+let micStream = null;
+let micSource = null;
+let silentKeepaliveGain = null;
+let freqDataBuf = null;
+const floatTimeBuf = new Float32Array(2048);
+const byteTimeBuf = new Uint8Array(2048);
+const volHistory = [];
+const VOL_HIST_LEN = 5;
+
+let lastValidAudioTime = performance.now();
+let lastVolumeUIUpdateTime = performance.now();
+let isRecoveringAudio = false;
+let audioErrorCount = 0;
+let lastAudioErrorMsg = 'None';
+let audioSystemStoppedAlert = false;
+
+function logAudioError(tag, err) {
+  audioErrorCount++;
+  const msg = err && err.message ? err.message : String(err);
+  lastAudioErrorMsg = `[${tag}] ${msg}`;
+  console.warn('[AudioSystem]', lastAudioErrorMsg);
 }
 
-// 其他下拉／勾選：變更即存（不含 goal 連續 input）
-document.querySelectorAll('#set select, #set input[type=checkbox]').forEach(e=>{
-  e.addEventListener('change', ()=>{
-    saveCfg({toast:false});
-    kickAudio();
-  });
-});
-
-// 嚴格／適中／寬鬆
-document.querySelectorAll('[data-g]').forEach(b=>{
-  b.addEventListener('click', ev=>{
-    ev.preventDefault();
-    ev.stopPropagation();
-    const g = +b.getAttribute('data-g');
-    $('#goal').value = String(g);
-    st.goal = g;
-    st.acc = 0; st.loud = 0; st.quiet = 1;
-    refreshGoalButtons();
-    saveCfg({toast:true});
-    kickAudio();
-  });
-});
-
-const saveBtn = $('#saveCfgBtn');
-if(saveBtn) saveBtn.addEventListener('click', ev=>{
-  ev.preventDefault();
-  saveCfg({toast:true});
-  kickAudio();
-});
-
-// 初始套用（不觸發風景切換的 go2 風險：sceneT 若為 0 先改回）
-if($('#sceneT') && $('#sceneT').value === '0') $('#sceneT').value = '180';
-if(cfg.goal != null){ $('#goal').value = cfg.goal; st.goal = +cfg.goal; }
-applyGoalFromUI();
-refreshGoalButtons();
-
-$('#gear').onclick = ()=>{
-  $('#set').hidden = !$('#set').hidden;
-  if(!$('#set').hidden) refreshGoalButtons();
-  kickAudio();
-};
-// 長按齒輪 0.8 秒開啟 Debug 面板
-(function(){
-  let t0=0, timer=null;
-  const g=$('#gear');
-  if(!g) return;
-  const start=()=>{ t0=performance.now(); timer=setTimeout(()=>{
-    const d=$('#dbg'); if(d){ d.classList.toggle('on'); updateDebugPanel(); }
-  }, 800); };
-  const cancel=()=>{ clearTimeout(timer); };
-  g.addEventListener('touchstart', start, {passive:true});
-  g.addEventListener('touchend', cancel);
-  g.addEventListener('touchcancel', cancel);
-  g.addEventListener('mousedown', start);
-  g.addEventListener('mouseup', cancel);
-  g.addEventListener('mouseleave', cancel);
-})();
-
-function updateDebugPanel(){
-  const d=$('#dbg'); if(!d || !d.classList.contains('on')) return;
-  const ac = st.ac;
-  const sfx = st.sfx;
-  const tracks = micStream ? micStream.getAudioTracks() : [];
-  const live = tracks.filter(t=>t.readyState==='live').length;
-  const acState = ac ? ac.state : 'none';
-  const micState = !st.mic ? 'off' : (live ? 'Connected' : 'Disconnected');
-  const anState = an ? 'Running' : 'Stopped';
-  let phase = 'Listening';
-  if(st.loud) phase = 'Noise';
-  else if(!st.tr) phase = st.qs>0 ? 'WaitingTrain' : 'Listening';
-  else if(st.tr.ph==='in') phase = 'TrainIn';
-  else if(st.tr.ph==='stop') phase = 'StationStop';
-  else if(st.tr.ph==='out') phase = 'TrainOut';
-  else if(st.tr.ph==='back') phase = 'TrainBack';
-  const goal = st.goal||+$('#goal').value||30;
-  d.innerHTML =
-    'AudioContext: <span class="'+(acState==='running'?'ok':(acState==='suspended'?'warn':'bad'))+'">'+acState+'</span>\n'+
-    'SFX Context: '+(sfx?sfx.state:'none')+'\n'+
-    'Microphone: <span class="'+(live?'ok':'bad')+'">'+micState+'</span> ('+live+' live)\n'+
-    'Analyser: <span class="'+(an?'ok':'bad')+'">'+anState+'</span>\n'+
-    'Volume: '+Math.round(st.lvlFast||st.lvl||0)+'  rawOff: '+(st.off||0).toFixed?.(1)+'\n'+
-    'Threshold: '+goal+'\n'+
-    'Quiet qs: '+(st.qs||0).toFixed(1)+'s  loudT: '+(st.loudT||0).toFixed(1)+'\n'+
-    'State: '+phase+'\n'+
-    'Trains: '+trainCount+'  silentFrames: '+silentFrames+'\n'+
-    'WakeLock: '+(wakeLock?'held':'off')+'\n'+
-    'Errors: '+micErrCount+'  last: '+(lastMicErr||'-');
+// 單一常駐 AudioContext（音效與麥克風共用，避免 iOS 雙 Context 衝突中斷）
+function getOrCreateAudioContext() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  if (!audioCtx || audioCtx.state === 'closed') {
+    audioCtx = new AC();
+  }
+  if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+    audioCtx.resume().catch(e => logAudioError('resume', e));
+  }
+  return audioCtx;
 }
 
-
-// 柔和木琴風車站音樂鈴
-// 【根本修復】音效必須使用「獨立」AudioContext，絕不可與麥克風共用同一個。
-// iOS Safari 在同一個 context 上播 Oscillator 後，MediaStream 輸入路徑常永久失效，
-// 表現為：第一班車 chime 後分貝條卡住、不再進站。
-function chime(freqs){
-  if(!$('#snd').checked)return;
-  try{
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if(!st.sfx || st.sfx.state === 'closed'){
-      st.sfx = new AC();
-    }
-    const a = st.sfx;
-    a.resume().catch(()=>{});
-    (Array.isArray(freqs)?freqs:[freqs]).forEach((f,idx)=>{
-      const o=a.createOscillator(),v=a.createGain();
-      o.type='sine';o.frequency.value=f;o.connect(v);v.connect(a.destination);
-      const t0=a.currentTime+idx*.22;
-      v.gain.setValueAtTime(.05,t0);v.gain.exponentialRampToValueAtTime(.0008,t0+.95);
-      o.start(t0);o.stop(t0+.95);
+// 溫和木琴音效（共用同一個常駐 AudioContext）
+function chime(freqs) {
+  if (!$('#snd').checked) return;
+  try {
+    const a = getOrCreateAudioContext();
+    if (!a) return;
+    const list = Array.isArray(freqs) ? freqs : [freqs];
+    list.forEach((f, idx) => {
+      const o = a.createOscillator();
+      const v = a.createGain();
+      o.type = 'sine';
+      o.frequency.value = f;
+      o.connect(v);
+      v.connect(a.destination);
+      const t0 = a.currentTime + idx * 0.22;
+      v.gain.setValueAtTime(0.04, t0);
+      v.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.90);
+      o.start(t0);
+      o.stop(t0 + 0.92);
     });
-  }catch(e){
-    dbgErr('chime', e);
+  } catch (e) {
+    logAudioError('chime', e);
   }
 }
 
-// ===================== 麥克風系統（長時間穩定版） =====================
-// 設計原則：
-// - 麥克風 AudioContext (st.ac) 與音效 context (st.sfx) 完全分離
-// - 絕不在沒有新 stream 時 stop 舊 track
-// - 不頻繁 disconnect/reconnect
-// - update 迴圈全程 try/catch，任何錯誤不得中斷 rAF
-let an = null, micStream = null, micSource = null, keepAliveGain = null, freqBuf = null;
-let silentOsc = null, silentGain = null;
-const timeBuf = new Float32Array(2048);
-const byteBuf = new Uint8Array(2048);
-const lvlHist = [];
-const LVL_HIST_N = 7;
-let calBusy = false;
-let adaptQuietT = 0;
-let lastMicOk = 0;
-let lastMicKick = 0;
-let micRecoverBusy = false;
-let silentFrames = 0;
-let micErrCount = 0;
-let lastMicErr = '';
-let trainCount = 0;
-let wakeLock = null;
+async function setupMicrophoneGraph(forceNewStream = false) {
+  const a = getOrCreateAudioContext();
+  if (!a) throw new Error('Web Audio API not supported');
+  await a.resume().catch(() => {});
 
-function dbgErr(tag, e){
-  micErrCount++;
-  lastMicErr = tag + ': ' + (e && e.message ? e.message : String(e));
-  console.warn('[mic]', lastMicErr);
-}
-
-function ensureAudioRunning(){
-  const a = st.ac;
-  if(!a) return Promise.resolve();
-  if(a.state === 'suspended' || a.state === 'interrupted'){
-    return a.resume().catch(e=>dbgErr('resume', e));
-  }
-  return Promise.resolve();
-}
-
-function ensureSilentKeepalive(){
-  const a = st.ac;
-  if(!a || silentOsc) return;
-  try{
-    silentOsc = a.createOscillator();
-    silentGain = a.createGain();
-    silentGain.gain.value = 0.00001;
-    silentOsc.frequency.value = 20;
-    silentOsc.connect(silentGain);
-    silentGain.connect(a.destination);
-    silentOsc.start();
-  }catch(e){
-    silentOsc = null; silentGain = null;
-    dbgErr('keepalive', e);
-  }
-}
-
-function kickAudio(){
-  lastMicKick = performance.now();
-  try{
-    ensureAudioRunning();
-    ensureSilentKeepalive();
-    if(micStream){
-      micStream.getAudioTracks().forEach(t=>{
-        if(t.readyState === 'live') t.enabled = true;
-      });
-    }
-  }catch(e){ dbgErr('kick', e); }
-}
-
-/** 僅在 graph 真正失效時重建；不 clone、不 stop 原始 track */
-function softReconnectMic(){
-  if(!micStream || !st.ac || micRecoverBusy) return false;
-  const tracks = micStream.getAudioTracks().filter(t=>t.readyState==='live');
-  if(!tracks.length) return false;
-  micRecoverBusy = true;
-  try{
-    if(micSource){ try{ micSource.disconnect(); }catch(e){} }
-    if(keepAliveGain){ try{ keepAliveGain.disconnect(); }catch(e){} }
-    an = st.ac.createAnalyser();
-    an.fftSize = 2048;
-    an.smoothingTimeConstant = 0.25;
-    an.minDecibels = -90;
-    an.maxDecibels = -10;
-    micSource = st.ac.createMediaStreamSource(micStream);
-    micSource.connect(an);
-    keepAliveGain = st.ac.createGain();
-    keepAliveGain.gain.value = 0;
-    micSource.connect(keepAliveGain);
-    keepAliveGain.connect(st.ac.destination);
-    ensureSilentKeepalive();
-    st.mic = 1;
-    lastMicOk = performance.now();
-    silentFrames = 0;
-    micRecoverBusy = false;
-    return true;
-  }catch(e){
-    micRecoverBusy = false;
-    dbgErr('softReconnect', e);
-    return false;
-  }
-}
-
-/** 螢幕常亮（家長長時間掛機） */
-async function requestWakeLock(){
-  try{
-    if(!('wakeLock' in navigator)) return false;
-    wakeLock = await navigator.wakeLock.request('screen');
-    wakeLock.addEventListener('release', ()=>{ wakeLock = null; });
-    return true;
-  }catch(e){
-    dbgErr('wakeLock', e);
-    return false;
-  }
-}
-document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState === 'visible'){
-    ensureAudioRunning();
-    kickAudio();
-    if(st.run) requestWakeLock();
-  }
-});
-
-// 回傳 0~50 的原始音量（尚未扣底噪）
-function rawInstant(){
-  if(!an) return 0;
-  try{
-    ensureAudioRunning();
-    // 方法 A：時間域 RMS
-    an.getFloatTimeDomainData(timeBuf);
-    let sum = 0, peak = 0;
-    for(let i = 0; i < timeBuf.length; i++){
-      const v = timeBuf[i];
-      sum += v * v;
-      const av = v < 0 ? -v : v;
-      if(av > peak) peak = av;
-    }
-    const rms = Math.sqrt(sum / timeBuf.length) || 1e-8;
-
-    // 方法 B：位元組時間域
-    an.getByteTimeDomainData(byteBuf);
-    let bSum = 0, bPeak = 0;
-    let allSame = true;
-    const b0 = byteBuf[0];
-    for(let i = 0; i < byteBuf.length; i++){
-      const d = (byteBuf[i] - 128) / 128;
-      bSum += d * d;
-      const ad = d < 0 ? -d : d;
-      if(ad > bPeak) bPeak = ad;
-      if(byteBuf[i] !== b0) allSame = false;
-    }
-    const bRms = Math.sqrt(bSum / byteBuf.length) || 1e-8;
-
-    if(allSame && b0 === 128){
-      silentFrames++;
-    }else{
-      silentFrames = 0;
-      lastMicOk = performance.now();
-    }
-
-    // 方法 C：頻譜能量
-    if(!freqBuf || freqBuf.length !== an.frequencyBinCount){
-      freqBuf = new Uint8Array(an.frequencyBinCount);
-    }
-    an.getByteFrequencyData(freqBuf);
-    const binHz = (st.ac && st.ac.sampleRate ? st.ac.sampleRate : 44100) / an.fftSize;
-    let fSum = 0, fN = 0;
-    for(let i = 0; i < freqBuf.length; i++){
-      const hz = i * binHz;
-      if(hz >= 150 && hz <= 4500){
-        fSum += freqBuf[i];
-        fN++;
+  const hasLiveTrack = micStream && micStream.getAudioTracks().some(t => t.readyState === 'live' && !t.muted);
+  if (forceNewStream || !hasLiveTrack) {
+    const constraintsList = [
+      { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } },
+      { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } },
+      { audio: true }
+    ];
+    let newStream = null, lastErr = null;
+    for (const c of constraintsList) {
+      try {
+        newStream = await navigator.mediaDevices.getUserMedia(c);
+        if (newStream) break;
+      } catch (e) {
+        lastErr = e;
       }
     }
-    const fAvg = fN ? fSum / fN : 0;
+    if (!newStream) throw lastErr || new Error('getUserMedia failed');
 
-    const lvlRms = cl((20 * Math.log10(Math.max(rms, bRms, 1e-8)) + 90) * 50 / 60, 0, 50);
-    const lvlPeak = cl((20 * Math.log10(Math.max(peak, bPeak, 1e-8)) + 80) * 50 / 55, 0, 50);
-    const lvlFreq = cl(fAvg * 50 / 180, 0, 50);
+    const oldStream = micStream;
+    micStream = newStream;
+    micStream.getAudioTracks().forEach(t => {
+      t.enabled = true;
+      t.onended = () => {
+        logAudioError('track.onended', 'Microphone track ended unexpectedly');
+      };
+    });
 
-    const merged = Math.max(lvlRms, lvlPeak * 0.85, lvlFreq);
-    if(merged > 0.5) lastMicOk = performance.now();
-    return merged;
-  }catch(e){
-    dbgErr('rawInstant', e);
-    silentFrames += 5;
+    if (oldStream && oldStream !== newStream) {
+      oldStream.getTracks().forEach(t => { try { t.stop(); } catch (e) {} });
+    }
+  }
+
+  try { if (micSource) micSource.disconnect(); } catch (e) {}
+  try { if (silentKeepaliveGain) silentKeepaliveGain.disconnect(); } catch (e) {}
+
+  analyserNode = a.createAnalyser();
+  analyserNode.fftSize = 2048;
+  analyserNode.smoothingTimeConstant = 0.22;
+  analyserNode.minDecibels = -90;
+  analyserNode.maxDecibels = -10;
+
+  micSource = a.createMediaStreamSource(micStream);
+  micSource.connect(analyserNode);
+
+  // 靜音 Keep-Alive 節點連接至 destination，確保 iOS WebKit 不會因為無輸出而把輸入管線休眠
+  silentKeepaliveGain = a.createGain();
+  silentKeepaliveGain.gain.value = 0;
+  analyserNode.connect(silentKeepaliveGain);
+  silentKeepaliveGain.connect(a.destination);
+
+  st.mic = true;
+  audioSystemStoppedAlert = false;
+  lastValidAudioTime = performance.now();
+  return true;
+}
+
+// BUG-005：麥克風自動恢復機制（當異常超過 10 秒時自動重建 AudioContext -> AnalyserNode -> 重新取得麥克風）
+async function recoverAudioSystem(reason) {
+  if (isRecoveringAudio) return;
+  isRecoveringAudio = true;
+  audioSystemStoppedAlert = true;
+  logAudioError('AutoRecover', reason);
+  try {
+    if (audioCtx && audioCtx.state === 'closed') {
+      audioCtx = null;
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!audioCtx) {
+      audioCtx = new AC();
+    } else if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+      await audioCtx.resume().catch(() => {});
+    }
+    await setupMicrophoneGraph(true);
+    lastValidAudioTime = performance.now();
+    audioSystemStoppedAlert = false;
+    $('#msg').textContent = '🔄 音訊系統已自動恢復監聽';
+  } catch (e) {
+    logAudioError('RecoverFailed', e);
+  } finally {
+    isRecoveringAudio = false;
+  }
+}
+
+// BUG-003：安全音訊偵測（無論吶喊、拍手、破音多大，絕不產生 NaN 或當機）
+function detectVolume() {
+  if (!st.mic || !analyserNode || !audioCtx) {
+    return st.sim ? 78 : (12 + Math.sin(performance.now() * 0.003) * 1.5);
+  }
+  try {
+    if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+      audioCtx.resume().catch(() => {});
+    }
+
+    // 1. Float32 時間域取樣
+    let fSum = 0, fPeak = 0, hasNonZeroFloat = false;
+    try {
+      analyserNode.getFloatTimeDomainData(floatTimeBuf);
+      for (let i = 0; i < floatTimeBuf.length; i++) {
+        const val = floatTimeBuf[i];
+        if (!Number.isFinite(val)) continue;
+        if (val !== 0) hasNonZeroFloat = true;
+        const clampedVal = clamp(val, -1.0, 1.0);
+        fSum += clampedVal * clampedVal;
+        const absV = Math.abs(clampedVal);
+        if (absV > fPeak) fPeak = absV;
+      }
+    } catch (e) {}
+    const fRms = Math.sqrt(fSum / floatTimeBuf.length);
+
+    // 2. Uint8 時間域取樣（相容所有舊款或特殊行動裝置）
+    analyserNode.getByteTimeDomainData(byteTimeBuf);
+    let bSum = 0, bPeak = 0, hasWaveVariation = false;
+    const firstByte = byteTimeBuf[0];
+    for (let i = 0; i < byteTimeBuf.length; i++) {
+      const b = byteTimeBuf[i];
+      if (b !== firstByte) hasWaveVariation = true;
+      const norm = (b - 128) / 128;
+      bSum += norm * norm;
+      const absB = Math.abs(norm);
+      if (absB > bPeak) bPeak = absB;
+    }
+    const bRms = Math.sqrt(bSum / byteTimeBuf.length);
+
+    // 3. 頻域能量（人聲與拍手頻段 120Hz ~ 5000Hz）
+    if (!freqDataBuf || freqDataBuf.length !== analyserNode.frequencyBinCount) {
+      freqDataBuf = new Uint8Array(analyserNode.frequencyBinCount);
+    }
+    analyserNode.getByteFrequencyData(freqDataBuf);
+    let freqEnergySum = 0, freqCount = 0;
+    const sampleRate = (audioCtx && audioCtx.sampleRate) ? audioCtx.sampleRate : 44100;
+    const binHz = sampleRate / analyserNode.fftSize;
+    for (let i = 0; i < freqDataBuf.length; i++) {
+      const hz = i * binHz;
+      if (hz >= 120 && hz <= 5000) {
+        freqEnergySum += freqDataBuf[i];
+        freqCount++;
+      }
+    }
+    const freqAvg = freqCount > 0 ? (freqEnergySum / freqCount) : 0;
+
+    // 只要硬體有微小電子底噪波動或非全零訊號，即更新有效時間戳記
+    if (hasNonZeroFloat || hasWaveVariation || freqAvg > 0) {
+      lastValidAudioTime = performance.now();
+    }
+
+    const combinedRms = Math.max(fRms, bRms, 1e-7);
+    const combinedPeak = Math.max(fPeak, bPeak, 1e-7);
+
+    // 將 RMS、Peak、頻譜換算為 0 ~ 100 的直覺分貝刻度
+    const dbFromRms = clamp((20 * Math.log10(combinedRms) + 82) * 1.35, 0, 100);
+    const dbFromPeak = clamp((20 * Math.log10(combinedPeak) + 72) * 1.30, 0, 100);
+    const dbFromFreq = clamp(freqAvg * 0.62, 0, 100);
+
+    const rawDb = clamp(Math.max(dbFromRms, dbFromPeak * 0.9, dbFromFreq), 0, 100);
+    volHistory.push(rawDb);
+    if (volHistory.length > VOL_HIST_LEN) volHistory.shift();
+
+    // 取近期較高反應值，確保拍手與大吼瞬間立刻反映，同時過濾單一雜訊點
+    const sorted = volHistory.slice().sort((a, b) => a - b);
+    const pickIdx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.65));
+    const result = sorted[pickIdx];
+    return Number.isFinite(result) ? clamp(result, 0, 100) : 0;
+  } catch (e) {
+    logAudioError('detectVolume', e);
     return 0;
   }
 }
 
-function median(arr){
-  const a = arr.slice().sort((x,y)=>x-y);
-  const m = a.length >> 1;
-  return a.length % 2 ? a[m] : (a[m-1] + a[m]) * 0.5;
+// BUG-006：開始 5 秒環境噪音自動校正
+function startEnvironmentCalibration() {
+  st.calibrating = true;
+  st.calibStartTime = performance.now();
+  st.calibSamples = [];
+  $('#msg').textContent = '🎚 正在進行 5 秒環境音自動校正…請保持日常安靜';
 }
 
-function raw(){
-  const v = rawInstant();
-  lvlHist.push(v);
-  if(lvlHist.length > LVL_HIST_N) lvlHist.shift();
-  // 用偏高百分位，讓大喊更容易被看到（抑制極短尖峰仍靠中值）
-  if(lvlHist.length >= 3){
-    const sorted = lvlHist.slice().sort((x,y)=>x-y);
-    const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.6));
-    return sorted[idx];
+function updateEnvironmentCalibration() {
+  if (!st.calibrating) return;
+  const elapsed = (performance.now() - st.calibStartTime) / 1000;
+  if (Number.isFinite(st.currentVolume)) {
+    st.calibSamples.push(st.currentVolume);
   }
-  return v;
-}
-
-function autoCalibrate(opts){
-  opts = opts || {};
-  if(!st.mic || calBusy) return;
-  calBusy = true;
-  ensureAudioRunning();
-  const samples = [];
-  const maxN = opts.samples || 50;
-  const interval = opts.interval || 40;
-  $('#msg').textContent = '🎚 正在聆聽環境底噪…請保持安靜';
-  const iv = setInterval(()=>{
-    samples.push(rawInstant());
-    if(samples.length >= maxN){
-      clearInterval(iv);
-      samples.sort((a,b)=>a-b);
-      const lo = Math.floor(samples.length * 0.1);
-      const hi = Math.floor(samples.length * 0.7);
-      const slice = samples.slice(lo, Math.max(lo+1, hi));
-      const floor = slice.reduce((a,b)=>a+b, 0) / slice.length;
-      // 安靜時目標讀數約 4~10；門檻預設 30，大喊應可到 35+
-      st.off = cl(floor - 6, 0, 35);
-      st.lvl = cl(floor - st.off, 0, 15);
-      st.lvlFast = st.lvl;
-      st.acc = 0; st.loud = 0; st.quiet = 2; adaptQuietT = 0;
-      calBusy = false;
-      $('#msg').textContent = '✅ 已校準（安靜約 ' + Math.round(st.lvl) + '，大喊應明顯上升）';
-      const lr = $('#lvlReadout');
-      if(lr) lr.textContent = Math.round(st.lvl) + ' / 門檻 ' + ($('#goal').value||30);
-      setTimeout(()=>{
-        if(($('#msg').textContent||'').indexOf('已校準')===0)
-          $('#msg').textContent = '提示：列車停靠時越安靜，停留時間越長喔！';
-      }, 5000);
+  if (elapsed >= 5.0) {
+    st.calibrating = false;
+    if (st.calibSamples.length > 5) {
+      const sorted = st.calibSamples.slice().sort((a, b) => a - b);
+      // 取 15% ~ 75% 區間平均作為穩定環境底噪（排除偶發咳嗽或關門聲）
+      const lo = Math.floor(sorted.length * 0.15);
+      const hi = Math.max(lo + 1, Math.floor(sorted.length * 0.75));
+      const slice = sorted.slice(lo, hi);
+      const avgEnv = slice.reduce((a, b) => a + b, 0) / slice.length;
+      st.environmentNoise = clamp(Math.round(avgEnv), 8, 60);
+    } else {
+      st.environmentNoise = 20;
     }
-  }, interval);
+    // 依據環境音自動計算 silenceThreshold
+    st.silenceThreshold = clamp(st.environmentNoise + st.thresholdMargin, 18, 85);
+    $('#goal').value = String(Math.round(st.silenceThreshold));
+    st.acc = 0;
+    st.loud = false;
+    st.quiet = 1;
+    refreshThresholdUI();
+    $('#msg').textContent = `✅ 環境音校正完成（環境 ${st.environmentNoise} dB / 門檻 ${st.silenceThreshold} dB）`;
+  }
 }
 
-async function startMic(){
-  // 多組 constraints，提高 iOS / Android 成功率
-  const tries = [
-    {audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1}},
-    {audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:true}},
-    {audio:true}
-  ];
-  // 關鍵：先取得新 stream，成功後再停舊軌道。
-  // 若先 stop 再 getUserMedia 失敗（無 gesture），麥克風會永久失效。
-  let stream = null, lastErr = null;
-  for(const c of tries){
-    try{
-      stream = await navigator.mediaDevices.getUserMedia(c);
-      break;
-    }catch(e){ lastErr = e; }
+// BUG-002：更新麥克風音量與自動恢復檢查（整個生命週期每幀執行，絕不中斷）
+function updateMicMeter(dt) {
+  const rawVol = st.sim ? 85 : detectVolume();
+  st.currentVolume = clamp(rawVol, 0, 100);
+
+  // 防 NaN 保護
+  if (!Number.isFinite(st.lvlFast)) st.lvlFast = st.currentVolume;
+  if (!Number.isFinite(st.lvl)) st.lvl = st.currentVolume;
+
+  const fastRate = st.currentVolume > st.lvlFast ? Math.min(1, dt * 22) : Math.min(1, dt * 10);
+  st.lvlFast = clamp(st.lvlFast + (st.currentVolume - st.lvlFast) * fastRate, 0, 100);
+
+  const smoothRate = st.currentVolume > st.lvl ? Math.min(1, dt * 9) : Math.min(1, dt * 4.5);
+  st.lvl = clamp(st.lvl + (st.currentVolume - st.lvl) * smoothRate, 0, 100);
+
+  if (st.calibrating) {
+    updateEnvironmentCalibration();
   }
-  if(!stream) throw lastErr || new Error('getUserMedia failed');
 
-  const oldStream = micStream;
-  try{
-    if(micSource){ try{ micSource.disconnect(); }catch(e){} }
-    if(keepAliveGain){ try{ keepAliveGain.disconnect(); }catch(e){} }
-  }catch(e){}
+  // BUG-005：檢查是否超過 10 秒無回應、Track 斷線或 Context Suspended
+  if (st.run && st.mic && !isRecoveringAudio) {
+    const now = performance.now();
+    const acSuspended = !audioCtx || audioCtx.state === 'suspended' || audioCtx.state === 'closed' || audioCtx.state === 'interrupted';
+    const trackDead = !micStream || !micStream.getAudioTracks().some(t => t.readyState === 'live' && !t.muted);
+    const signalStalled = (now - lastValidAudioTime) > 10000;
+    const uiStalled = (now - lastVolumeUIUpdateTime) > 10000;
 
-  micStream = stream;
-  micSource = null; keepAliveGain = null; an = null;
-
-  const AC = window.AudioContext || window.webkitAudioContext;
-  const a = st.ac = st.ac || new AC();
-  await a.resume();
-  an = a.createAnalyser();
-  an.fftSize = 2048;
-  an.smoothingTimeConstant = 0.25;
-  an.minDecibels = -90;
-  an.maxDecibels = -10;
-  micSource = a.createMediaStreamSource(stream);
-  micSource.connect(an);
-  keepAliveGain = a.createGain();
-  keepAliveGain.gain.value = 0;
-  micSource.connect(keepAliveGain);
-  keepAliveGain.connect(a.destination);
-  ensureSilentKeepalive();
-  st.mic = 1;
-  lastMicOk = performance.now();
-  silentFrames = 0;
-
-  stream.getAudioTracks().forEach(t=>{
-    t.enabled = true;
-    try{ t.applyConstraints && t.applyConstraints({autoGainControl:false}); }catch(e){}
-    t.onended = ()=>{ console.warn('mic track ended'); };
-  });
-
-  // 新 stream 已就緒，再釋放舊軌道
-  if(oldStream && oldStream !== stream){
-    try{ oldStream.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} }); }catch(e){}
-  }
-  return true;
-}
-
-$('#go').onclick = async ()=>{
-  $('#start').hidden = 1;
-  ['lamp','dots','top','volWrap'].forEach(i=>{ const el=$('#'+i); if(el) el.hidden=0; });
-  initWaitingPassengers();
-  try{
-    await startMic();
-    $('#msg').textContent = '🎤 麥克風已開啟，正在校準…';
-    setTimeout(()=>autoCalibrate({samples:50, interval:40}), 350);
-  }catch(e){
-    st.mic = 0;
-    const nz = $('#noise'); if(nz) nz.hidden = 0;
-    $('#msg').textContent = '未開啟麥克風：請允許權限，或按住「測試吵鬧」／空白鍵';
-    console.warn('mic error', e);
-  }
-  st.run = 1; st.first = 1; st.qs = 2.0;
-  // iOS：每次觸控都嘗試 resume + kick
-  const resume = ()=>kickAudio();
-  document.addEventListener('touchstart', resume, {passive:true});
-  document.addEventListener('click', resume, {passive:true});
-  // 螢幕常亮（長時間掛機）
-  requestWakeLock().then(ok=>{
-    if(!ok && $('#msg')){
-      const prev = $('#msg').textContent;
-      $('#msg').textContent = '提示：若螢幕會自動鎖定，請到系統設定改為「永不」';
-      setTimeout(()=>{ if($('#msg')) $('#msg').textContent = prev; }, 6000);
+    if (trackDead || signalStalled || uiStalled || (acSuspended && (now - lastValidAudioTime) > 10000)) {
+      lastValidAudioTime = now; // 避免重複觸發
+      recoverAudioSystem(
+        trackDead ? 'Microphone Disconnected' :
+        acSuspended ? 'AudioContext Suspended' :
+        'Volume Signal Stalled > 10s'
+      );
     }
-  });
-};
-
-$('#cal').onclick = ()=>{
-  if(!st.mic){
-    // 嘗試重新要權限
-    startMic().then(()=>autoCalibrate({samples:50, interval:40}))
-      .catch(()=>{$('#msg').textContent='請先允許麥克風權限後再校準';});
-    return;
   }
-  kickAudio();
-  autoCalibrate({samples:50, interval:40});
-};
-const nz=$('#noise');
-if(nz){ nz.onpointerdown=()=>st.sim=1; nz.onpointerup=nz.onpointerleave=()=>st.sim=0; }
-addEventListener('keydown',e=>{if(e.code=='Space'&&!st.mic){st.sim=1;e.preventDefault()}});
-addEventListener('keyup',e=>{if(e.code=='Space')st.sim=0});
+}
 
-// 右上角「🔔」：若無車則召喚進站；若停靠中則溫和關門準備發車
-$('#callBtn').onclick=()=>{
-  st.loud=0;st.acc=0;
-  if(!st.tr){
-    spawnTrain();
-  }else if(st.tr.ph=='stop' && st.tr.t < st.tr.maxDwell - 4){
-    st.tr.t = st.tr.maxDwell - 4; // 進入關門準備發車階段
+// BUG-002：更新分貝條與數值 UI（獨立函式，確保每幀更新不消失）
+function updateVolumeBar() {
+  lastVolumeUIUpdateTime = performance.now();
+  const displayDb = Math.round(clamp(st.lvlFast, 0, 100));
+  const threshold = clamp(st.silenceThreshold, 12, 85);
+
+  const volFill = $('#volFill');
+  const volGoal = $('#volGoal');
+  const volNum = $('#volNum');
+
+  if (volFill) volFill.style.width = clamp(displayDb, 0, 100) + '%';
+  if (volGoal) volGoal.style.left = clamp(threshold, 0, 100) + '%';
+  if (volNum) volNum.textContent = displayDb + ' dB';
+
+  const lr = $('#lvlReadout');
+  if (lr) {
+    const stateTag = st.loud ? '環境太吵 🔴' : (displayDb > threshold * 0.85 ? '注意 🟡' : '安靜 🟢');
+    lr.textContent = `${displayDb} dB / 門檻 ${threshold} dB (${stateTag})`;
   }
-};
+}
 
-// ===================== 抽車、進站與上下車劇本生成 =====================
-function pick(){
-  const b=[0,1,2].find(x=>!bd(x));
-  if(b==null&&!seen[30])return 30;
-  const un=b==null?[]:[...Array(10).keys()].map(k=>b*10+k).filter(i=>!seen[i]);
-  if(!Object.keys(seen).length)return 0;
-  if(un.length&&Math.random()<.78){
-    const w=un.map(i=>[1,1,.85,.6,.35][M[i].r]||.5);
-    let r=Math.random()*w.reduce((a,c)=>a+c,0),k=0;
-    for(;k<un.length-1&&(r-=w[k])>=0;k++);
+// ===================== BUG-007：iPhone / 平板防黑畫面休眠 (Screen Wake Lock API) =====================
+let wakeLockSentinel = null;
+
+async function requestScreenWakeLock() {
+  const banner = $('#wakeBanner');
+  if (!('wakeLock' in navigator)) {
+    if (banner) banner.hidden = false;
+    return false;
+  }
+  try {
+    if (wakeLockSentinel) return true;
+    wakeLockSentinel = await navigator.wakeLock.request('screen');
+    if (banner) banner.hidden = true;
+    wakeLockSentinel.addEventListener('release', () => {
+      wakeLockSentinel = null;
+    });
+    return true;
+  } catch (e) {
+    if (banner) banner.hidden = false;
+    return false;
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && st.run) {
+    getOrCreateAudioContext();
+    requestScreenWakeLock();
+    // 檢查麥克風軌道是否因背景切換被系統關閉
+    const hasLive = micStream && micStream.getAudioTracks().some(t => t.readyState === 'live');
+    if (st.mic && !hasLive) {
+      recoverAudioSystem('Visibility Restored Track Dead');
+    }
+  }
+});
+
+// ===================== 列車生成與狀態機管理 (BUG-001) =====================
+const bd = b => [...Array(10).keys()].every(k => seen[b * 10 + k]);
+const nd = () => [0, 1, 2].filter(bd).length;
+const unl = () => Math.min(6, 1 + 2 * nd());
+
+function pickTrainIndex() {
+  const b = [0, 1, 2].find(x => !bd(x));
+  if (b == null && !seen[30]) return 30;
+  const un = b == null ? [] : [...Array(10).keys()].map(k => b * 10 + k).filter(i => !seen[i]);
+  if (!Object.keys(seen).length) return 0;
+  if (un.length && Math.random() < 0.78) {
+    const w = un.map(i => [1, 1, 0.85, 0.6, 0.35][M[i].r] || 0.5);
+    let r = Math.random() * w.reduce((a, c) => a + c, 0), k = 0;
+    for (; k < un.length - 1 && (r -= w[k]) >= 0; k++);
     return un[k];
   }
-  const sn=Object.keys(seen).map(Number);
-  return sn.length?sn[Math.random()*sn.length|0]:0;
+  const sn = Object.keys(seen).map(Number);
+  return sn.length ? sn[Math.random() * sn.length | 0] : 0;
 }
 
-function spawnTrain(){
-  const idx = pick();
-  const baseDwell = +$('#dwellT').value || 35;
-  trainCount++;
-  st.tr={
+function spawnTrain() {
+  const idx = pickTrainIndex();
+  const baseDwell = +$('#dwellT').value || 30;
+  st.trainCount++;
+  st.tr = {
     i: idx,
     x: -30,
     ph: 'in',
     t: 0,
     v: 0,
-    door: 0,        // 車門開度 0~1
-    occ: 0.65,      // 車廂內乘客比例
+    door: 0,
+    occ: 0.65,
     baseDwell: baseDwell,
     maxDwell: baseDwell,
     chimePlayed: false
   };
-  st.qs=0;st.first=0;
+  // 同步設定所有列車狀態旗標
+  st.trainActive = true;
+  st.isTrainRunning = true;
+  st.rewardRunning = true;
+  st.stationPlaying = false;
+  st.silenceTimer = 0;
+  st.first = false;
+  st.cue = false;
 }
 
-function showCornerCard(m,isNew){
-  $('#ccStatus').textContent=isNew?'✨ 新車進站收錄':'✅ 已收錄列車 (第'+seen[m.id]+'次停靠)';
-  $('#ccStatus').style.color=isNew?'#b45309':'#15803d';
-  $('#ccType').textContent=m.trk=='V'?'高架新幹線':(m.trk=='M'?'超電導磁浮':'在來線・台鐵');
-  $('#ccName').textContent=m.n;
-  $('#ccStars').textContent='⭐'.repeat(m.r);
-  $('#ccRoute').textContent='📍 '+m.route;
+function showCornerCard(m, isNew) {
+  $('#ccStatus').textContent = isNew ? '✨ 新車進站收錄' : '✅ 已收錄列車 (第' + seen[m.id] + '次停靠)';
+  $('#ccStatus').style.color = isNew ? '#b45309' : '#15803d';
+  $('#ccType').textContent = m.trk === 'V' ? '高架新幹線' : (m.trk === 'M' ? '超電導磁浮' : '在來線・台鐵');
+  $('#ccName').textContent = m.n;
+  $('#ccStars').textContent = '⭐'.repeat(m.r);
+  $('#ccRoute').textContent = '📍 ' + m.route;
   $('#cornerCard').classList.add('show');
-  st.ccTimer=7.5;
+  st.ccTimer = 7.0;
 }
 
-// 當列車平穩停妥於月台時：觸發收錄與少量旅客上下車劇本
-function arrive(){
-  const T=st.tr, i=T.i, m=M[i], isNew=!seen[i];
-  seen[i]=(seen[i]||0)+1;sv('ak_s',seen);
-  showCornerCard(m,isNew);
-  if(isNew){$('#badge').hidden=0;chime([440,554,659])}else{chime([440,554])}
+function onTrainArriveStation() {
+  const T = st.tr;
+  if (!T) return;
+  const i = T.i, m = M[i], isNew = !seen[i];
+  seen[i] = (seen[i] || 0) + 1;
+  sv('ak_s', seen);
 
-  const ch=CH(), sx= isPortrait ? W*0.92 : W*0.86;
-  const doors = getVisibleDoorXs(m,sx,ch);
+  st.stationPlaying = true;
+  showCornerCard(m, isNew);
+  if (isNew) {
+    $('#badge').hidden = false;
+    chime([440, 554, 659]);
+  } else {
+    chime([440, 554]);
+  }
+
+  const ch = CH(), sx = isPortrait ? W * 0.92 : W * 0.86;
+  const doors = getVisibleDoorXs(m, sx, ch);
   const scObj = SCENES[st.sc] || SCENES[0];
 
-  if(doors.length>0){
-    // 1. 原本在月台等候的 1~2 位旅客：分配到最近的車門，準備等門開後緩慢上車
-    st.pax.forEach((p,idx)=>{
-      const dX = doors[idx % doors.length];
-      p.targetX = dX;
+  if (doors.length > 0) {
+    st.pax.forEach((p, idx) => {
+      p.targetX = doors[idx % doors.length];
       p.state = 'wait_board';
-      p.delay = 2.6 + idx*2.2;
+      p.delay = 2.2 + idx * 2.0;
     });
 
-    // 2. 從其他車門緩慢下車的 2 位新旅客（攜帶符合場景特色的物品）
-    const alightCount = 2;
-    for(let k=0;k<alightCount;k++){
-      const dX = doors[(k+1) % doors.length];
-      const restSpot = cl(dX + (k%2===0 ? -ch*1.1 : ch*1.1), W*.18, W*.74);
+    for (let k = 0; k < 2; k++) {
+      const dX = doors[(k + 1) % doors.length];
+      const restSpot = clamp(dX + (k % 2 === 0 ? -ch * 1.1 : ch * 1.1), W * 0.16, W * 0.76);
       st.pax.push({
         x: dX,
         targetX: restSpot,
         dir: restSpot > dX ? 1 : -1,
         walking: false,
         waving: false,
-        alpha: 0, // 等門打開才從車廂現身
+        alpha: 0,
         state: 'wait_alight',
-        delay: 2.2 + k*3.0,
+        delay: 2.0 + k * 2.6,
         role: scObj.role,
-        color: scObj.colors[(k+2) % scObj.colors.length],
-        seed: (k+3)*19
+        color: scObj.colors[(k + 2) % scObj.colors.length],
+        seed: (k + 3) * 19
       });
     }
   }
 
-  const b=i/10|0;
-  if(i<30&&bd(b)&&!cd[b]){cd[b]=1;sv('ak_c',cd);st.page={t:0};st.pend=1+2*b}
+  const b = i / 10 | 0;
+  if (i < 30 && bd(b) && !cd[b]) {
+    cd[b] = 1;
+    sv('ak_c', cd);
+    st.page = { t: 0 };
+    st.pend = 1 + 2 * b;
+  }
 }
 
-function endTrain(){
-  st.tr=null;
-  st.qs=0;
-  st.first=0;
-  // 關鍵：離站必須清掉吵鬧累積，否則 st.loud 卡住會永遠不進第二班車
-  st.loud=0;
-  st.loudT=0;
-  st.acc=0;
-  st.quiet=1;
-  $('#dwellHint').hidden=true;
-  st.pax = st.pax.filter(p=>p.alpha>0.5).slice(0,2);
-  st.pax.forEach((p,idx)=>{
-    p.waving=false;p.walking=false;p.state='wait_board';p.delay=2.5+idx*2;
+// 【BUG-001 關鍵】列車結束後徹底重置所有狀態，確保第二台、第 N 台列車無限循環生成
+function endTrain() {
+  st.tr = null;
+  st.trainActive = false;
+  st.isTrainRunning = false;
+  st.rewardRunning = false;
+  st.stationPlaying = false;
+  st.silenceTimer = 0;
+  st.first = false;
+  st.cue = false;
+
+  // 重置吵鬧累積，避免卡死在噪音狀態
+  st.loud = false;
+  st.loudT = 0;
+  st.acc = 0;
+  st.quiet = 1;
+  $('#dwellHint').hidden = true;
+
+  // 限制月台旅客陣列長度，防止長時間掛機記憶體洩漏 (BUG-009)
+  const scObj = SCENES[st.sc] || SCENES[0];
+  st.pax = st.pax.filter(p => p.alpha > 0.5).slice(0, 2);
+  while (st.pax.length < 2) {
+    const k = st.pax.length;
+    st.pax.push({
+      x: W * (0.28 + k * 0.24),
+      targetX: W * (0.28 + k * 0.24),
+      dir: 1,
+      walking: false,
+      waving: false,
+      alpha: 1,
+      state: 'wait_board',
+      delay: 2.0 + k * 2.0,
+      role: scObj.role,
+      color: scObj.colors[k % scObj.colors.length],
+      seed: (st.trainCount * 7 + k * 13) % 997
+    });
+  }
+  st.pax.forEach((p, idx) => {
+    p.waving = false;
+    p.walking = false;
+    p.alpha = 1;
+    p.state = 'wait_board';
+    p.delay = 2.2 + idx * 2.0;
   });
-  st.staff.waving=false;
-  // 只 resume / keepalive，不強制 disconnect（避免把活著的 mic 弄死）
-  kickAudio();
-  if(st.pend!=null){go(st.pend);st.pend=null}
+  st.staff.waving = false;
+  st.staff.walking = false;
+
+  if (st.pend != null) {
+    triggerSceneFade(st.pend);
+    st.pend = null;
+  }
 }
-const go2=i=>{st.fade={t:0,n:i,sw:0}};function go(i){if(!st.fade)go2(i)}
 
-// ===================== 核心更新迴圈：緩慢進站、20~60秒停靠、上下車與揮手 =====================
-function update(dt){
-  st.t+=dt;const ch=CH();
-  if(st.ccTimer>0){st.ccTimer-=dt;if(st.ccTimer<=0)$('#cornerCard').classList.remove('show')}
+const triggerSceneFade = i => {
+  if (!st.fade) st.fade = { t: 0, n: i, sw: 0 };
+};
 
-  if(st.run){
-    const goal=st.goal||+$('#goal').value||30;
-    // 每幀確保 AudioContext 在跑（iOS 背景回來常被 suspend）
-    if(st.mic) ensureAudioRunning();
-    let tg;
-    if(st.mic){
-      const instant = raw();
-      tg = cl(instant - (st.off||0), 0, 50);
-      // 看門狗：僅在連續全靜音或長時間無訊號時 softReconnect；絕不自動 startMic
-      const now = performance.now();
-      const graphDead = silentFrames > 90; // ~1.5 秒連續全 128 buffer
-      if((graphDead || now - lastMicOk > 8000) && st.t > 8 && !micRecoverBusy && !calBusy && now - lastMicKick > 5000){
-        lastMicKick = now;
-        softReconnectMic();
-      }
-    }else{
-      tg = st.sim ? 46 : 4 + Math.random() * 1.2;
-    }
-    if(st.lvlFast == null) st.lvlFast = tg;
-    // 音量計：極快跟隨
-    const fastF = tg > st.lvlFast ? Math.min(1, dt * 18) : Math.min(1, dt * 10);
-    st.lvlFast += (tg - st.lvlFast) * fastF;
-    // 遊戲判定：中速平滑
-    const follow = tg > st.lvl ? Math.min(1, dt * 6) : Math.min(1, dt * 3.5);
-    st.lvl += (tg - st.lvl) * follow;
+// ===================== 遊戲核心更新迴圈 =====================
+function updateGameLogic(dt) {
+  st.t += dt;
+  const ch = CH();
 
-    const over = st.lvl - goal;
-    if(over > 0){
-      const intensity = Math.min(1, over / 10);
-      st.acc += dt * (0.4 + 3.0 * intensity * intensity);
-      st.quiet = 0; adaptQuietT = 0;
-    }else{
+  if (st.ccTimer > 0) {
+    st.ccTimer -= dt;
+    if (st.ccTimer <= 0) $('#cornerCard').classList.remove('show');
+  }
+
+  // 1. 永遠先更新麥克風與分貝條 (BUG-002)
+  updateMicMeter(dt);
+  updateVolumeBar();
+
+  if (st.run) {
+    const threshold = clamp(st.silenceThreshold, 12, 85);
+    const over = st.lvl - threshold;
+
+    if (over > 0) {
+      const intensity = clamp(over / 15, 0.2, 2.5);
+      st.acc = clamp(st.acc + dt * (0.8 + 2.2 * intensity), 0, 12);
+      st.quiet = 0;
+    } else {
       st.quiet += dt;
-      st.acc = Math.max(0, st.acc - dt * 3.5);
-      // 關閉持續自動校準：長時間安靜 + 錯誤 off 會把讀數鎖在 6
-      // 僅在校準後短時間、且 raw 有變化時微調
-      adaptQuietT = 0;
+      st.acc = Math.max(0, st.acc - dt * 3.2);
     }
-    if(!st.loud && st.acc >= 4.8){ st.loud = 1; st.loudT = 0; }
-    if(st.loud && st.quiet >= 1.2){ st.loud = 0; st.acc = 0; }
 
-    const isWarn = !st.loud && (st.lvl > goal * 0.75 || st.acc > 0.9);
-    if(st.loud){ st.loudT += dt; }
-    else{
-      if(!st.tr) st.qs += dt * (isWarn ? 0.4 : 1.0);
+    if (!st.loud && st.acc >= 2.2) {
+      st.loud = true;
+      st.loudT = 0;
+    }
+    if (st.loud && st.quiet >= 1.0) {
+      st.loud = false;
+      st.acc = 0;
+      st.loudT = 0;
+    }
+
+    const isWarn = !st.loud && (st.lvl > threshold * 0.85 || st.acc > 0.7);
+    const waitInterval = st.first ? 4.0 : (+$('#rate').value || 15);
+
+    if (st.loud) {
+      st.loudT += dt;
+    } else {
+      if (!st.tr) {
+        st.silenceTimer += dt * (isWarn ? 0.45 : 1.0);
+      }
       st.scT += dt;
     }
 
-
-    // 左上角 3 歲直覺表情燈號 + 底部進度條
-    const lampEl=$('#lamp'), lampTxt=$('#lampTxt'), lampBar=$('#lampBar');
-    const INT = st.first ? 3.5 : +$('#rate').value;
-
-    if(!st.tr){
-      // 候車中：綠條代表距離火車進站的集氣進度
-      const prog = cl((st.qs/INT)*100, 0, 100);
+    // 更新左上角燈號與倒數顯示
+    const lampEl = $('#lamp'), lampTxt = $('#lampTxt'), lampBar = $('#lampBar'), lampCd = $('#lampCountdown');
+    if (!st.tr) {
+      const remainSec = Math.max(0, Math.ceil(waitInterval - st.silenceTimer));
+      const prog = clamp((st.silenceTimer / waitInterval) * 100, 0, 100);
       lampBar.style.width = prog + '%';
+      lampCd.textContent = st.calibrating ? '校正中' : `${remainSec}s`;
       $('#dwellHint').hidden = true;
-    }else if(st.tr.ph=='stop'){
-      // 停靠中：綠條代表列車在月台陪伴大家的時間
-      const remain = cl((1 - st.tr.t / st.tr.maxDwell)*100, 0, 100);
-      lampBar.style.width = remain + '%';
+    } else if (st.tr.ph === 'stop') {
+      const remainStay = Math.max(0, Math.ceil(st.tr.maxDwell - st.tr.t));
+      const remainPct = clamp((1 - st.tr.t / st.tr.maxDwell) * 100, 0, 100);
+      lampBar.style.width = remainPct + '%';
+      lampCd.textContent = `停靠 ${remainStay}s`;
       $('#dwellHint').hidden = st.loud || isWarn;
-    }else{
+    } else {
       lampBar.style.width = '100%';
+      lampCd.textContent = st.tr.ph === 'in' ? '進站中' : '離站中';
       $('#dwellHint').hidden = true;
     }
 
-    if(st.loud){
-      lampTxt.textContent='🔴🙉';lampEl.style.borderColor='#ef4444';lampBar.style.background='#ef4444';
-    }else if(isWarn){
-      lampTxt.textContent='🟡😐';lampEl.style.borderColor='#f59e0b';lampBar.style.background='#f59e0b';
-    }else{
-      lampTxt.textContent='🟢🙂';lampEl.style.borderColor='#4ade80';lampBar.style.background='#22c55e';
+    if (st.loud) {
+      lampTxt.textContent = '🔴🙉';
+      lampEl.style.borderColor = '#ef4444';
+      lampBar.style.background = '#ef4444';
+    } else if (isWarn) {
+      lampTxt.textContent = '🟡😐';
+      lampEl.style.borderColor = '#f59e0b';
+      lampBar.style.background = '#f59e0b';
+    } else {
+      lampTxt.textContent = '🟢🙂';
+      lampEl.style.borderColor = '#4ade80';
+      lampBar.style.background = '#22c55e';
     }
 
-    // 音量計與設定讀數（每幀更新，大喊必動）
-    const showLv = Math.round(st.lvlFast != null ? st.lvlFast : st.lvl);
-    const volFill = $('#volFill'), volGoal = $('#volGoal'), volNum = $('#volNum');
-    if(volFill){
-      volFill.style.width = cl(showLv / 50 * 100, 0, 100) + '%';
-      if(volGoal) volGoal.style.left = cl(goal / 50 * 100, 0, 100) + '%';
-      if(volNum) volNum.textContent = String(showLv);
-    }
-    const lr = $('#lvlReadout');
-    if(lr){
-      const tag = st.loud ? '紅' : (isWarn ? '黃' : '綠');
-      lr.textContent = showLv + ' / 門檻 ' + goal + '（' + tag + '）';
-    }
-    if(st.t*10%1<0.15) try{ updateDebugPanel(); }catch(e){}
-
-    st.cue=!st.tr&&st.qs>=INT-4.0;
-    if(!st.tr&&!st.loud&&st.qs>=INT){
+    // 候車倒數達標 -> 生成列車
+    st.cue = !st.tr && st.silenceTimer >= Math.max(0, waitInterval - 3.5);
+    if (!st.tr && !st.loud && st.silenceTimer >= waitInterval) {
       spawnTrain();
     }
 
-    // ===================== 列車四階段慢速狀態機 =====================
-    const T=st.tr;
-    if(T){
-      const m=M[T.i],L=lenOf(m,ch),sx=isPortrait?W*0.92:W*0.86;
+    // 列車四階段狀態機
+    const T = st.tr;
+    if (T) {
+      const m = M[T.i], L = lenOf(m, ch), sx = isPortrait ? W * 0.92 : W * 0.86;
 
-      // 若太吵超過 4 秒：關門並溫和退回或提前離站
-      if(st.loud && st.loudT>4.0){
-        if(T.ph=='in'){
-          T.ph='back';$('#cornerCard').classList.remove('show');
-        }else if(T.ph=='stop' && T.t < T.maxDwell - 3.5){
-          T.t = T.maxDwell - 3.5; // 提前進入關門程序
+      // 環境太吵超過 3.5 秒：提前關門離站或退回
+      if (st.loud && st.loudT > 3.5) {
+        if (T.ph === 'in') {
+          T.ph = 'back';
+          $('#cornerCard').classList.remove('show');
+        } else if (T.ph === 'stop' && T.t < T.maxDwell - 3.5) {
+          T.t = T.maxDwell - 3.5;
         }
       }
 
-      if(T.ph=='in'){
-        // 1. 緩慢平穩進站 (耗時約 8~10 秒，像真車一樣優雅滑入減速)
+      if (T.ph === 'in') {
+        st.isTrainRunning = true;
+        st.stationPlaying = false;
         const dist = sx - T.x;
-        const spd = cl(dist * 0.42, W*0.022, W*0.145);
-        T.x += (st.loud ? spd*0.2 : spd) * dt;
-        if(dist <= 2.5){
+        const spd = clamp(dist * 0.45, W * 0.03, W * 0.16);
+        T.x += (st.loud ? spd * 0.25 : spd) * dt;
+        if (dist <= 2.5) {
           T.x = sx;
           T.ph = 'stop';
           T.t = 0;
-          arrive();
+          onTrainArriveStation();
         }
-      }else if(T.ph=='stop'){
-        // 2. 停靠月台 25~60 秒 + 安靜延長獎勵
+      } else if (T.ph === 'stop') {
+        st.isTrainRunning = true;
+        st.stationPlaying = true;
         T.t += dt;
-        // 只要教室非常安靜(綠燈)，每安靜 1 秒，列車就多停留 0.35 秒 (最高可延長至 65 秒)
-        if(!st.loud && !isWarn && T.maxDwell < T.baseDwell + 22){
+        if (!st.loud && !isWarn && T.maxDwell < T.baseDwell + 20) {
           T.maxDwell += dt * 0.35;
         }
 
-        // 車門開關時序：停妥 1.2 秒後緩慢開門；發車前 3.5 秒緩慢關門
         const closeStart = T.maxDwell - 3.5;
-        if(T.t > 1.2 && T.t < closeStart){
-          T.door = Math.min(1, T.door + dt * 0.65); // 約 1.5 秒優雅全開
-        }else if(T.t >= closeStart){
-          if(!T.chimePlayed){
+        if (T.t > 1.0 && T.t < closeStart) {
+          T.door = Math.min(1, T.door + dt * 0.75);
+        } else if (T.t >= closeStart) {
+          if (!T.chimePlayed) {
             T.chimePlayed = true;
-            chime([523,659]); // 溫柔發車提示音
+            chime([523, 659]);
           }
-          T.door = Math.max(0, T.door - dt * 0.65); // 緩慢關門
+          T.door = Math.max(0, T.door - dt * 0.75);
         }
 
-        // 門完全關妥且時間到達後，開始緩慢起步離站
-        if(T.t >= T.maxDwell && T.door <= 0.01){
+        if (T.t >= T.maxDwell && T.door <= 0.01) {
           T.door = 0;
           T.ph = 'out';
-          T.v = W * 0.012; // 極緩慢起步
-          // 月台上的旅客與站務員開始緩緩揮手送別
+          T.v = W * 0.015;
+          st.stationPlaying = false;
           st.staff.waving = true;
           st.staff.walking = false;
-          st.pax.forEach((p,idx)=>{if(p.alpha>0.8 && idx%2===0) p.waving=true});
+          st.pax.forEach((p, idx) => { if (p.alpha > 0.8 && idx % 2 === 0) p.waving = true; });
         }
-      }else if(T.ph=='out'){
-        // 3. 緩慢加速離站 (讓孩子能目送整列火車與揮手的站務員)
-        T.v = Math.min(W*0.24, T.v + W*0.032*dt);
+      } else if (T.ph === 'out') {
+        st.isTrainRunning = true;
+        st.stationPlaying = false;
+        T.v = Math.min(W * 0.26, T.v + W * 0.036 * dt);
         T.x += T.v * dt;
-        if(T.x - L > W + 50) endTrain();
-      }else if(T.ph=='back'){
-        T.door = Math.max(0, T.door - dt*1.2);
-        T.x -= W*0.18*dt;
-        if(T.x < -40) endTrain();
+        if (T.x - L > W + 60) {
+          endTrain();
+        }
+      } else if (T.ph === 'back') {
+        st.isTrainRunning = true;
+        st.stationPlaying = false;
+        T.door = Math.max(0, T.door - dt * 1.2);
+        T.x -= W * 0.20 * dt;
+        if (T.x < -50) {
+          endTrain();
+        }
       }
     }
 
-    // ===================== 月台旅客與站務員慢動作更新 =====================
-    const walkSpeed = cl(W*0.028, 22, 38); // 悠閒散步速度
-    st.pax.forEach(p=>{
-      if(st.tr && st.tr.ph=='stop' && st.tr.door > 0.75){
-        if(p.state=='wait_board'){
+    // 月台旅客與站務員慢動作更新
+    const walkSpeed = clamp(W * 0.03, 24, 42);
+    st.pax.forEach(p => {
+      if (st.tr && st.tr.ph === 'stop' && st.tr.door > 0.75) {
+        if (p.state === 'wait_board') {
           p.delay -= dt;
-          if(p.delay <= 0) p.state = 'boarding';
-        }else if(p.state=='boarding'){
+          if (p.delay <= 0) p.state = 'boarding';
+        } else if (p.state === 'boarding') {
           const dx = p.targetX - p.x;
-          if(Math.abs(dx) > 3){
+          if (Math.abs(dx) > 3) {
             p.walking = true;
             p.dir = dx > 0 ? 1 : -1;
             p.x += p.dir * walkSpeed * dt;
-          }else{
-            // 走到車門前，緩慢走進車廂內淡出
+          } else {
             p.walking = false;
-            p.alpha -= dt * 0.85;
-            if(p.alpha <= 0){
+            p.alpha -= dt * 0.9;
+            if (p.alpha <= 0) {
               p.state = 'inside';
-              st.tr.occ = Math.min(0.9, st.tr.occ + 0.08);
+              st.tr.occ = Math.min(0.92, st.tr.occ + 0.08);
             }
           }
-        }else if(p.state=='wait_alight'){
+        } else if (p.state === 'wait_alight') {
           p.delay -= dt;
-          if(p.delay <= 0) p.state = 'alighting';
-        }else if(p.state=='alighting'){
-          // 從車廂門內緩慢走出來淡入
-          if(p.alpha < 1){
-            p.alpha = Math.min(1, p.alpha + dt * 0.85);
-          }else{
+          if (p.delay <= 0) p.state = 'alighting';
+        } else if (p.state === 'alighting') {
+          if (p.alpha < 1) {
+            p.alpha = Math.min(1, p.alpha + dt * 0.9);
+          } else {
             const dx = p.targetX - p.x;
-            if(Math.abs(dx) > 3){
+            if (Math.abs(dx) > 3) {
               p.walking = true;
               p.dir = dx > 0 ? 1 : -1;
               p.x += p.dir * walkSpeed * dt;
-            }else{
+            } else {
               p.walking = false;
               p.state = 'on_platform';
             }
           }
         }
-      }else{
+      } else {
         p.walking = false;
       }
     });
 
-    // 站務員偶爾在月台右側慢步巡視
     const sf = st.staff;
-    if(st.tr && st.tr.ph=='stop' && st.tr.t > 3 && st.tr.t < st.tr.maxDwell - 5){
+    if (st.tr && st.tr.ph === 'stop' && st.tr.t > 2.5 && st.tr.t < st.tr.maxDwell - 4.5) {
       sf.walking = true;
       sf.waving = false;
       sf.x += sf.dir * (walkSpeed * 0.65) * dt;
-      if(sf.x < W*0.72) sf.dir = 1;
-      if(sf.x > W*0.82) sf.dir = -1;
-    }else if(st.tr && st.tr.ph=='out'){
+      if (sf.x < W * 0.70) sf.dir = 1;
+      if (sf.x > W * 0.82) sf.dir = -1;
+    } else if (st.tr && st.tr.ph === 'out') {
       sf.walking = false;
       sf.dir = 1;
       sf.waving = true;
-    }else{
+    } else {
       sf.walking = false;
     }
 
-    if(+$('#sceneT').value>0 && st.scT>=+$('#sceneT').value && !st.fade && !st.tr){
-      go2((st.sc+1)%unl());st.scT=0;
+    const sceneInterval = +$('#sceneT').value || 180;
+    if (sceneInterval > 0 && st.scT >= sceneInterval && !st.fade && !st.tr) {
+      triggerSceneFade((st.sc + 1) % unl());
+      st.scT = 0;
     }
   }
 
-  st.arm+=((st.loud?1:0)-st.arm)*Math.min(1,dt*2.0);
-  if(st.page){st.page.t+=dt;if(st.page.t>4)st.page=null}
-  if(st.fade){
-    st.fade.t+=dt/1.6;
-    if(st.fade.t>=.5&&!st.fade.sw){
-      st.fade.sw=1;st.sc=st.fade.n;st.scT=0;
-      initWaitingPassengers(); // 切換場景時更新對應特色的候車旅客
-    }
-    if(st.fade.t>=1)st.fade=null;
+  st.arm += ((st.loud ? 1 : 0) - st.arm) * Math.min(1, dt * 2.5);
+  if (st.page) {
+    st.page.t += dt;
+    if (st.page.t > 4) st.page = null;
   }
-  let b=[0,1,2].find(x=>!bd(x));
-  $('#dotsTxt').textContent=b==null?'👑 全圖鑑收集達成':'📘 '+SCENES[st.sc].zh+' '+[...Array(10).keys()].map(k=>seen[b*10+k]?'🟢':'⚪').join('');
+  if (st.fade) {
+    st.fade.t += dt / 1.5;
+    if (st.fade.t >= 0.5 && !st.fade.sw) {
+      st.fade.sw = 1;
+      st.sc = st.fade.n;
+      st.scT = 0;
+      initWaitingPassengers();
+    }
+    if (st.fade.t >= 1) st.fade = null;
+  }
+
+  const b = [0, 1, 2].find(x => !bd(x));
+  $('#dotsTxt').textContent = b == null
+    ? '👑 全圖鑑收集達成'
+    : '📘 ' + SCENES[st.sc].zh + ' ' + [...Array(10).keys()].map(k => seen[b * 10 + k] ? '🟢' : '⚪').join('');
 }
 
-// ===================== 遠景富士山 + 真實高架鐵道 + 活著的月台小世界 =====================
-function mix(a,b,f){const p=c=>[1,3,5].map(i=>parseInt(c.substr(i,2),16)),x=p(a),y=p(b);return'rgb('+x.map((v,i)=>v+(y[i]-v)*f|0)+')'}
-const SK=[['#f6c0a0','#ffeab8',0],['#70c6f5','#e4f4fe',0],['#7a68b0','#ff9f70',.3],['#10183c','#27356a',1]],
-      GR=['#76b068','#dfe9f2','#84a88c','#d8cba0','#8a7a5a','#b0b4be'];
+// ===================== 場景繪製迴圈（具完整 save/restore 防護） =====================
+function mix(a, b, f) {
+  const p = c => [1, 3, 5].map(i => parseInt(c.substr(i, 2), 16));
+  const x = p(a), y = p(b);
+  return 'rgb(' + x.map((v, i) => v + (y[i] - v) * f | 0) + ')';
+}
+const SK = [['#f6c0a0', '#ffeab8', 0], ['#70c6f5', '#e4f4fe', 0], ['#7a68b0', '#ff9f70', 0.3], ['#10183c', '#27356a', 1]];
+const GR = ['#76b068', '#dfe9f2', '#84a88c', '#d8cba0', '#8a7a5a', '#b0b4be'];
 
-function drawDistantLandmark(i,t,hz){
-  const X=v=>W*v;
+function drawDistantLandmark(i, t, hz) {
+  const X = v => W * v;
   g.save();
-  g.globalAlpha=0.52;
-  if(i==0){
-    const peakY=hz - H*.24, cx=X(.34);
-    g.fillStyle='#7c92bd';
+  g.globalAlpha = 0.52;
+  if (i === 0) {
+    const peakY = hz - H * 0.22, cx = X(0.34);
+    g.fillStyle = '#7c92bd';
     g.beginPath();
-    g.moveTo(cx-W*.26,hz);
-    g.quadraticCurveTo(cx-W*.08,hz-H*.10,cx-W*.025,peakY);
-    g.lineTo(cx+W*.025,peakY);
-    g.quadraticCurveTo(cx+W*.08,hz-H*.10,cx+W*.26,hz);
+    g.moveTo(cx - W * 0.26, hz);
+    g.quadraticCurveTo(cx - W * 0.08, hz - H * 0.10, cx - W * 0.025, peakY);
+    g.lineTo(cx + W * 0.025, peakY);
+    g.quadraticCurveTo(cx + W * 0.08, hz - H * 0.10, cx + W * 0.26, hz);
     g.fill();
-    g.fillStyle='#ffffff';
+    g.fillStyle = '#ffffff';
     g.beginPath();
-    g.moveTo(cx-W*.025,peakY);g.lineTo(cx+W*.025,peakY);
-    g.lineTo(cx+W*.075,peakY+H*.09);
-    g.lineTo(cx+W*.04,peakY+H*.07);g.lineTo(cx+W*.015,peakY+H*.095);
-    g.lineTo(cx-W*.015,peakY+H*.075);g.lineTo(cx-W*.045,peakY+H*.095);
-    g.lineTo(cx-W*.075,peakY+H*.085);
+    g.moveTo(cx - W * 0.025, peakY); g.lineTo(cx + W * 0.025, peakY);
+    g.lineTo(cx + W * 0.075, peakY + H * 0.08);
+    g.lineTo(cx + W * 0.04, peakY + H * 0.065); g.lineTo(cx + W * 0.015, peakY + H * 0.085);
+    g.lineTo(cx - W * 0.015, peakY + H * 0.065); g.lineTo(cx - W * 0.045, peakY + H * 0.085);
+    g.lineTo(cx - W * 0.075, peakY + H * 0.075);
     g.fill();
-  }else if(i==1){
-    [[.28,.34],[.65,.38]].forEach(([x,h])=>{
-      g.fillStyle='#b8c8e4';g.beginPath();g.moveTo(X(x-.22),hz);g.lineTo(X(x),H*h);g.lineTo(X(x+.22),hz);g.fill();
-      g.fillStyle='#fff';g.beginPath();g.moveTo(X(x),H*h);g.lineTo(X(x-.05),H*h+hz*.18);g.lineTo(X(x+.05),H*h+hz*.18);g.fill();
+  } else if (i === 1) {
+    [[0.28, 0.34], [0.65, 0.38]].forEach(([x, h]) => {
+      g.fillStyle = '#b8c8e4'; g.beginPath(); g.moveTo(X(x - 0.22), hz); g.lineTo(X(x), H * h); g.lineTo(X(x + 0.22), hz); g.fill();
+      g.fillStyle = '#fff'; g.beginPath(); g.moveTo(X(x), H * h); g.lineTo(X(x - 0.05), H * h + hz * 0.18); g.lineTo(X(x + 0.05), H * h + hz * 0.18); g.fill();
     });
-  }else if(i==2){
-    const bx=X(.28),w=Math.min(W*.10,H*.20),ty=hz-H*.26,hh=hz-ty;
-    g.fillStyle='#e8502a';g.beginPath();g.moveTo(bx,ty);g.lineTo(bx+w/2,hz);g.lineTo(bx-w/2,hz);g.fill();
-    g.fillStyle='#fff';for(let k=1;k<4;k++){const y=ty+hh*.22*k,hw=w/2*(y-ty)/hh;g.fillRect(bx-hw,y,hw*2,hh*.05)}
-  }else if(i==3){
-    // 湘南海岸遠方帆船與海平線
-    g.fillStyle='#0284c7';g.fillRect(0,hz-H*.08,W,H*.08);
-    const sx=((t*12)%W);
-    g.fillStyle='#fff';g.beginPath();g.moveTo(sx,hz-H*.08);g.lineTo(sx+14,hz-H*.08);g.lineTo(sx+7,hz-H*.14);g.fill();
-  }else if(i==4){
-    g.fillStyle='#7a5c4c';g.beginPath();g.moveTo(X(.18),hz);g.lineTo(X(.36),hz-H*.20);g.lineTo(X(.46),hz-H*.20);g.lineTo(X(.64),hz);g.fill();
-  }else{
-    g.fillStyle='#4a7fcf';g.beginPath();g.arc(X(.72),H*.24,H*.09,0,7);g.fill();
+  } else if (i === 2) {
+    const bx = X(0.28), w = Math.min(W * 0.10, H * 0.20), ty = hz - H * 0.24, hh = hz - ty;
+    g.fillStyle = '#e8502a'; g.beginPath(); g.moveTo(bx, ty); g.lineTo(bx + w / 2, hz); g.lineTo(bx - w / 2, hz); g.fill();
+    g.fillStyle = '#fff'; for (let k = 1; k < 4; k++) { const y = ty + hh * 0.22 * k, hw = w / 2 * (y - ty) / hh; g.fillRect(bx - hw, y, hw * 2, hh * 0.05); }
+  } else if (i === 3) {
+    g.fillStyle = '#0284c7'; g.fillRect(0, hz - H * 0.08, W, H * 0.08);
+    const sx = ((t * 0.012) % W);
+    g.fillStyle = '#fff'; g.beginPath(); g.moveTo(sx, hz - H * 0.08); g.lineTo(sx + 14, hz - H * 0.08); g.lineTo(sx + 7, hz - H * 0.14); g.fill();
+  } else if (i === 4) {
+    g.fillStyle = '#7a5c4c'; g.beginPath(); g.moveTo(X(0.18), hz); g.lineTo(X(0.36), hz - H * 0.20); g.lineTo(X(0.46), hz - H * 0.20); g.lineTo(X(0.64), hz); g.fill();
+  } else {
+    g.fillStyle = '#4a7fcf'; g.beginPath(); g.arc(X(0.72), H * 0.24, H * 0.09, 0, Math.PI * 2); g.fill();
   }
   g.restore();
 }
 
-// 繪製鐵道設施 + 後方車站遮雨棚/站名牌/候車椅
-function drawRailwayInfra(railY,ch,trkType,t){
-  // 1. 架線柱與懸垂電車線
-  if(trkType!='SL'){
-    const span = cl(W*.22, 160, 280);
-    const wireY = railY - ch*1.36;
-    const messengerY = wireY - ch*.22;
+function drawRailwayInfra(railY, ch, trkType, t) {
+  if (trkType !== 'SL') {
+    const span = clamp(W * 0.22, 150, 280);
+    const wireY = railY - ch * 1.36;
+    const messengerY = wireY - ch * 0.22;
 
-    for(let x=span*.35; x<W; x+=span){
-      g.fillStyle='#7c8594';
-      g.fillRect(x-4, messengerY-14, 8, (railY-messengerY)+18);
-      g.strokeStyle='#5a6270';g.lineWidth=1.4;
+    for (let x = span * 0.35; x < W; x += span) {
+      g.fillStyle = '#7c8594';
+      g.fillRect(x - 4, messengerY - 14, 8, (railY - messengerY) + 18);
+      g.strokeStyle = '#5a6270'; g.lineWidth = 1.4;
       g.beginPath();
-      for(let y=messengerY; y<railY; y+=18){
-        g.moveTo(x-4,y);g.lineTo(x+4,y+9);g.lineTo(x-4,y+18);
+      for (let y = messengerY; y < railY; y += 18) {
+        g.moveTo(x - 4, y); g.lineTo(x + 4, y + 9); g.lineTo(x - 4, y + 18);
       }
       g.stroke();
-      g.strokeStyle='#636b78';g.lineWidth=3;
+      g.strokeStyle = '#636b78'; g.lineWidth = 3;
       g.beginPath();
-      g.moveTo(x, messengerY-6);g.lineTo(x+26, wireY-2);
-      g.moveTo(x, wireY-2);g.lineTo(x+26, wireY-2);
+      g.moveTo(x, messengerY - 6); g.lineTo(x + 26, wireY - 2);
+      g.moveTo(x, wireY - 2); g.lineTo(x + 26, wireY - 2);
       g.stroke();
-      g.fillStyle='#f0f4f8';
-      g.fillRect(x+6, messengerY-9, 6, 5);
-      g.fillRect(x+6, wireY-5, 6, 5);
+      g.fillStyle = '#f0f4f8';
+      g.fillRect(x + 6, messengerY - 9, 6, 5);
+      g.fillRect(x + 6, wireY - 5, 6, 5);
     }
 
-    g.strokeStyle='rgba(40,50,65,.65)';g.lineWidth=1.8;
-    g.beginPath();g.moveTo(0,wireY);g.lineTo(W,wireY);g.stroke();
+    g.strokeStyle = 'rgba(40, 50, 65, 0.65)'; g.lineWidth = 1.8;
+    g.beginPath(); g.moveTo(0, wireY); g.lineTo(W, wireY); g.stroke();
 
-    g.strokeStyle='rgba(40,50,65,.45)';g.lineWidth=1.3;
-    for(let x=-span*.65; x<W+span; x+=span){
-      const x1=x, x2=x+span, mx=(x1+x2)/2;
-      g.beginPath();g.moveTo(x1, messengerY);g.quadraticCurveTo(mx, wireY-4, x2, messengerY);g.stroke();
-      for(let f=.15; f<.9; f+=.18){
-        const dx=x1+(x2-x1)*f, u=2*(f-.5), dy=(wireY-6) - (wireY-6-messengerY)*u*u;
-        g.beginPath();g.moveTo(dx,dy);g.lineTo(dx,wireY);g.stroke();
+    g.strokeStyle = 'rgba(40, 50, 65, 0.45)'; g.lineWidth = 1.3;
+    for (let x = -span * 0.65; x < W + span; x += span) {
+      const x1 = x, x2 = x + span, mx = (x1 + x2) / 2;
+      g.beginPath(); g.moveTo(x1, messengerY); g.quadraticCurveTo(mx, wireY - 4, x2, messengerY); g.stroke();
+      for (let f = 0.15; f < 0.9; f += 0.18) {
+        const dx = x1 + (x2 - x1) * f, u = 2 * (f - 0.5), dy = (wireY - 6) - (wireY - 6 - messengerY) * u * u;
+        g.beginPath(); g.moveTo(dx, dy); g.lineTo(dx, wireY); g.stroke();
       }
     }
   }
 
-  // 2. 後方車站月台建築 (遮雨棚柱、日式站名牌)
-  const roofY = railY - ch*1.24;
-  const stL = isPortrait ? W*0.05 : W*0.12, stR = isPortrait ? W*0.95 : W*0.84;
-  // 遮雨棚支撐柱 (在列車後方)
-  g.fillStyle='#64748b';
-  for(let px=stL+W*.08; px<stR; px+=W*.22){
-    g.fillRect(px-4, roofY, 8, railY-roofY);
+  const roofY = railY - ch * 1.24;
+  const stL = isPortrait ? W * 0.05 : W * 0.12, stR = isPortrait ? W * 0.95 : W * 0.84;
+  g.fillStyle = '#64748b';
+  for (let px = stL + W * 0.08; px < stR; px += W * 0.22) {
+    g.fillRect(px - 4, roofY, 8, railY - roofY);
   }
-  // 車站遮雨棚屋頂
-  g.fillStyle='#475569';
+  g.fillStyle = '#475569';
   g.beginPath();
-  g.moveTo(stL-15, roofY+6);
-  g.lineTo(stL+10, roofY-8);
-  g.lineTo(stR-10, roofY-8);
-  g.lineTo(stR+15, roofY+6);
-  g.closePath();
-  g.fill();
-  g.fillStyle='#94a3b8';
-  g.fillRect(stL-10, roofY+4, (stR-stL)+20, 4);
+  g.moveTo(stL - 15, roofY + 6); g.lineTo(stL + 10, roofY - 8);
+  g.lineTo(stR - 10, roofY - 8); g.lineTo(stR + 15, roofY + 6);
+  g.closePath(); g.fill();
+  g.fillStyle = '#94a3b8';
+  g.fillRect(stL - 10, roofY + 4, (stR - stL) + 20, 4);
 
-  // 懸掛式 JR 風格站名牌 (隨場景顯示：ふじさん / ほっかいどう / とうきょう 等)
-  const signX = W*0.48, signY = roofY + 10, signW = 126, signH = 32;
-  g.fillStyle='#ffffff';
-  g.beginPath();g.roundRect(signX-signW/2, signY, signW, signH, 4);g.fill();
-  g.strokeStyle='#334155';g.lineWidth=1.5;g.stroke();
-  g.fillStyle='#16a34a';
-  g.fillRect(signX-signW/2, signY+signH-7, signW, 5);
-  g.fillStyle='#0f172a';
-  g.font='bold 14px "PingFang TC","Noto Sans TC",sans-serif';
-  g.textAlign='center';
-  g.fillText((SCENES[st.sc]||SCENES[0]).jp, signX, signY+19);
+  const signX = W * 0.48, signY = roofY + 10, signW = 126, signH = 32;
+  g.fillStyle = '#ffffff';
+  g.beginPath(); g.roundRect(signX - signW / 2, signY, signW, signH, 4); g.fill();
+  g.strokeStyle = '#334155'; g.lineWidth = 1.5; g.stroke();
+  g.fillStyle = '#16a34a';
+  g.fillRect(signX - signW / 2, signY + signH - 7, signW, 5);
+  g.fillStyle = '#0f172a';
+  g.font = 'bold 14px "PingFang TC","Noto Sans TC",sans-serif';
+  g.textAlign = 'center';
+  g.fillText((SCENES[st.sc] || SCENES[0]).jp, signX, signY + 19);
 
-  // 3. 高架橋或地面軌道結構
-  if(trkType=='V'||trkType=='M'){
-    const deckH = ch*.54;
-    const pillarW = ch*.42, pillarSpan = cl(W*.22, 160, 280);
-    for(let x=pillarSpan*.35; x<W; x+=pillarSpan){
-      g.fillStyle='#aeb6c2';
-      g.fillRect(x-pillarW/2, railY+deckH*.7, pillarW, H-(railY+deckH*.7));
-      g.fillStyle='#9ba4b2';
+  if (trkType === 'V' || trkType === 'M') {
+    const deckH = ch * 0.54;
+    const pillarW = ch * 0.42, pillarSpan = clamp(W * 0.22, 150, 280);
+    for (let x = pillarSpan * 0.35; x < W; x += pillarSpan) {
+      g.fillStyle = '#aeb6c2';
+      g.fillRect(x - pillarW / 2, railY + deckH * 0.7, pillarW, H - (railY + deckH * 0.7));
+      g.fillStyle = '#9ba4b2';
       g.beginPath();
-      g.moveTo(x-pillarW*.75, railY+deckH*.7);g.lineTo(x+pillarW*.75, railY+deckH*.7);
-      g.lineTo(x+pillarW*.5, railY+deckH*.98);g.lineTo(x-pillarW*.5, railY+deckH*.98);
+      g.moveTo(x - pillarW * 0.75, railY + deckH * 0.7); g.lineTo(x + pillarW * 0.75, railY + deckH * 0.7);
+      g.lineTo(x + pillarW * 0.5, railY + deckH * 0.98); g.lineTo(x - pillarW * 0.5, railY + deckH * 0.98);
       g.fill();
     }
-    g.fillStyle='#c4cbd6';g.fillRect(0, railY, W, deckH*.75);
-    g.fillStyle='#9ea7b5';g.fillRect(0, railY+deckH*.55, W, deckH*.25);
+    g.fillStyle = '#c4cbd6'; g.fillRect(0, railY, W, deckH * 0.75);
+    g.fillStyle = '#9ea7b5'; g.fillRect(0, railY + deckH * 0.55, W, deckH * 0.25);
 
-    const wallH = ch*.24;
-    g.fillStyle='#dce2ec';g.fillRect(0, railY-wallH, W, wallH);
-    g.fillStyle='#8c96a6';g.fillRect(0, railY-wallH, W, 4);
-    g.fillStyle='#4a525e';g.fillRect(0, railY-4, W, 5);
-  }else{
-    g.fillStyle='#7c7872';g.fillRect(0, railY, W, ch*.28);
-    g.fillStyle='#5c5650';for(let x=0;x<W;x+=22)g.fillRect(x, railY-2, 12, 10);
-    g.fillStyle='#454c56';g.fillRect(0, railY-5, W, 5);
+    const wallH = ch * 0.24;
+    g.fillStyle = '#dce2ec'; g.fillRect(0, railY - wallH, W, wallH);
+    g.fillStyle = '#8c96a6'; g.fillRect(0, railY - wallH, W, 4);
+    g.fillStyle = '#4a525e'; g.fillRect(0, railY - 4, W, 5);
+  } else {
+    g.fillStyle = '#7c7872'; g.fillRect(0, railY, W, ch * 0.28);
+    g.fillStyle = '#5c5650'; for (let x = 0; x < W; x += 22) g.fillRect(x, railY - 2, 12, 10);
+    g.fillStyle = '#454c56'; g.fillRect(0, railY - 5, W, 5);
   }
 
-  // 4. 右前方三色鐵道出發號誌機
-  const sigX = isPortrait ? W*0.97 : W*0.935, sigTop = railY - ch*1.32;
-  g.fillStyle='#4a525e';g.fillRect(sigX-3, sigTop, 6, railY-sigTop);
-  g.fillStyle='#1e242c';g.beginPath();g.roundRect(sigX-14, sigTop-10, 28, 66, 14);g.fill();
-  g.strokeStyle='#dce2ec';g.lineWidth=2;g.stroke();
-  const goal=(st.goal||+$('#goal').value||30), isWarn=!st.loud&&(st.lvl>goal*.78||st.acc>1.0);
-  const cols=[
-    [st.loud?'#ff2e2e':'#4a1c1c', st.loud],
-    [isWarn?'#fbbf24':'#4a3b18', isWarn],
-    [(!st.loud&&!isWarn)?'#22c55e':'#184226', !st.loud&&!isWarn]
+  const sigX = isPortrait ? W * 0.95 : W * 0.935, sigTop = railY - ch * 1.32;
+  g.fillStyle = '#4a525e'; g.fillRect(sigX - 3, sigTop, 6, railY - sigTop);
+  g.fillStyle = '#1e242c'; g.beginPath(); g.roundRect(sigX - 14, sigTop - 10, 28, 66, 14); g.fill();
+  g.strokeStyle = '#dce2ec'; g.lineWidth = 2; g.stroke();
+  const threshold = clamp(st.silenceThreshold, 12, 85);
+  const isWarn = !st.loud && (st.lvl > threshold * 0.85 || st.acc > 0.7);
+  const cols = [
+    [st.loud ? '#ff2e2e' : '#4a1c1c', st.loud],
+    [isWarn ? '#fbbf24' : '#4a3b18', isWarn],
+    [(!st.loud && !isWarn) ? '#22c55e' : '#184226', !st.loud && !isWarn]
   ];
-  cols.forEach(([col,on],idx)=>{
-    const cy=sigTop+8+idx*20;
-    g.fillStyle=col;g.beginPath();g.arc(sigX,cy,7,0,7);g.fill();
-    if(on){g.fillStyle=col;g.globalAlpha=.35;g.beginPath();g.arc(sigX,cy,14,0,7);g.fill();g.globalAlpha=1}
+  cols.forEach(([col, on], idx) => {
+    const cy = sigTop + 8 + idx * 20;
+    g.fillStyle = col; g.beginPath(); g.arc(sigX, cy, 7, 0, Math.PI * 2); g.fill();
+    if (on) { g.fillStyle = col; g.globalAlpha = 0.35; g.beginPath(); g.arc(sigX, cy, 14, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
   });
 }
 
-// 繪製前景車站月台、木長椅、站務員與上下車旅客
-function drawStationPlatformAndPeople(railY,ch,trkType,t){
-  const platY = railY - ch*0.16; // 月台表面高度 (剛好對齊車門下緣，不擋住流線車頭)
-  const platL = isPortrait ? W*0.04 : W*0.11, platR = isPortrait ? W*0.96 : W*0.83, platW = platR - platL;
-  const platH = ch*0.26;
+function drawStationPlatformAndPeople(railY, ch, trkType, t) {
+  const platY = railY - ch * 0.16;
+  const platL = isPortrait ? W * 0.04 : W * 0.11, platR = isPortrait ? W * 0.96 : W * 0.83, platW = platR - platL;
+  const platH = ch * 0.26;
 
-  // 1. 月台混凝土基座與黃色安全導盲磚
-  g.fillStyle='#d6dce5';
-  g.beginPath();g.roundRect(platL, platY, platW, platH, [3,3,0,0]);g.fill();
-  g.fillStyle='#94a3b8';
-  g.fillRect(platL, platY+platH*0.45, platW, platH*0.55);
-  // 黃色安全警戒線 (Tactile Paving)
-  g.fillStyle='#eab308';
-  g.fillRect(platL+8, platY+3, platW-16, 4);
+  g.fillStyle = '#d6dce5';
+  g.beginPath(); g.roundRect(platL, platY, platW, platH, [3, 3, 0, 0]); g.fill();
+  g.fillStyle = '#94a3b8';
+  g.fillRect(platL, platY + platH * 0.45, platW, platH * 0.55);
+  g.fillStyle = '#eab308';
+  g.fillRect(platL + 8, platY + 3, platW - 16, 4);
 
-  // 2. 月台上的木製候車長椅與站牌
-  for(const bx of [W*0.24, W*0.58]){
-    g.fillStyle='#92400e';
-    g.fillRect(bx-20, platY-11, 40, 5); // 椅背
-    g.fillStyle='#b45309';
-    g.fillRect(bx-22, platY-6, 44, 4);  // 椅面
-    g.fillStyle='#334155';
-    g.fillRect(bx-16, platY-2, 4, 4);
-    g.fillRect(bx+12, platY-2, 4, 4);
+  for (const bx of [W * 0.24, W * 0.58]) {
+    g.fillStyle = '#92400e'; g.fillRect(bx - 20, platY - 11, 40, 5);
+    g.fillStyle = '#b45309'; g.fillRect(bx - 22, platY - 6, 44, 4);
+    g.fillStyle = '#334155'; g.fillRect(bx - 16, platY - 2, 4, 4); g.fillRect(bx + 12, platY - 2, 4, 4);
   }
 
-  // 3. 繪製月台上的特色旅客與站務員 (活著的小世界)
-  st.pax.forEach(p=>drawPerson(g, p, platY+2, ch, t));
-  drawPerson(g, st.staff, platY+2, ch, t);
+  st.pax.forEach(p => drawPerson(g, p, platY + 2, ch, t));
+  drawPerson(g, st.staff, platY + 2, ch, t);
 
-  // 4. 在來線/台鐵專屬：左側經典平交道遮斷機
-  if(trkType!='V'&&trkType!='M'){
-    const px=W*.055;
-    g.fillStyle='#f59e0b';g.fillRect(px-4,railY-ch*1.45,8,ch*1.55);
-    g.fillStyle='#1e242c';for(let y=railY-ch*1.4;y<railY;y+=18)g.fillRect(px-4,y,8,9);
-    g.save();g.translate(px,railY-ch*1.38);
-    g.fillStyle='#fff';g.strokeStyle='#dc2626';g.lineWidth=2.5;
-    for(const a of[.6,-.6]){g.save();g.rotate(a);g.fillRect(-ch*.28,-4,ch*.56,8);g.strokeRect(-ch*.28,-4,ch*.56,8);g.restore()}
+  if (trkType !== 'V' && trkType !== 'M') {
+    const px = W * 0.055;
+    g.fillStyle = '#f59e0b'; g.fillRect(px - 4, railY - ch * 1.45, 8, ch * 1.55);
+    g.fillStyle = '#1e242c'; for (let y = railY - ch * 1.4; y < railY; y += 18) g.fillRect(px - 4, y, 8, 9);
+    g.save(); g.translate(px, railY - ch * 1.38);
+    g.fillStyle = '#fff'; g.strokeStyle = '#dc2626'; g.lineWidth = 2.5;
+    for (const a of [0.6, -0.6]) { g.save(); g.rotate(a); g.fillRect(-ch * 0.28, -4, ch * 0.56, 8); g.strokeRect(-ch * 0.28, -4, ch * 0.56, 8); g.restore(); }
     g.restore();
-    const bl=Math.floor(t/500)%2;
-    for(let k=0;k<2;k++){
-      const on=st.arm>.15&&bl==k;
-      g.fillStyle=on?'#ff2a2a':'#5a1c1c';
-      g.beginPath();g.arc(px+(k?10:-10),railY-ch*1.05,7,0,7);g.fill();
+    const bl = Math.floor(t / 500) % 2;
+    for (let k = 0; k < 2; k++) {
+      const on = st.arm > 0.15 && bl === k;
+      g.fillStyle = on ? '#ff2a2a' : '#5a1c1c';
+      g.beginPath(); g.arc(px + (k ? 10 : -10), railY - ch * 1.05, 7, 0, Math.PI * 2); g.fill();
     }
-    const L=ch*1.8,a=(1-st.arm)*1.42,ex=px+L*Math.cos(a),ey=railY-ch*.65-L*Math.sin(a);
-    g.lineCap='round';g.lineWidth=7;
-    g.strokeStyle='#f59e0b';g.beginPath();g.moveTo(px,railY-ch*.65);g.lineTo(ex,ey);g.stroke();
-    g.strokeStyle='#18181b';g.setLineDash([10,10]);g.stroke();g.setLineDash([]);
+    const L = ch * 1.8, a = (1 - st.arm) * 1.42, ex = px + L * Math.cos(a), ey = railY - ch * 0.65 - L * Math.sin(a);
+    g.lineCap = 'round'; g.lineWidth = 7;
+    g.strokeStyle = '#f59e0b'; g.beginPath(); g.moveTo(px, railY - ch * 0.65); g.lineTo(ex, ey); g.stroke();
+    g.strokeStyle = '#18181b'; g.setLineDash([10, 10]); g.stroke(); g.setLineDash([]);
   }
 }
 
-// ===================== 主場景繪圖迴圈 =====================
-function draw(t){
-  const {hz,railY}=sceneLayout(),ch=CH(),s=st.sc,p=st.t*.05%4,i=Math.floor(p),j=(i+1)%4,f=p-i,sm=f*f*(3-2*f);
-  let top=mix(SK[i][0],SK[j][0],sm),bot=mix(SK[i][1],SK[j][1],sm);
-  const night=SK[i][2]+(SK[j][2]-SK[i][2])*sm;
-  if(s==3){top='#38bdf8';bot='#bae6fd'}if(s==5){top='#04061a';bot='#141c48'}
+function renderScene(t) {
+  g.save();
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  const gr=g.createLinearGradient(0,0,0,hz);gr.addColorStop(0,top);gr.addColorStop(1,bot);
-  g.fillStyle=gr;g.fillRect(0,0,W,hz+2);
-  if(night>.4||s==5){
-    g.fillStyle='#fff';
-    for(let q=0;q<30;q++){g.globalAlpha=s==5?.8:(night-.3)*.9;g.fillRect((q*97)%W,(q*53)%(hz*.8),2,2)}
-    g.globalAlpha=1;
+  const { hz, railY } = sceneLayout(), ch = CH(), s = st.sc;
+  const p = (st.t * 0.05) % 4, i = Math.floor(p), j = (i + 1) % 4, f = p - i, sm = f * f * (3 - 2 * f);
+  let top = mix(SK[i][0], SK[j][0], sm), bot = mix(SK[i][1], SK[j][1], sm);
+  const night = SK[i][2] + (SK[j][2] - SK[i][2]) * sm;
+  if (s === 3) { top = '#38bdf8'; bot = '#bae6fd'; }
+  if (s === 5) { top = '#04061a'; bot = '#141c48'; }
+
+  const gr = g.createLinearGradient(0, 0, 0, hz);
+  gr.addColorStop(0, top); gr.addColorStop(1, bot);
+  g.fillStyle = gr; g.fillRect(0, 0, W, hz + 2);
+
+  if (night > 0.4 || s === 5) {
+    g.fillStyle = '#fff';
+    for (let q = 0; q < 30; q++) {
+      g.globalAlpha = s === 5 ? 0.8 : (night - 0.3) * 0.9;
+      g.fillRect((q * 97) % W, (q * 53) % (hz * 0.8), 2, 2);
+    }
+    g.globalAlpha = 1;
   }
 
-  g.textAlign='center';
-  drawDistantLandmark(s,t,hz);
+  g.textAlign = 'center';
+  drawDistantLandmark(s, t, hz);
 
-  g.fillStyle=GR[s];g.fillRect(0,hz,W,H-hz);
-  if(night>.05&&s!=3&&s!=5){g.fillStyle='rgba(10,20,55,'+night*.26+')';g.fillRect(0,0,W,H)}
+  g.fillStyle = GR[s]; g.fillRect(0, hz, W, H - hz);
+  if (night > 0.05 && s !== 3 && s !== 5) {
+    g.fillStyle = 'rgba(10, 20, 55, ' + (night * 0.26) + ')';
+    g.fillRect(0, 0, W, H);
+  }
 
-  const T=st.tr, trkType = T ? M[T.i].trk : 'V';
-  drawRailwayInfra(railY,ch,trkType,t);
+  const T = st.tr, trkType = T ? M[T.i].trk : 'V';
+  drawRailwayInfra(railY, ch, trkType, t);
 
-  if(T){
-    const m=M[T.i];
-    drawTrain(g,m,T.x,railY,ch,{
-      night: s==5?0.8:night,
+  if (T) {
+    const m = M[T.i];
+    g.save();
+    drawTrain(g, m, T.x, railY, ch, {
+      night: s === 5 ? 0.8 : night,
       t: st.t,
       p: T.x,
-      glow: T.ph=='in',
+      glow: T.ph === 'in',
       door: T.door,
       occ: T.occ
     });
+    g.restore();
   }
 
-  if(st.cue){
-    const a=.45+.35*Math.sin(t/500),q=g.createRadialGradient(16,railY-ch*.55,0,16,railY-ch*.55,ch*2.0);
-    q.addColorStop(0,'rgba(255,246,184,'+a+')');q.addColorStop(1,'rgba(255,246,184,0)');
-    g.fillStyle=q;g.fillRect(0,railY-ch*2.2,ch*2.4,ch*3.2);
+  if (st.cue) {
+    const a = 0.45 + 0.35 * Math.sin(t / 500);
+    const q = g.createRadialGradient(16, railY - ch * 0.55, 0, 16, railY - ch * 0.55, ch * 2.0);
+    q.addColorStop(0, 'rgba(255, 246, 184, ' + a + ')');
+    q.addColorStop(1, 'rgba(255, 246, 184, 0)');
+    g.fillStyle = q; g.fillRect(0, railY - ch * 2.2, ch * 2.4, ch * 3.2);
   }
 
-  // 繪製前景車站月台、上下車旅客與站務員
-  drawStationPlatformAndPeople(railY,ch,trkType,t);
+  drawStationPlatformAndPeople(railY, ch, trkType, t);
 
-  if(st.arm>.02){g.fillStyle='rgba(60,70,85,'+.18*st.arm+')';g.fillRect(0,0,W,H)}
-  if(st.page){
-    const u=st.page.t/4,a=Math.sin(Math.PI*u);
-    g.fillStyle='rgba(255,248,210,'+.35*a+')';g.fillRect(0,0,W,H);
-    g.globalAlpha=a;g.font=Math.round(ch*1.0)+'px serif';g.fillText('📖',W/2,H*.35);
-    g.font=Math.round(ch*.42)+'px serif';
-    for(let k=0;k<10;k++)if(k<=u*11)g.fillText('⭐',W/2+(k-4.5)*ch*.5,H*.46);
-    g.globalAlpha=1;
+  if (st.arm > 0.02) {
+    g.fillStyle = 'rgba(60, 70, 85, ' + (0.18 * st.arm) + ')';
+    g.fillRect(0, 0, W, H);
   }
-  if(st.fade){
-    const u=st.fade.t<.5?st.fade.t*2:(1-st.fade.t)*2;
-    g.fillStyle='rgba(255,255,255,'+u+')';g.fillRect(0,0,W,H);
+  if (st.page) {
+    const u = st.page.t / 4, a = Math.sin(Math.PI * u);
+    g.fillStyle = 'rgba(255, 248, 210, ' + (0.35 * a) + ')';
+    g.fillRect(0, 0, W, H);
+    g.globalAlpha = a;
+    g.font = Math.round(ch * 1.0) + 'px serif';
+    g.fillText('📖', W / 2, H * 0.35);
+    g.font = Math.round(ch * 0.42) + 'px serif';
+    for (let k = 0; k < 10; k++) if (k <= u * 11) g.fillText('⭐', W / 2 + (k - 4.5) * ch * 0.5, H * 0.46);
+    g.globalAlpha = 1;
+  }
+  if (st.fade) {
+    const u = st.fade.t < 0.5 ? st.fade.t * 2 : (1 - st.fade.t) * 2;
+    g.fillStyle = 'rgba(255, 255, 255, ' + u + ')';
+    g.fillRect(0, 0, W, H);
+  }
+  g.restore();
+}
+
+// ===================== 新增 Debug 開發者面板 =====================
+function getSystemPhaseName() {
+  if (st.loud) return 'Noise';
+  if (!st.tr) return st.silenceTimer > 0.5 ? 'WaitingTrain' : 'Listening';
+  if (st.tr.ph === 'stop') return 'StationStop';
+  return 'TrainRunning';
+}
+
+function updateDebugPanel() {
+  const d = $('#dbg');
+  if (!d || !d.classList.contains('on')) return;
+
+  let acState = 'Closed';
+  if (audioCtx) {
+    if (audioCtx.state === 'running') acState = 'Running';
+    else if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') acState = 'Suspended';
+    else acState = 'Closed';
+  }
+
+  const hasLiveMic = micStream && micStream.getAudioTracks().some(t => t.readyState === 'live' && !t.muted);
+  const micStatus = (st.mic && hasLiveMic) ? 'Connected' : 'Disconnected';
+  const anStatus = (analyserNode && acState === 'Running') ? 'Running' : 'Stopped';
+  const waitInterval = st.first ? 4.0 : (+$('#rate').value || 15);
+  const countdown = st.tr ? 0 : Math.max(0, waitInterval - st.silenceTimer);
+  const sysPhase = getSystemPhaseName();
+
+  const isSystemError = audioSystemStoppedAlert || (st.run && st.mic && (acState !== 'Running' || micStatus !== 'Connected' || anStatus !== 'Running'));
+  const errBanner = isSystemError ? `<span class="err-banner">[ERROR] Audio System Stopped</span>` : '';
+
+  d.innerHTML = `${errBanner}` +
+    `AudioContext：<span class="${acState === 'Running' ? 'ok' : (acState === 'Suspended' ? 'warn' : 'bad')}">${acState}</span>\n` +
+    `Microphone：<span class="${micStatus === 'Connected' ? 'ok' : 'bad'}">${micStatus}</span>\n` +
+    `Analyser：<span class="${anStatus === 'Running' ? 'ok' : 'bad'}">${anStatus}</span>\n` +
+    `目前音量：${Math.round(st.lvlFast)} dB\n` +
+    `環境音：${Math.round(st.environmentNoise)} dB${st.calibrating ? ' (校正中...)' : ''}\n` +
+    `安靜門檻：${Math.round(st.silenceThreshold)} dB\n` +
+    `安靜倒數：${countdown.toFixed(1)} s\n` +
+    `目前狀態：<span class="${sysPhase === 'Noise' ? 'bad' : 'ok'}">${sysPhase}</span>\n` +
+    `列車總數：${st.trainCount}\n` +
+    `錯誤數：${audioErrorCount}\n` +
+    `最後錯誤：${lastAudioErrorMsg}`;
+}
+
+// ===================== 設定面板與事件綁定 =====================
+['rate', 'dwellT', 'sceneT'].forEach(i => {
+  if (cfg[i] != null && $('#' + i).querySelector(`option[value="${cfg[i]}"]`)) {
+    $('#' + i).value = cfg[i];
+  }
+});
+if (cfg.snd != null) $('#snd').checked = !!cfg.snd;
+if (cfg.thresholdMargin != null) st.thresholdMargin = +cfg.thresholdMargin || 18;
+if (cfg.silenceThreshold != null) {
+  st.silenceThreshold = clamp(+cfg.silenceThreshold, 12, 85);
+  $('#goal').value = String(st.silenceThreshold);
+}
+
+function refreshThresholdUI() {
+  const gl = $('#goalLive');
+  if (gl) gl.textContent = `環境 ${Math.round(st.environmentNoise)} dB / 門檻 ${Math.round(st.silenceThreshold)} dB`;
+  const volGoal = $('#volGoal');
+  if (volGoal) volGoal.style.left = clamp(st.silenceThreshold, 0, 100) + '%';
+  document.querySelectorAll('[data-g]').forEach(b => {
+    const m = +b.getAttribute('data-g');
+    const on = Math.abs(st.thresholdMargin - m) <= 2;
+    b.style.background = on ? '#2e7d32' : '';
+    b.style.color = on ? '#fff' : '';
+  });
+}
+
+$('#goal').addEventListener('input', () => {
+  st.silenceThreshold = clamp(+$('#goal').value || 35, 12, 85);
+  st.thresholdMargin = clamp(st.silenceThreshold - st.environmentNoise, 5, 60);
+  st.acc = 0; st.loud = false;
+  refreshThresholdUI();
+}, { passive: true });
+
+document.querySelectorAll('[data-g]').forEach(b => {
+  b.addEventListener('click', ev => {
+    ev.preventDefault();
+    const margin = +b.getAttribute('data-g');
+    st.thresholdMargin = margin;
+    st.silenceThreshold = clamp(st.environmentNoise + margin, 12, 85);
+    $('#goal').value = String(Math.round(st.silenceThreshold));
+    st.acc = 0; st.loud = false;
+    refreshThresholdUI();
+  });
+});
+
+function saveSettings(showToast = false) {
+  if ($('#sceneT').value === '0') {
+    $('#sceneT').value = '180';
+    triggerSceneFade((st.sc + 1) % 6);
+  }
+  ['rate', 'dwellT', 'sceneT'].forEach(i => { cfg[i] = $('#' + i).value; });
+  cfg.snd = $('#snd').checked;
+  cfg.silenceThreshold = st.silenceThreshold;
+  cfg.thresholdMargin = st.thresholdMargin;
+  sv('ak_cfg_v4', cfg);
+  if (showToast) {
+    const h = $('#saveHint');
+    if (h) {
+      h.textContent = '✅ 設定已儲存';
+      setTimeout(() => { h.textContent = ''; }, 2500);
+    }
   }
 }
 
-// ===================== 鐵道探索收藏館 =====================
-function showDetail(i){
-  const m=M[i],box=$('#detailBox'),isCollected=!!seen[i];
-  box.hidden=false;
-  if(!isCollected){
-    box.innerHTML=`<div style="text-align:center;padding:12px"><h4>🔒 尚未收錄此列車</h4><p style="margin:4px 0;opacity:.8">保持教室安靜 🟢🙂，等待這列火車緩緩進站吧！</p></div>`;
+$('#saveCfgBtn').onclick = () => saveSettings(true);
+document.querySelectorAll('#set select, #set input[type=checkbox]').forEach(el => {
+  el.addEventListener('change', () => saveSettings(false));
+});
+
+$('#gear').onclick = () => {
+  $('#set').hidden = !$('#set').hidden;
+  refreshThresholdUI();
+};
+
+$('#dbgBtn').onclick = () => {
+  $('#dbg').classList.toggle('on');
+  updateDebugPanel();
+};
+
+$('#cal').onclick = async () => {
+  if (!st.mic) {
+    try {
+      await setupMicrophoneGraph(true);
+    } catch (e) {
+      $('#msg').textContent = '⚠️ 請先允許瀏覽器麥克風權限';
+      return;
+    }
+  }
+  startEnvironmentCalibration();
+};
+
+const nzBtn = $('#noise');
+if (nzBtn) {
+  nzBtn.onpointerdown = () => { st.sim = true; };
+  nzBtn.onpointerup = nzBtn.onpointerleave = nzBtn.onpointercancel = () => { st.sim = false; };
+}
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') { st.sim = true; e.preventDefault(); }
+});
+window.addEventListener('keyup', e => {
+  if (e.code === 'Space') { st.sim = false; }
+});
+
+$('#callBtn').onclick = () => {
+  st.loud = false; st.acc = 0;
+  if (!st.tr) {
+    spawnTrain();
+  } else if (st.tr.ph === 'stop' && st.tr.t < st.tr.maxDwell - 3.6) {
+    st.tr.t = st.tr.maxDwell - 3.6;
+  }
+};
+
+$('#go').onclick = async () => {
+  $('#start').hidden = true;
+  $('#hudTop').hidden = false;
+  resizeViewport();
+  initWaitingPassengers();
+  st.run = true;
+  st.first = true;
+  st.silenceTimer = 0;
+
+  try {
+    await setupMicrophoneGraph(true);
+    startEnvironmentCalibration();
+  } catch (e) {
+    st.mic = false;
+    logAudioError('startMic', e);
+    $('#msg').textContent = '⚠️ 未偵測到麥克風權限：目前已啟用模擬環境音，可按「重新校正」授權';
+  }
+
+  requestScreenWakeLock();
+};
+
+// ===================== 鐵道探索收藏館（圖鑑 Modal） =====================
+function showDetail(i) {
+  const m = M[i], box = $('#detailBox'), isCollected = !!seen[i];
+  box.hidden = false;
+  if (!isCollected) {
+    box.innerHTML = `<div style="text-align:center;padding:12px"><h4>🔒 尚未收錄此列車</h4><p style="margin:4px 0;opacity:.8">保持安靜 🟢🙂，等待這列火車緩緩進站吧！</p></div>`;
     return;
   }
   const wikiUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(m.img)}?width=500`;
   const photoSrc = customPhotos[i] || wikiUrl;
-  box.innerHTML=`
+  box.innerHTML = `
     <div class="db-head">
       <div class="db-photo">
         <img id="dbImg" src="${photoSrc}" alt="${m.n}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
         <div style="display:none;padding:8px;text-align:center;font-size:12px">📷 離線模式<br>(可點擊下方上傳真車照片)</div>
       </div>
-      <div style="flex:1;min-width:220px">
+      <div style="flex:1;min-width:200px">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:20px;font-weight:900">🚄 ${m.n}</span>
-          <span style="color:#f59e0b;font-size:16px">${'⭐'.repeat(m.r)}</span>
+          <span style="font-size:18px;font-weight:900">🚄 ${m.n}</span>
+          <span style="color:#f59e0b;font-size:15px">${'⭐'.repeat(m.r)}</span>
         </div>
-        <div style="margin:6px 0;font-weight:700;color:#2563eb">📍 行駛區間：${m.route}</div>
-        <p style="margin:6px 0;font-size:13.5px;line-height:1.5">${m.desc}</p>
+        <div style="margin:5px 0;font-weight:700;color:#2563eb">📍 行駛區間：${m.route}</div>
+        <p style="margin:5px 0;font-size:13px;line-height:1.5">${m.desc}</p>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px">
           <span style="background:#22c55e22;color:#16a34a;padding:3px 8px;border-radius:6px;font-weight:700">✅ 已收錄 (停靠 ${seen[i]} 次)</span>
-          <span style="background:#8882;padding:3px 8px;border-radius:6px">${m.cars} 輛編組・${m.trk=='V'?'高架專用軌':(m.trk=='M'?'磁浮軌道':'在來線軌道')}</span>
+          <span style="background:#8882;padding:3px 8px;border-radius:6px">${m.cars} 輛編組・${m.trk === 'V' ? '高架專用軌' : (m.trk === 'M' ? '磁浮軌道' : '在來線軌道')}</span>
           <label style="cursor:pointer;background:#3b82f622;color:#2563eb;padding:3px 8px;border-radius:6px;font-weight:700">
             📷 更換真車照片 <input type="file" id="upPhoto" accept="image/*" hidden>
           </label>
         </div>
       </div>
     </div>`;
-  const up=$('#upPhoto');
-  if(up)up.onchange=e=>{
-    const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();
-    r.onload=ev=>{customPhotos[i]=ev.target.result;sv('ak_ph',customPhotos);showDetail(i)};
+  const up = $('#upPhoto');
+  if (up) up.onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => { customPhotos[i] = ev.target.result; sv('ak_ph', customPhotos); showDetail(i); };
     r.readAsDataURL(f);
   };
 }
 
-function album(pg){
-  const totalSeen=Object.keys(seen).length;
-  $('#dexCount').textContent=`(已收集 ${totalSeen} / ${M.length} 種)`;
-  const tabs=['第一冊：日本新幹線','第二冊：特快與台灣鐵道','第三冊：世界高速鐵道'].map((n,k)=>
-    `<button data-p="${k}" style="margin:3px;${k==pg?'background:#2563eb;color:#fff':''}">${bd(k)?'✅':'📘'} ${n}</button>`
-  ).join('')+`<button data-p="3" style="margin:3px;${pg==3?'background:#d97706;color:#fff':''}">${seen[30]?'👑 傳說':'❓ 傳說'}</button>`;
-  $('#tabs').innerHTML=tabs;
-  $('#detailBox').hidden=true;
+function album(pg) {
+  const totalSeen = Object.keys(seen).length;
+  $('#dexCount').textContent = `(已收集 ${totalSeen} / ${M.length} 種)`;
+  const tabs = ['第一冊：日本新幹線', '第二冊：特快與台灣鐵道', '第三冊：世界高速鐵道'].map((n, k) =>
+    `<button data-p="${k}" style="margin:3px;${k === pg ? 'background:#2563eb;color:#fff' : ''}">${bd(k) ? '✅' : '📘'} ${n}</button>`
+  ).join('') + `<button data-p="3" style="margin:3px;${pg === 3 ? 'background:#d97706;color:#fff' : ''}">${seen[30] ? '👑 傳說' : '❓ 傳說'}</button>`;
+  $('#tabs').innerHTML = tabs;
+  $('#detailBox').hidden = true;
 
-  const ids=pg==3?[30]:[...Array(10).keys()].map(k=>pg*10+k);
-  $('#grid').innerHTML=ids.map(i=>{
-    const m=M[i],ok=!!seen[i];
+  const ids = pg === 3 ? [30] : [...Array(10).keys()].map(k => pg * 10 + k);
+  $('#grid').innerHTML = ids.map(i => {
+    const m = M[i], ok = !!seen[i];
     return `<div class="dex-item" data-idx="${i}">
       <canvas width="520" height="160"></canvas>
-      <div class="di-title"><span>${ok?'🚄 '+m.n:'🔒 ？？？'}</span><span style="color:#f59e0b">${'⭐'.repeat(m.r)}</span></div>
-      <div class="di-route">${ok?'📍 '+m.route:'保持安靜即可解鎖收錄'}</div>
+      <div class="di-title"><span>${ok ? '🚄 ' + m.n : '🔒 ？？？'}</span><span style="color:#f59e0b">${'⭐'.repeat(m.r)}</span></div>
+      <div class="di-route">${ok ? '📍 ' + m.route : '保持安靜即可解鎖收錄'}</div>
     </div>`;
   }).join('');
 
-  document.querySelectorAll('#grid canvas').forEach((c,k)=>{
-    const x=c.getContext('2d'),i=ids[k],m=M[i];
-    x.scale(2,2);
-    x.fillStyle='#cbd5e1';x.fillRect(0,64,260,16);
-    x.fillStyle='#475569';x.fillRect(0,62,260,3);
-    drawTrain(x,m,248,64,28,{sil:!seen[i],t:0,p:0,door:0,occ:0.6});
+  document.querySelectorAll('#grid canvas').forEach((c, k) => {
+    const x = c.getContext('2d'), i = ids[k], m = M[i];
+    x.save();
+    x.scale(2, 2);
+    x.fillStyle = '#cbd5e1'; x.fillRect(0, 64, 260, 16);
+    x.fillStyle = '#475569'; x.fillRect(0, 62, 260, 3);
+    drawTrain(x, m, 248, 64, 28, { sil: !seen[i], t: 0, p: 0, door: 0, occ: 0.6 });
+    x.restore();
   });
 
-  document.querySelectorAll('.dex-item').forEach(el=>el.onclick=()=>showDetail(+el.dataset.idx));
-  document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>album(+b.dataset.p));
-  const firstCollected=ids.find(i=>seen[i]);
-  if(firstCollected!=null)showDetail(firstCollected);
-  $('#dex').hidden=0;
+  document.querySelectorAll('.dex-item').forEach(el => el.onclick = () => showDetail(+el.dataset.idx));
+  document.querySelectorAll('[data-p]').forEach(b => b.onclick = () => album(+b.dataset.p));
+  const firstCollected = ids.find(i => seen[i]);
+  if (firstCollected != null) showDetail(firstCollected);
+  $('#dex').hidden = false;
 }
 
-$('#alb').onclick=()=>{$('#badge').hidden=1;album([0,1,2].find(x=>!bd(x))??0)};
-$('#dx').onclick=()=>$('#dex').hidden=1;
+$('#alb').onclick = () => {
+  $('#badge').hidden = true;
+  album([0, 1, 2].find(x => !bd(x)) ?? 0);
+};
+$('#dx').onclick = () => { $('#dex').hidden = true; };
 
+// ===================== 啟動初始化與永不中斷之主動畫迴圈 =====================
+resizeViewport();
 initWaitingPassengers();
-let last=performance.now();
-(function loop(t){
-  try{
-    update(Math.min(.1,(t-last)/1000));
-  }catch(e){
-    dbgErr('update', e);
+refreshThresholdUI();
+
+let lastFrameTime = performance.now();
+let debugTick = 0;
+
+function mainLoop(now) {
+  const dt = clamp((now - lastFrameTime) / 1000, 0.001, 0.1);
+  lastFrameTime = now;
+
+  try {
+    updateGameLogic(dt);
+  } catch (e) {
+    logAudioError('updateGameLogic', e);
   }
-  try{
-    draw(t);
-  }catch(e){
-    dbgErr('draw', e);
+
+  try {
+    renderScene(now);
+  } catch (e) {
+    logAudioError('renderScene', e);
   }
-  last=t;
-  requestAnimationFrame(loop);
-})(last);
-</script></body></html>
+
+  debugTick += dt;
+  if (debugTick >= 0.2) {
+    debugTick = 0;
+    try { updateDebugPanel(); } catch (e) {}
+  }
+
+  requestAnimationFrame(mainLoop);
+}
+
+requestAnimationFrame(mainLoop);
+</script>
+</body>
+</html>
