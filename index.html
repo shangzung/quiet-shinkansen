@@ -936,21 +936,74 @@ function chime(freqs){
   }catch(e){}
 }
 
-// ===================== 麥克風與自動環境音校準（穩定版） =====================
-let an, buf = new Float32Array(2048);
+// ===================== 麥克風與自動環境音校準（iOS 強化穩定版） =====================
+let an = null, micStream = null, freqBuf = null;
+const timeBuf = new Float32Array(2048);
+const byteBuf = new Uint8Array(2048);
 const lvlHist = [];
-const LVL_HIST_N = 9;
+const LVL_HIST_N = 7;
 let calBusy = false;
 let adaptQuietT = 0;
+let lastMicOk = 0;
 
+function ensureAudioRunning(){
+  const a = st.ac;
+  if(!a) return;
+  if(a.state === 'suspended'){
+    a.resume().catch(()=>{});
+  }
+}
+
+// 回傳 0~50 的原始音量（尚未扣底噪）
 function rawInstant(){
-  if(!an) return 4;
-  an.getFloatTimeDomainData(buf);
-  let s = 0;
-  for(let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
-  const rms = Math.sqrt(s / buf.length) || 1e-5;
-  const db = 20 * Math.log10(rms);
-  return cl((db + 85) * 50 / 58, 0, 50);
+  if(!an) return 0;
+  ensureAudioRunning();
+  // 方法 A：時間域 RMS
+  an.getFloatTimeDomainData(timeBuf);
+  let sum = 0, peak = 0;
+  for(let i = 0; i < timeBuf.length; i++){
+    const v = timeBuf[i];
+    sum += v * v;
+    const av = v < 0 ? -v : v;
+    if(av > peak) peak = av;
+  }
+  const rms = Math.sqrt(sum / timeBuf.length) || 1e-8;
+
+  // 方法 B：位元組時間域（部分 iOS 上 float 幾乎靜音，byte 仍有反應）
+  an.getByteTimeDomainData(byteBuf);
+  let bSum = 0, bPeak = 0;
+  for(let i = 0; i < byteBuf.length; i++){
+    const d = (byteBuf[i] - 128) / 128;
+    bSum += d * d;
+    const ad = d < 0 ? -d : d;
+    if(ad > bPeak) bPeak = ad;
+  }
+  const bRms = Math.sqrt(bSum / byteBuf.length) || 1e-8;
+
+  // 方法 C：頻譜能量（人聲約 200~4000Hz）
+  if(!freqBuf || freqBuf.length !== an.frequencyBinCount){
+    freqBuf = new Uint8Array(an.frequencyBinCount);
+  }
+  an.getByteFrequencyData(freqBuf);
+  const binHz = (st.ac && st.ac.sampleRate ? st.ac.sampleRate : 44100) / an.fftSize;
+  let fSum = 0, fN = 0;
+  for(let i = 0; i < freqBuf.length; i++){
+    const hz = i * binHz;
+    if(hz >= 150 && hz <= 4500){
+      fSum += freqBuf[i];
+      fN++;
+    }
+  }
+  const fAvg = fN ? fSum / fN : 0; // 0~255
+
+  // 取三種量測的「最大反應」，避免單一 API 在某裝置失效
+  const lvlRms = cl((20 * Math.log10(Math.max(rms, bRms, 1e-8)) + 90) * 50 / 60, 0, 50);
+  const lvlPeak = cl((20 * Math.log10(Math.max(peak, bPeak, 1e-8)) + 80) * 50 / 55, 0, 50);
+  const lvlFreq = cl(fAvg * 50 / 180, 0, 50); // 人聲中等響約 80~120 → 約 22~33
+
+  const merged = Math.max(lvlRms, lvlPeak * 0.85, lvlFreq);
+  if(merged > 1) lastMicOk = performance.now();
+  return merged;
 }
 
 function median(arr){
@@ -963,63 +1016,120 @@ function raw(){
   const v = rawInstant();
   lvlHist.push(v);
   if(lvlHist.length > LVL_HIST_N) lvlHist.shift();
-  return lvlHist.length >= 3 ? median(lvlHist) : v;
+  // 用偏高百分位，讓大喊更容易被看到（抑制極短尖峰仍靠中值）
+  if(lvlHist.length >= 3){
+    const sorted = lvlHist.slice().sort((x,y)=>x-y);
+    const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.6));
+    return sorted[idx];
+  }
+  return v;
 }
 
 function autoCalibrate(opts){
   opts = opts || {};
   if(!st.mic || calBusy) return;
   calBusy = true;
+  ensureAudioRunning();
   const samples = [];
-  const maxN = opts.samples || 40;
-  const interval = opts.interval || 50;
+  const maxN = opts.samples || 50;
+  const interval = opts.interval || 40;
   $('#msg').textContent = '🎚 正在聆聽環境底噪…請保持安靜';
   const iv = setInterval(()=>{
     samples.push(rawInstant());
     if(samples.length >= maxN){
       clearInterval(iv);
       samples.sort((a,b)=>a-b);
-      const lo = Math.floor(samples.length * 0.15);
-      const hi = Math.floor(samples.length * 0.75);
-      const slice = samples.slice(lo, hi);
-      const floor = slice.reduce((a,b)=>a+b, 0) / (slice.length || 1);
-      st.off = cl(floor - 5, 0, 32);
-      st.lvl = cl(floor - st.off, 0, 20);
+      const lo = Math.floor(samples.length * 0.1);
+      const hi = Math.floor(samples.length * 0.7);
+      const slice = samples.slice(lo, Math.max(lo+1, hi));
+      const floor = slice.reduce((a,b)=>a+b, 0) / slice.length;
+      // 安靜時目標讀數約 4~10；門檻預設 30，大喊應可到 35+
+      st.off = cl(floor - 6, 0, 35);
+      st.lvl = cl(floor - st.off, 0, 15);
+      st.lvlFast = st.lvl;
       st.acc = 0; st.loud = 0; st.quiet = 2; adaptQuietT = 0;
       calBusy = false;
-      $('#msg').textContent = '✅ 已校準環境底噪（安靜讀數約 ' + Math.round(st.lvl) + '）';
-      setTimeout(()=>{ if($('#msg').textContent.indexOf('已校準')===0) $('#msg').textContent='提示：列車停靠時越安靜，停留時間越長喔！'; }, 4500);
+      $('#msg').textContent = '✅ 已校準（安靜約 ' + Math.round(st.lvl) + '，大喊應明顯上升）';
+      const lr = $('#lvlReadout');
+      if(lr) lr.textContent = Math.round(st.lvl) + ' / 門檻 ' + ($('#goal').value||30);
+      setTimeout(()=>{
+        if(($('#msg').textContent||'').indexOf('已校準')===0)
+          $('#msg').textContent = '提示：列車停靠時越安靜，停留時間越長喔！';
+      }, 5000);
     }
   }, interval);
 }
 
-$('#go').onclick=async()=>{
-  $('#start').hidden=1;['lamp','dots','top','volWrap'].forEach(i=>$('#'+i).hidden=0);
+async function startMic(){
+  // 多組 constraints，提高 iOS / Android 成功率
+  const tries = [
+    {audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1}},
+    {audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:true}},
+    {audio:true}
+  ];
+  let stream = null, lastErr = null;
+  for(const c of tries){
+    try{
+      stream = await navigator.mediaDevices.getUserMedia(c);
+      break;
+    }catch(e){ lastErr = e; }
+  }
+  if(!stream) throw lastErr || new Error('getUserMedia failed');
+  micStream = stream;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const a = st.ac = st.ac || new AC();
+  await a.resume();
+  // 重建分析器
+  an = a.createAnalyser();
+  an.fftSize = 2048;
+  an.smoothingTimeConstant = 0.25;
+  an.minDecibels = -90;
+  an.maxDecibels = -10;
+  const src = a.createMediaStreamSource(stream);
+  src.connect(an);
+  // 不 connect destination，避免回授；僅分析
+  st.mic = 1;
+  // 確認軌道活著
+  stream.getAudioTracks().forEach(t=>{
+    t.enabled = true;
+    try{ t.applyConstraints && t.applyConstraints({autoGainControl:false}); }catch(e){}
+  });
+  return true;
+}
+
+$('#go').onclick = async ()=>{
+  $('#start').hidden = 1;
+  ['lamp','dots','top','volWrap'].forEach(i=>{ const el=$('#'+i); if(el) el.hidden=0; });
   initWaitingPassengers();
   try{
-    const s = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 }
-    });
-    const a = st.ac = new (window.AudioContext || webkitAudioContext)();
-    await a.resume();
-    an = a.createAnalyser();
-    an.fftSize = 2048;
-    an.smoothingTimeConstant = 0.35;
-    a.createMediaStreamSource(s).connect(an);
-    st.mic = 1;
-    setTimeout(()=>autoCalibrate({samples:48, interval:50}), 400);
+    await startMic();
+    $('#msg').textContent = '🎤 麥克風已開啟，正在校準…';
+    setTimeout(()=>autoCalibrate({samples:50, interval:40}), 350);
   }catch(e){
-    $('#noise').hidden=0;
-    $('#msg').textContent='未開啟麥克風：按住「按住=測試吵鬧」或空白鍵測試';
+    st.mic = 0;
+    const nz = $('#noise'); if(nz) nz.hidden = 0;
+    $('#msg').textContent = '未開啟麥克風：請允許權限，或按住「測試吵鬧」／空白鍵';
+    console.warn('mic error', e);
   }
-  st.run=1; st.first=1; st.qs=2.0;
+  st.run = 1; st.first = 1; st.qs = 2.0;
+  // iOS：每次觸控都嘗試 resume
+  const resume = ()=>ensureAudioRunning();
+  document.addEventListener('touchstart', resume, {passive:true});
+  document.addEventListener('click', resume, {passive:true});
 };
 
-$('#cal').onclick=()=>{
-  if(!st.mic){ $('#msg').textContent='請先允許麥克風權限後再校準'; return; }
-  autoCalibrate({samples:48, interval:50});
+$('#cal').onclick = ()=>{
+  if(!st.mic){
+    // 嘗試重新要權限
+    startMic().then(()=>autoCalibrate({samples:50, interval:40}))
+      .catch(()=>{$('#msg').textContent='請先允許麥克風權限後再校準';});
+    return;
+  }
+  ensureAudioRunning();
+  autoCalibrate({samples:50, interval:40});
 };
-const nz=$('#noise');nz.onpointerdown=()=>st.sim=1;nz.onpointerup=nz.onpointerleave=()=>st.sim=0;
+const nz=$('#noise');
+if(nz){ nz.onpointerdown=()=>st.sim=1; nz.onpointerup=nz.onpointerleave=()=>st.sim=0; }
 addEventListener('keydown',e=>{if(e.code=='Space'&&!st.mic){st.sim=1;e.preventDefault()}});
 addEventListener('keyup',e=>{if(e.code=='Space')st.sim=0});
 
@@ -1143,39 +1253,52 @@ function update(dt){
 
   if(st.run){
     const goal=+$('#goal').value;
-    const tg = st.mic ? cl(raw() - st.off, 0, 50) : (st.sim ? 46 : 4 + Math.random() * 1.5);
-    // 遊戲判斷用中速平滑；音量計用較快跟隨，講話時立刻看得到
-    const follow = tg > st.lvl ? Math.min(1, dt * 5.5) : Math.min(1, dt * 3.0);
-    st.lvl += (tg - st.lvl) * follow;
-    if(st.lvlFast == null) st.lvlFast = st.lvl;
-    const fastF = tg > st.lvlFast ? Math.min(1, dt * 14) : Math.min(1, dt * 8);
+    // 每幀確保 AudioContext 在跑（iOS 背景回來常被 suspend）
+    if(st.mic) ensureAudioRunning();
+    let tg;
+    if(st.mic){
+      const instant = raw();
+      tg = cl(instant - (st.off||0), 0, 50);
+      // 若長時間幾乎無訊號，提示可能被系統靜音
+      if(performance.now() - lastMicOk > 8000 && st.t > 10){
+        // 不強制改 msg，避免洗版；讀數仍更新
+      }
+    }else{
+      tg = st.sim ? 46 : 4 + Math.random() * 1.2;
+    }
+    if(st.lvlFast == null) st.lvlFast = tg;
+    // 音量計：極快跟隨
+    const fastF = tg > st.lvlFast ? Math.min(1, dt * 18) : Math.min(1, dt * 10);
     st.lvlFast += (tg - st.lvlFast) * fastF;
+    // 遊戲判定：中速平滑
+    const follow = tg > st.lvl ? Math.min(1, dt * 6) : Math.min(1, dt * 3.5);
+    st.lvl += (tg - st.lvl) * follow;
 
     const over = st.lvl - goal;
     if(over > 0){
       const intensity = Math.min(1, over / 10);
-      st.acc += dt * (0.35 + 2.8 * intensity * intensity);
+      st.acc += dt * (0.4 + 3.0 * intensity * intensity);
       st.quiet = 0; adaptQuietT = 0;
     }else{
       st.quiet += dt;
-      st.acc = Math.max(0, st.acc - dt * 3.2);
-      if(st.lvl < goal * 0.55 && st.mic && !calBusy){
+      st.acc = Math.max(0, st.acc - dt * 3.5);
+      if(st.lvl < goal * 0.5 && st.mic && !calBusy){
         adaptQuietT += dt;
-        if(adaptQuietT > 8){
-          const targetOff = st.off + (tg - 6) * 0.02;
-          st.off = cl(st.off + (targetOff - st.off) * Math.min(1, dt * 0.15), 0, 32);
+        if(adaptQuietT > 10){
+          st.off = cl(st.off + (tg - 6) * 0.015 * Math.min(1, dt), 0, 35);
         }
       }else adaptQuietT = 0;
     }
-    if(!st.loud && st.acc >= 5.2){ st.loud = 1; st.loudT = 0; }
-    if(st.loud && st.quiet >= 1.4){ st.loud = 0; st.acc = 0; }
+    if(!st.loud && st.acc >= 4.8){ st.loud = 1; st.loudT = 0; }
+    if(st.loud && st.quiet >= 1.2){ st.loud = 0; st.acc = 0; }
 
-    const isWarn = !st.loud && (st.lvl > goal * 0.78 || st.acc > 1.0);
+    const isWarn = !st.loud && (st.lvl > goal * 0.75 || st.acc > 0.9);
     if(st.loud){ st.loudT += dt; }
     else{
-      if(!st.tr) st.qs += dt * (isWarn ? 0.45 : 1.0);
+      if(!st.tr) st.qs += dt * (isWarn ? 0.4 : 1.0);
       st.scT += dt;
     }
+
 
     // 左上角 3 歲直覺表情燈號 + 底部進度條
     const lampEl=$('#lamp'), lampTxt=$('#lampTxt'), lampBar=$('#lampBar');
@@ -1204,11 +1327,11 @@ function update(dt){
       lampTxt.textContent='🟢🙂';lampEl.style.borderColor='#4ade80';lampBar.style.background='#22c55e';
     }
 
-    // 常駐音量計 + 設定內讀數（講話時會立刻動）
+    // 音量計與設定讀數（每幀更新，大喊必動）
     const showLv = Math.round(st.lvlFast != null ? st.lvlFast : st.lvl);
     const volFill = $('#volFill'), volGoal = $('#volGoal'), volNum = $('#volNum');
     if(volFill){
-      volFill.style.width = cl((st.lvlFast != null ? st.lvlFast : st.lvl) / 50 * 100, 0, 100) + '%';
+      volFill.style.width = cl(showLv / 50 * 100, 0, 100) + '%';
       if(volGoal) volGoal.style.left = cl(goal / 50 * 100, 0, 100) + '%';
       if(volNum) volNum.textContent = String(showLv);
     }
