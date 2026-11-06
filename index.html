@@ -25,6 +25,9 @@ html,body{
   touch-action:none;-webkit-touch-callout:none;
   overscroll-behavior:none;
 }
+html.orient-fix, body.orient-fix { overflow:hidden; width:100%; height:100%; }
+canvas#c.orient-fix { width:100% !important; height:100% !important; }
+
 canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .card{background:var(--card);border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 button,select{font:inherit;border:1px solid #8885;border-radius:14px;background:var(--card);color:var(--fg);padding:8px 14px;cursor:pointer;transition:.2s;-webkit-tap-highlight-color:transparent}
@@ -116,14 +119,50 @@ button:hover{transform:scale(1.02)}
 #detailBox .db-head{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
 #detailBox .db-photo{width:min(220px,100%);height:130px;border-radius:12px;object-fit:cover;background:#0002;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;flex-shrink:0}
 #detailBox .db-photo img{width:100%;height:100%;object-fit:cover}
+
+/* 常駐音量計（語音／環境音即時反應） */
+#volWrap{
+  position:fixed;
+  left:calc(10px + var(--safe-l, 0px));
+  top:calc(10px + var(--safe-t, 0px) + 74px);
+  z-index:13;
+  display:flex;align-items:center;gap:8px;
+  padding:6px 10px;min-width:120px;
+  pointer-events:none;
+}
+#volWrap .card{pointer-events:none}
+#volBar{
+  position:relative;width:min(140px,28vw);height:12px;
+  background:#e2e8f0;border-radius:99px;overflow:hidden;
+  border:1px solid #94a3b866;
+}
+#volFill{
+  position:absolute;left:0;top:0;bottom:0;width:0%;
+  background:linear-gradient(90deg,#22c55e,#eab308,#ef4444);
+  border-radius:99px;transition:width .08s linear;
+}
+#volGoal{
+  position:absolute;top:0;bottom:0;width:2px;background:#1e293b;
+  transform:translateX(-50%);pointer-events:none;
+}
+#volNum{font-size:12px;font-weight:800;min-width:2.5em;color:var(--fg)}
+@media (max-width:640px),(orientation:portrait){
+  #volWrap{top:calc(8px + var(--safe-t, 0px) + 58px); left:calc(8px + var(--safe-l, 0px));}
+  #volBar{width:min(110px,32vw);height:10px}
+}
+@media (orientation:landscape) and (max-height:500px){
+  #volWrap{top:calc(8px + var(--safe-t, 0px) + 50px); padding:4px 8px}
+  #volBar{width:100px;height:9px}
+}
 [hidden]{display:none!important}
+
 
 /* —— 直式（窄螢幕）：縮小頂欄，避免燈號／進度／按鈕互撞 —— */
 @media (max-width:640px),(orientation:portrait){
   :root{--ic:48px}
   #lamp{height:58px;font-size:28px;padding:0 10px;border-width:3px;left:calc(8px + var(--safe-l));top:calc(8px + var(--safe-t))}
   #dots{
-    top:calc(8px + var(--safe-t) + 62px);
+    top:calc(8px + var(--safe-t) + 88px);
     left:calc(8px + var(--safe-l)); right:calc(8px + var(--safe-r));
     transform:none;width:auto;max-width:none;
     justify-content:flex-start;
@@ -162,6 +201,10 @@ button:hover{transform:scale(1.02)}
 
 <!-- 左上：3歲幼兒直覺燈號 + 底部進度條 -->
 <div id="lamp" class="card" hidden><span id="lampTxt">🟢🙂</span><div id="lampBar"></div></div>
+<div id="volWrap" class="card" hidden>
+  <div id="volBar"><div id="volFill"></div><div id="volGoal"></div></div>
+  <span id="volNum">0</span>
+</div>
 <div id="dots" class="card" hidden><span id="dotsTxt"></span><span id="dwellHint" hidden>🤫 安靜觀察中・列車停留延長</span></div>
 <div id="top" hidden>
   <button id="callBtn" class="card ic" title="召喚列車 / 切換發車">🔔</button>
@@ -235,28 +278,59 @@ button:hover{transform:scale(1.02)}
 // ===================== 基本畫布與儲存工具 =====================
 const $=s=>document.querySelector(s),cv=$('#c'),g=cv.getContext('2d');let W,H,isPortrait=true;
 function rs(){
-  // 使用 visualViewport 避免手機旋轉／位址列造成裁切
+  // 以 window 尺寸為主（旋轉最穩）；visualViewport 僅作參考下限
   const vv = window.visualViewport;
-  const d = Math.min(devicePixelRatio||1, 3);
-  W = Math.round(vv ? vv.width : innerWidth);
-  H = Math.round(vv ? vv.height : innerHeight);
-  if(W<1||H<1){W=innerWidth;H=innerHeight}
+  const d = Math.min(devicePixelRatio || 1, 3);
+  let w = window.innerWidth || document.documentElement.clientWidth || 1;
+  let h = window.innerHeight || document.documentElement.clientHeight || 1;
+  // iOS 旋轉當下有時 inner 尚未更新，取較大合理值避免畫布過矮只剩天空
+  if(vv && vv.width > 0 && vv.height > 0){
+    w = Math.max(w, Math.round(vv.width));
+    h = Math.max(h, Math.round(vv.height));
+  }
+  W = Math.max(1, Math.round(w));
+  H = Math.max(1, Math.round(h));
   const wasPortrait = isPortrait;
-  isPortrait = H >= W;
-  cv.width = Math.max(1, Math.floor(W*d));
-  cv.height = Math.max(1, Math.floor(H*d));
-  g.setTransform(d,0,0,d,0,0);
-  // 僅在直橫切換時重配月台人物，避免旋轉裁切；一般 resize 不重置劇本
-  if(wasPortrait !== isPortrait && typeof st!=='undefined' && st.run && typeof initWaitingPassengers==='function'){
+  isPortrait = H >= W * 0.95; // 接近正方形也當直式，較不易誤判
+  cv.width = Math.max(1, Math.floor(W * d));
+  cv.height = Math.max(1, Math.floor(H * d));
+  // CSS 尺寸與邏輯像素對齊，避免被拉伸裁切
+  cv.style.width = W + 'px';
+  cv.style.height = H + 'px';
+  g.setTransform(d, 0, 0, d, 0, 0);
+  if(wasPortrait !== isPortrait && typeof st !== 'undefined' && st.run && typeof initWaitingPassengers === 'function'){
     try{ initWaitingPassengers(); }catch(e){}
   }
 }
-addEventListener('resize',rs);
-addEventListener('orientationchange',()=>setTimeout(rs,80));
-addEventListener('touchmove',e=>{ if(!(e.target.closest && e.target.closest('#set,#dex,#start'))) e.preventDefault(); }, {passive:false});
+function rsDebounced(){
+  rs();
+  // 旋轉後瀏覽器會分階段改尺寸，連續補算避免半套版面
+  clearTimeout(rs._t1); clearTimeout(rs._t2); clearTimeout(rs._t3);
+  rs._t1 = setTimeout(rs, 60);
+  rs._t2 = setTimeout(rs, 200);
+  rs._t3 = setTimeout(rs, 500);
+}
+addEventListener('resize', rsDebounced);
+addEventListener('orientationchange', ()=>{
+  document.documentElement.classList.add('orient-fix');
+  document.body.classList.add('orient-fix');
+  rsDebounced();
+  setTimeout(()=>{
+    document.documentElement.classList.remove('orient-fix');
+    document.body.classList.remove('orient-fix');
+    rs();
+  }, 600);
+});
+addEventListener('touchmove', e=>{
+  if(!(e.target.closest && e.target.closest('#set,#dex,#start'))) e.preventDefault();
+}, {passive:false});
 if(window.visualViewport){
-  visualViewport.addEventListener('resize',rs);
-  visualViewport.addEventListener('scroll',()=>{ /* 鎖在左上，避免 iOS 捲動位移 */ document.documentElement.scrollTop=0; document.body.scrollTop=0; });
+  visualViewport.addEventListener('resize', rsDebounced);
+  visualViewport.addEventListener('scroll', ()=>{
+    window.scrollTo(0,0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  });
 }
 rs();
 const ld=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}},sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},cl=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -316,11 +390,16 @@ const CH=()=>{
 };
 // 地平線與軌道高度：確保月台與列車完整落在可視區
 const sceneLayout=()=>{
+  // 保證地平線與軌道都在可視區內，旋轉後也不會整片只剩天空
   if(isPortrait){
-    return { hz: H*0.42, railY: H*0.72 };
+    const railY = cl(H * 0.70, H * 0.58, H * 0.78);
+    const hz = cl(railY - H * 0.28, H * 0.32, H * 0.50);
+    return { hz, railY };
   }
-  // 橫式：軌道略靠下但仍留出天空
-  return { hz: H*0.50, railY: cl(H*0.78, H*0.62, H*0.86) };
+  // 橫式：軌道約在 70% 高度，上方留天空、下方留月台與安全區
+  const railY = cl(H * 0.70, 120, H * 0.82);
+  const hz = cl(railY - Math.min(H * 0.32, 160), H * 0.28, railY - 40);
+  return { hz, railY };
 };
 
 function noseRatio(tp){return {E7:3.6, E5:4.8, E6:4.5, N700:3.8, D:3.4, P500:5.0, ALFA:5.8, MAG:5.0, F800:2.6, F:1.8, B:0.45, SL:3.6}[tp]||3.2}
@@ -915,7 +994,7 @@ function autoCalibrate(opts){
 }
 
 $('#go').onclick=async()=>{
-  $('#start').hidden=1;['lamp','dots','top'].forEach(i=>$('#'+i).hidden=0);
+  $('#start').hidden=1;['lamp','dots','top','volWrap'].forEach(i=>$('#'+i).hidden=0);
   initWaitingPassengers();
   try{
     const s = await navigator.mediaDevices.getUserMedia({
@@ -1065,8 +1144,12 @@ function update(dt){
   if(st.run){
     const goal=+$('#goal').value;
     const tg = st.mic ? cl(raw() - st.off, 0, 50) : (st.sim ? 46 : 4 + Math.random() * 1.5);
-    const follow = tg > st.lvl ? Math.min(1, dt * 4.2) : Math.min(1, dt * 2.6);
+    // 遊戲判斷用中速平滑；音量計用較快跟隨，講話時立刻看得到
+    const follow = tg > st.lvl ? Math.min(1, dt * 5.5) : Math.min(1, dt * 3.0);
     st.lvl += (tg - st.lvl) * follow;
+    if(st.lvlFast == null) st.lvlFast = st.lvl;
+    const fastF = tg > st.lvlFast ? Math.min(1, dt * 14) : Math.min(1, dt * 8);
+    st.lvlFast += (tg - st.lvlFast) * fastF;
 
     const over = st.lvl - goal;
     if(over > 0){
@@ -1121,10 +1204,18 @@ function update(dt){
       lampTxt.textContent='🟢🙂';lampEl.style.borderColor='#4ade80';lampBar.style.background='#22c55e';
     }
 
+    // 常駐音量計 + 設定內讀數（講話時會立刻動）
+    const showLv = Math.round(st.lvlFast != null ? st.lvlFast : st.lvl);
+    const volFill = $('#volFill'), volGoal = $('#volGoal'), volNum = $('#volNum');
+    if(volFill){
+      volFill.style.width = cl((st.lvlFast != null ? st.lvlFast : st.lvl) / 50 * 100, 0, 100) + '%';
+      if(volGoal) volGoal.style.left = cl(goal / 50 * 100, 0, 100) + '%';
+      if(volNum) volNum.textContent = String(showLv);
+    }
     const lr = $('#lvlReadout');
-    if(lr && !$('#set').hidden){
+    if(lr){
       const tag = st.loud ? '紅' : (isWarn ? '黃' : '綠');
-      lr.textContent = Math.round(st.lvl) + ' / 門檻 ' + goal + '（' + tag + '）';
+      lr.textContent = showLv + ' / 門檻 ' + goal + '（' + tag + '）';
     }
 
     st.cue=!st.tr&&st.qs>=INT-4.0;
