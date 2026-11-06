@@ -1,43 +1,162 @@
-<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>安靜新幹線 - 慢活鐵道小世界</title>
+<!DOCTYPE html><html lang="zh-Hant"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>安靜新幹線 - 慢活鐵道小世界</title>
 <style>
-:root{--card:rgba(255,252,245,.94);--fg:#1e293b;color-scheme:light dark}
+:root{
+  --card:rgba(255,252,245,.94);--fg:#1e293b;color-scheme:light dark;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-l:env(safe-area-inset-left,0px);
+  --safe-r:env(safe-area-inset-right,0px);
+  --ui-gap:10px;
+  --ic:56px;
+}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--card:rgba(24,32,46,.95);--fg:#f1f5f9}}
-html,body{margin:0;height:100%;overflow:hidden;background:#8ab4d8;color:var(--fg);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;user-select:none}
-canvas#c{position:fixed;inset:0;width:100%;height:100%}
-.card{background:var(--card);border-radius:20px;box-shadow:0 6px 20px rgba(0,0,0,.18);backdrop-filter:blur(8px)}
-button,select{font:inherit;border:1px solid #8885;border-radius:14px;background:var(--card);color:var(--fg);padding:8px 14px;cursor:pointer;transition:.2s}
+html,body{
+  margin:0;width:100%;height:100%;
+  height:100dvh; /* 手機瀏覽器位址列伸縮仍滿版 */
+  overflow:hidden;background:#8ab4d8;color:var(--fg);
+  font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+  user-select:none;-webkit-user-select:none;
+  touch-action:none;-webkit-touch-callout:none;
+  overscroll-behavior:none;
+}
+canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.card{background:var(--card);border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+button,select{font:inherit;border:1px solid #8885;border-radius:14px;background:var(--card);color:var(--fg);padding:8px 14px;cursor:pointer;transition:.2s;-webkit-tap-highlight-color:transparent}
 button:hover{transform:scale(1.02)}
-.ic{width:60px;height:60px;font-size:28px;padding:0;position:relative;display:inline-flex;align-items:center;justify-content:center}
-/* 3歲直覺表情燈號 + 底部溫和進度條 */
-#lamp{position:fixed;left:14px;top:calc(12px + env(safe-area-inset-top,0px));height:78px;padding:0 18px;font-size:40px;display:flex;align-items:center;justify-content:center;gap:10px;border:4px solid #4ade80;transition:border-color .4s;overflow:hidden}
-#lampBar{position:absolute;left:0;bottom:0;height:7px;background:#22c55e;width:0%;transition:width .25s linear}
-#dots{position:fixed;left:50%;transform:translateX(-50%);top:calc(16px + env(safe-area-inset-top,0px));padding:8px 18px;font-size:clamp(12px,2.6vw,15px);white-space:nowrap;font-weight:700;display:flex;align-items:center;gap:10px}
-#dwellHint{font-size:13px;color:#15803d;background:#dcfce7;padding:3px 10px;border-radius:99px;font-weight:700}
-#top{position:fixed;right:14px;top:calc(12px + env(safe-area-inset-top,0px));display:flex;gap:8px}
-#badge{position:absolute;right:-6px;top:-6px;font-size:20px}
-#set{position:fixed;right:14px;top:calc(84px + env(safe-area-inset-top,0px));width:min(320px,calc(100vw - 28px));padding:14px;box-sizing:border-box;font-size:14px;z-index:20}
-#set label,#set .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:10px 0}#set input[type=range]{width:100%}
-.modal{position:fixed;inset:0;margin:auto;width:min(760px,95vw);height:fit-content;max-height:88vh;overflow:auto;padding:22px;box-sizing:border-box;text-align:center;z-index:30}
-.go{font-size:30px;padding:12px 48px;background:#2e7d32;color:#fff;border:0;border-radius:99px;box-shadow:0 4px 14px rgba(46,125,50,.35)}
-/* 角落自動收錄列車卡片 (溫和滑出) */
-#cornerCard{position:fixed;right:18px;bottom:18px;width:min(300px,84vw);padding:12px 16px;text-align:left;z-index:15;transform:translateY(140%);opacity:0;transition:transform .7s cubic-bezier(.22,1,.36,1),opacity .6s;border-left:6px solid #2563eb}
+.ic{width:var(--ic);height:var(--ic);font-size:calc(var(--ic)*0.46);padding:0;position:relative;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* 左上燈號 */
+#lamp{
+  position:fixed;
+  left:calc(12px + var(--safe-l));
+  top:calc(10px + var(--safe-t));
+  height:70px;min-width:72px;padding:0 14px;font-size:36px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  border:4px solid #4ade80;transition:border-color .4s;overflow:hidden;z-index:12;
+  box-sizing:border-box;
+}
+#lampBar{position:absolute;left:0;bottom:0;height:6px;background:#22c55e;width:0%;transition:width .25s linear}
+
+/* 中央進度／圖鑑進度（可換行，避免直式裁切） */
+#dots{
+  position:fixed;left:50%;transform:translateX(-50%);
+  top:calc(12px + var(--safe-t));
+  max-width:min(420px, calc(100vw - 160px - var(--safe-l) - var(--safe-r)));
+  padding:6px 12px;font-size:clamp(11px,2.4vw,14px);
+  font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px 10px;
+  flex-wrap:wrap;text-align:center;z-index:11;box-sizing:border-box;
+  line-height:1.35;
+}
+#dwellHint{font-size:clamp(11px,2.2vw,13px);color:#15803d;background:#dcfce7;padding:2px 8px;border-radius:99px;font-weight:700;white-space:nowrap}
+
+/* 右上按鈕列 */
+#top{
+  position:fixed;
+  right:calc(10px + var(--safe-r));
+  top:calc(10px + var(--safe-t));
+  display:flex;gap:6px;z-index:12;
+}
+#badge{position:absolute;right:-6px;top:-6px;font-size:18px}
+
+/* 設定面板：可捲動，避免橫式高度不足被切掉 */
+#set{
+  position:fixed;
+  right:calc(10px + var(--safe-r));
+  top:calc(10px + var(--safe-t) + var(--ic) + 12px);
+  width:min(320px, calc(100vw - 20px - var(--safe-l) - var(--safe-r)));
+  max-height:calc(100dvh - var(--safe-t) - var(--safe-b) - var(--ic) - 28px);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:12px 14px;box-sizing:border-box;font-size:14px;z-index:20;
+}
+#set label,#set .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap}
+#set input[type=range]{width:100%;touch-action:pan-y}
+
+/* Modal：直式／橫式都留安全邊距 */
+.modal{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(760px, calc(100vw - 16px - var(--safe-l) - var(--safe-r)));
+  max-height:calc(100dvh - 16px - var(--safe-t) - var(--safe-b));
+  overflow:auto;-webkit-overflow-scrolling:touch;
+  padding:18px;box-sizing:border-box;text-align:center;z-index:30;
+  margin:0;
+}
+.go{font-size:clamp(22px,5vw,30px);padding:12px 40px;background:#2e7d32;color:#fff;border:0;border-radius:99px;box-shadow:0 4px 14px rgba(46,125,50,.35);width:auto;max-width:100%}
+
+/* 右下收錄卡 */
+#cornerCard{
+  position:fixed;
+  right:calc(12px + var(--safe-r));
+  bottom:calc(12px + var(--safe-b));
+  width:min(300px, calc(100vw - 24px - var(--safe-l) - var(--safe-r)));
+  padding:10px 14px;text-align:left;z-index:15;
+  transform:translateY(140%);opacity:0;
+  transition:transform .7s cubic-bezier(.22,1,.36,1),opacity .6s;
+  border-left:6px solid #2563eb;box-sizing:border-box;
+}
 #cornerCard.show{transform:translateY(0);opacity:1}
 #cornerCard .cc-top{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:#b45309}
-#cornerCard .cc-name{font-size:20px;font-weight:900;margin:4px 0 2px;display:flex;align-items:center;gap:6px}
-#cornerCard .cc-stars{color:#f59e0b;font-size:15px;letter-spacing:2px;margin-bottom:4px}
-#cornerCard .cc-route{font-size:13px;font-weight:700;background:#8882;padding:3px 9px;border-radius:8px;display:inline-block}
-/* 圖鑑收藏館 */
-#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:12px}
+#cornerCard .cc-name{font-size:clamp(16px,4.5vw,20px);font-weight:900;margin:4px 0 2px;display:flex;align-items:center;gap:6px}
+#cornerCard .cc-stars{color:#f59e0b;font-size:14px;letter-spacing:2px;margin-bottom:4px}
+#cornerCard .cc-route{font-size:12px;font-weight:700;background:#8882;padding:3px 9px;border-radius:8px;display:inline-block;max-width:100%;word-break:break-all}
+
+/* 圖鑑 */
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(210px,100%),1fr));gap:12px;margin-top:12px}
 .dex-item{background:#8882;border-radius:16px;padding:10px;font-size:13px;text-align:left;cursor:pointer;transition:.2s;border:2px solid transparent}
 .dex-item:hover{border-color:#3b82f6}
 .dex-item canvas{width:100%;height:auto;border-radius:10px;background:linear-gradient(180deg,#dbeafe,#f1f5f9)}
-.dex-item .di-title{font-weight:800;font-size:15px;margin-top:6px;display:flex;justify-content:space-between}
+.dex-item .di-title{font-weight:800;font-size:15px;margin-top:6px;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
 .dex-item .di-route{font-size:12px;opacity:.8;margin-top:2px}
 #detailBox{background:#8881;border-radius:16px;padding:14px;margin-bottom:14px;text-align:left;border:1px solid #8884}
 #detailBox .db-head{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
-#detailBox .db-photo{width:220px;height:130px;border-radius:12px;object-fit:cover;background:#0002;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;flex-shrink:0}
+#detailBox .db-photo{width:min(220px,100%);height:130px;border-radius:12px;object-fit:cover;background:#0002;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;flex-shrink:0}
 #detailBox .db-photo img{width:100%;height:100%;object-fit:cover}
 [hidden]{display:none!important}
+
+/* —— 直式（窄螢幕）：縮小頂欄，避免燈號／進度／按鈕互撞 —— */
+@media (max-width:640px),(orientation:portrait){
+  :root{--ic:48px}
+  #lamp{height:58px;font-size:28px;padding:0 10px;border-width:3px;left:calc(8px + var(--safe-l));top:calc(8px + var(--safe-t))}
+  #dots{
+    top:calc(8px + var(--safe-t) + 62px);
+    left:calc(8px + var(--safe-l)); right:calc(8px + var(--safe-r));
+    transform:none;width:auto;max-width:none;
+    justify-content:flex-start;
+  }
+  #top{right:calc(8px + var(--safe-r));top:calc(8px + var(--safe-t));gap:5px}
+  #set{
+    left:calc(8px + var(--safe-l)); right:calc(8px + var(--safe-r));
+    width:auto;top:calc(8px + var(--safe-t) + var(--ic) + 10px);
+    max-height:calc(100dvh - var(--safe-t) - var(--safe-b) - var(--ic) - 24px);
+  }
+  #cornerCard{left:calc(10px + var(--safe-l));right:calc(10px + var(--safe-r));width:auto}
+  .modal{padding:14px;width:calc(100vw - 12px - var(--safe-l) - var(--safe-r))}
+  #start h2{font-size:clamp(18px,5.2vw,24px);margin:6px 0}
+  #start p{font-size:clamp(13px,3.6vw,16px)}
+}
+
+/* —— 橫式矮螢幕：壓低頂欄、設定可捲 —— */
+@media (orientation:landscape) and (max-height:500px){
+  :root{--ic:42px}
+  #lamp{height:48px;font-size:24px;padding:0 8px;border-width:3px}
+  #dots{top:calc(8px + var(--safe-t));font-size:11px;max-width:min(360px,calc(100vw - 200px))}
+  #set{max-height:calc(100dvh - var(--safe-t) - var(--safe-b) - 56px);font-size:13px;padding:8px 10px}
+  #cornerCard{padding:8px 12px}
+  #cornerCard .cc-name{font-size:15px}
+  .modal{max-height:calc(100dvh - 10px - var(--safe-t) - var(--safe-b));padding:12px}
+}
+
+/* 極窄寬度 */
+@media (max-width:380px){
+  :root{--ic:44px}
+  #lamp{font-size:24px;height:52px}
+  #dwellHint{display:none} /* 極窄時隱藏提示，避免擠壓 */
+}
 </style></head><body>
 <canvas id="c"></canvas>
 
@@ -114,9 +233,32 @@ button:hover{transform:scale(1.02)}
 
 <script>
 // ===================== 基本畫布與儲存工具 =====================
-const $=s=>document.querySelector(s),cv=$('#c'),g=cv.getContext('2d');let W,H;
-function rs(){const d=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;g.setTransform(d,0,0,d,0,0)}
-addEventListener('resize',rs);rs();
+const $=s=>document.querySelector(s),cv=$('#c'),g=cv.getContext('2d');let W,H,isPortrait=true;
+function rs(){
+  // 使用 visualViewport 避免手機旋轉／位址列造成裁切
+  const vv = window.visualViewport;
+  const d = Math.min(devicePixelRatio||1, 3);
+  W = Math.round(vv ? vv.width : innerWidth);
+  H = Math.round(vv ? vv.height : innerHeight);
+  if(W<1||H<1){W=innerWidth;H=innerHeight}
+  const wasPortrait = isPortrait;
+  isPortrait = H >= W;
+  cv.width = Math.max(1, Math.floor(W*d));
+  cv.height = Math.max(1, Math.floor(H*d));
+  g.setTransform(d,0,0,d,0,0);
+  // 僅在直橫切換時重配月台人物，避免旋轉裁切；一般 resize 不重置劇本
+  if(wasPortrait !== isPortrait && typeof st!=='undefined' && st.run && typeof initWaitingPassengers==='function'){
+    try{ initWaitingPassengers(); }catch(e){}
+  }
+}
+addEventListener('resize',rs);
+addEventListener('orientationchange',()=>setTimeout(rs,80));
+addEventListener('touchmove',e=>{ if(!(e.target.closest && e.target.closest('#set,#dex,#start'))) e.preventDefault(); }, {passive:false});
+if(window.visualViewport){
+  visualViewport.addEventListener('resize',rs);
+  visualViewport.addEventListener('scroll',()=>{ /* 鎖在左上，避免 iOS 捲動位移 */ document.documentElement.scrollTop=0; document.body.scrollTop=0; });
+}
+rs();
 const ld=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}},sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},cl=(v,a,b)=>Math.max(a,Math.min(b,v));
 
 // ===================== 列車資料庫 =====================
@@ -165,7 +307,22 @@ const SCENES=[
 ];
 
 // ===================== 車體比例與車門位置計算 =====================
-const CH=()=>cl(H*.22,64,W*.13);
+// 車高：直式與橫式都保持可辨識，且不讓車身超過畫面寬度比例
+const CH=()=>{
+  // 直式：以寬度為主限制；橫式：以高度為主
+  const byH = H * (isPortrait ? 0.16 : 0.26);
+  const byW = W * (isPortrait ? 0.18 : 0.12);
+  return cl(Math.min(byH, byW), isPortrait ? 48 : 56, isPortrait ? 110 : 140);
+};
+// 地平線與軌道高度：確保月台與列車完整落在可視區
+const sceneLayout=()=>{
+  if(isPortrait){
+    return { hz: H*0.42, railY: H*0.72 };
+  }
+  // 橫式：軌道略靠下但仍留出天空
+  return { hz: H*0.50, railY: cl(H*0.78, H*0.62, H*0.86) };
+};
+
 function noseRatio(tp){return {E7:3.6, E5:4.8, E6:4.5, N700:3.8, D:3.4, P500:5.0, ALFA:5.8, MAG:5.0, F800:2.6, F:1.8, B:0.45, SL:3.6}[tp]||3.2}
 function carWidthRatio(tp){return tp=='B'?3.4:4.2}
 const lenOf=(m,ch)=>m.nose=='SL'?ch*9.5:(noseRatio(m.nose)+Math.min(m.cars,6)*carWidthRatio(m.nose))*ch;
@@ -174,7 +331,7 @@ const lenOf=(m,ch)=>m.nose=='SL'?ch*9.5:(noseRatio(m.nose)+Math.min(m.cars,6)*ca
 function getVisibleDoorXs(m,hx,ch){
   if(m.nose=='SL'){
     const L=ch*3.5,l=hx-L;
-    return [l-ch*.2-ch*3.5+ch*3.1, l-ch*.2-ch*7.0+ch*3.1].filter(x=>x>W*.15 && x<W*.78);
+    return [l-ch*.2-ch*3.5+ch*3.1, l-ch*.2-ch*7.0+ch*3.1].filter(x=>x>W*.10 && x<(isPortrait?W*.90:W*.80));
   }
   const NL=noseRatio(m.nose)*ch, cw=carWidthRatio(m.nose)*ch, gp=ch*.07, nc=Math.min(m.cars,6);
   const doors=[];
@@ -187,7 +344,7 @@ function getVisibleDoorXs(m,hx,ch){
       if(i>0) doors.push(r-cw*.035-ch*.12);
     }
   }
-  return doors.filter(x=>x>W*.14 && x<W*.78);
+  return doors.filter(x=>x>W*.10 && x<(isPortrait?W*.90:W*.80));
 }
 
 // ===================== 繪製車頭輪廓與車廂（支援車門開闔與窗內乘客剪影） =====================
@@ -701,33 +858,28 @@ function chime(freqs){
 }
 
 // ===================== 麥克風與自動環境音校準（穩定版） =====================
-// 目標：降低裝置差異、背景噪音誤判、短促尖峰誤觸發
 let an, buf = new Float32Array(2048);
-const lvlHist = [];           // 近期 level 環形緩衝（中值濾波用）
-const LVL_HIST_N = 9;         // 約 0.15~0.2s 的中值窗
-let calBusy = false;          // 校準進行中，避免重入
-let adaptQuietT = 0;          // 連續安靜時間，用於慢速適應底噪
+const lvlHist = [];
+const LVL_HIST_N = 9;
+let calBusy = false;
+let adaptQuietT = 0;
 
-// 單次 RMS → 0~50 尺度（保留與舊版相近的映射，但後續會再平滑）
 function rawInstant(){
   if(!an) return 4;
   an.getFloatTimeDomainData(buf);
   let s = 0;
   for(let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
   const rms = Math.sqrt(s / buf.length) || 1e-5;
-  // 稍調公式：更容忍低底噪裝置，避免安靜時讀數偏高
   const db = 20 * Math.log10(rms);
   return cl((db + 85) * 50 / 58, 0, 50);
 }
 
-// 取中值，抑制偶發尖峰（咳嗽、鍵盤、短暫碰撞）
 function median(arr){
   const a = arr.slice().sort((x,y)=>x-y);
   const m = a.length >> 1;
   return a.length % 2 ? a[m] : (a[m-1] + a[m]) * 0.5;
 }
 
-// 穩定讀值：中值濾波 + 輕微 EMA（給 update 用）
 function raw(){
   const v = rawInstant();
   lvlHist.push(v);
@@ -735,13 +887,12 @@ function raw(){
   return lvlHist.length >= 3 ? median(lvlHist) : v;
 }
 
-// 強化校準：較長取樣、去極端值、用低百分位當底噪
 function autoCalibrate(opts){
   opts = opts || {};
   if(!st.mic || calBusy) return;
   calBusy = true;
   const samples = [];
-  const maxN = opts.samples || 40;       // ~2 秒 @ 50ms
+  const maxN = opts.samples || 40;
   const interval = opts.interval || 50;
   $('#msg').textContent = '🎚 正在聆聽環境底噪…請保持安靜';
   const iv = setInterval(()=>{
@@ -749,18 +900,13 @@ function autoCalibrate(opts){
     if(samples.length >= maxN){
       clearInterval(iv);
       samples.sort((a,b)=>a-b);
-      // 去掉最低/最高各約 15%，取剩餘較低端作為安靜底噪
       const lo = Math.floor(samples.length * 0.15);
       const hi = Math.floor(samples.length * 0.75);
       const slice = samples.slice(lo, hi);
       const floor = slice.reduce((a,b)=>a+b, 0) / (slice.length || 1);
-      // 讓安靜時讀數落在大約 3~8，給 goal（預設 30）足夠餘裕
       st.off = cl(floor - 5, 0, 32);
       st.lvl = cl(floor - st.off, 0, 20);
-      st.acc = 0;
-      st.loud = 0;
-      st.quiet = 2;
-      adaptQuietT = 0;
+      st.acc = 0; st.loud = 0; st.quiet = 2; adaptQuietT = 0;
       calBusy = false;
       $('#msg').textContent = '✅ 已校準環境底噪（安靜讀數約 ' + Math.round(st.lvl) + '）';
       setTimeout(()=>{ if($('#msg').textContent.indexOf('已校準')===0) $('#msg').textContent='提示：列車停靠時越安靜，停留時間越長喔！'; }, 4500);
@@ -773,29 +919,21 @@ $('#go').onclick=async()=>{
   initWaitingPassengers();
   try{
     const s = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        channelCount: 1
-      }
+      audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 }
     });
     const a = st.ac = new (window.AudioContext || webkitAudioContext)();
     await a.resume();
     an = a.createAnalyser();
     an.fftSize = 2048;
-    an.smoothingTimeConstant = 0.35; // 分析器本身再做一層時間平滑
+    an.smoothingTimeConstant = 0.35;
     a.createMediaStreamSource(s).connect(an);
     st.mic = 1;
-    // 啟動後稍等再校準，讓麥克風硬體穩定
     setTimeout(()=>autoCalibrate({samples:48, interval:50}), 400);
   }catch(e){
     $('#noise').hidden=0;
     $('#msg').textContent='未開啟麥克風：按住「按住=測試吵鬧」或空白鍵測試';
   }
-  st.run=1;
-  st.first=1;
-  st.qs=2.0; // 啟動後平緩迎來第一班列車
+  st.run=1; st.first=1; st.qs=2.0;
 };
 
 $('#cal').onclick=()=>{
@@ -868,7 +1006,7 @@ function arrive(){
   showCornerCard(m,isNew);
   if(isNew){$('#badge').hidden=0;chime([440,554,659])}else{chime([440,554])}
 
-  const ch=CH(), sx=W*.86;
+  const ch=CH(), sx= isPortrait ? W*0.92 : W*0.86;
   const doors = getVisibleDoorXs(m,sx,ch);
   const scObj = SCENES[st.sc] || SCENES[0];
 
@@ -926,44 +1064,32 @@ function update(dt){
 
   if(st.run){
     const goal=+$('#goal').value;
-    // 模擬吵鬧或真實麥克風；中值濾波後的 raw 再做中速 EMA，避免抖動
-    const tg = st.mic
-      ? cl(raw() - st.off, 0, 50)
-      : (st.sim ? 46 : 4 + Math.random() * 1.5);
-    // 平滑：安靜時跟得較慢、變吵時稍快，降低誤紅燈又保有反應
+    const tg = st.mic ? cl(raw() - st.off, 0, 50) : (st.sim ? 46 : 4 + Math.random() * 1.5);
     const follow = tg > st.lvl ? Math.min(1, dt * 4.2) : Math.min(1, dt * 2.6);
     st.lvl += (tg - st.lvl) * follow;
 
     const over = st.lvl - goal;
     if(over > 0){
-      // 需明顯超過門檻才快速累積；輕微超標累積很慢 → 減少背景噪音誤判
       const intensity = Math.min(1, over / 10);
       st.acc += dt * (0.35 + 2.8 * intensity * intensity);
-      st.quiet = 0;
-      adaptQuietT = 0;
+      st.quiet = 0; adaptQuietT = 0;
     }else{
       st.quiet += dt;
-      // 回到門檻以下時較快清除累積，避免「明明安靜卻還紅」
       st.acc = Math.max(0, st.acc - dt * 3.2);
-      // 長時間非常安靜時，緩慢下修底噪偏移（適應冷氣等穩定噪音）
       if(st.lvl < goal * 0.55 && st.mic && !calBusy){
         adaptQuietT += dt;
         if(adaptQuietT > 8){
           const targetOff = st.off + (tg - 6) * 0.02;
           st.off = cl(st.off + (targetOff - st.off) * Math.min(1, dt * 0.15), 0, 32);
         }
-      }else{
-        adaptQuietT = 0;
-      }
+      }else adaptQuietT = 0;
     }
-    // 觸發紅燈需持續累積更久；解除則在安靜約 1.4 秒後
     if(!st.loud && st.acc >= 5.2){ st.loud = 1; st.loudT = 0; }
     if(st.loud && st.quiet >= 1.4){ st.loud = 0; st.acc = 0; }
 
     const isWarn = !st.loud && (st.lvl > goal * 0.78 || st.acc > 1.0);
-    if(st.loud){
-      st.loudT += dt;
-    }else{
+    if(st.loud){ st.loudT += dt; }
+    else{
       if(!st.tr) st.qs += dt * (isWarn ? 0.45 : 1.0);
       st.scT += dt;
     }
@@ -995,7 +1121,6 @@ function update(dt){
       lampTxt.textContent='🟢🙂';lampEl.style.borderColor='#4ade80';lampBar.style.background='#22c55e';
     }
 
-    // 設定面板即時音量讀數（方便確認校準與裝置差異）
     const lr = $('#lvlReadout');
     if(lr && !$('#set').hidden){
       const tag = st.loud ? '紅' : (isWarn ? '黃' : '綠');
@@ -1010,7 +1135,7 @@ function update(dt){
     // ===================== 列車四階段慢速狀態機 =====================
     const T=st.tr;
     if(T){
-      const m=M[T.i],L=lenOf(m,ch),sx=W*.86;
+      const m=M[T.i],L=lenOf(m,ch),sx=isPortrait?W*0.92:W*0.86;
 
       // 若太吵超過 4 秒：關門並溫和退回或提前離站
       if(st.loud && st.loudT>4.0){
@@ -1246,7 +1371,7 @@ function drawRailwayInfra(railY,ch,trkType,t){
 
   // 2. 後方車站月台建築 (遮雨棚柱、日式站名牌)
   const roofY = railY - ch*1.24;
-  const stL = W*0.12, stR = W*0.84;
+  const stL = isPortrait ? W*0.05 : W*0.12, stR = isPortrait ? W*0.95 : W*0.84;
   // 遮雨棚支撐柱 (在列車後方)
   g.fillStyle='#64748b';
   for(let px=stL+W*.08; px<stR; px+=W*.22){
@@ -1303,7 +1428,7 @@ function drawRailwayInfra(railY,ch,trkType,t){
   }
 
   // 4. 右前方三色鐵道出發號誌機
-  const sigX = W*.935, sigTop = railY - ch*1.32;
+  const sigX = isPortrait ? W*0.97 : W*0.935, sigTop = railY - ch*1.32;
   g.fillStyle='#4a525e';g.fillRect(sigX-3, sigTop, 6, railY-sigTop);
   g.fillStyle='#1e242c';g.beginPath();g.roundRect(sigX-14, sigTop-10, 28, 66, 14);g.fill();
   g.strokeStyle='#dce2ec';g.lineWidth=2;g.stroke();
@@ -1323,7 +1448,7 @@ function drawRailwayInfra(railY,ch,trkType,t){
 // 繪製前景車站月台、木長椅、站務員與上下車旅客
 function drawStationPlatformAndPeople(railY,ch,trkType,t){
   const platY = railY - ch*0.16; // 月台表面高度 (剛好對齊車門下緣，不擋住流線車頭)
-  const platL = W*0.11, platR = W*0.83, platW = platR - platL;
+  const platL = isPortrait ? W*0.04 : W*0.11, platR = isPortrait ? W*0.96 : W*0.83, platW = platR - platL;
   const platH = ch*0.26;
 
   // 1. 月台混凝土基座與黃色安全導盲磚
@@ -1374,7 +1499,7 @@ function drawStationPlatformAndPeople(railY,ch,trkType,t){
 
 // ===================== 主場景繪圖迴圈 =====================
 function draw(t){
-  const hz=H*.56,ch=CH(),railY=H*.78,s=st.sc,p=st.t*.05%4,i=Math.floor(p),j=(i+1)%4,f=p-i,sm=f*f*(3-2*f);
+  const {hz,railY}=sceneLayout(),ch=CH(),s=st.sc,p=st.t*.05%4,i=Math.floor(p),j=(i+1)%4,f=p-i,sm=f*f*(3-2*f);
   let top=mix(SK[i][0],SK[j][0],sm),bot=mix(SK[i][1],SK[j][1],sm);
   const night=SK[i][2]+(SK[j][2]-SK[i][2])*sm;
   if(s==3){top='#38bdf8';bot='#bae6fd'}if(s==5){top='#04061a';bot='#141c48'}
